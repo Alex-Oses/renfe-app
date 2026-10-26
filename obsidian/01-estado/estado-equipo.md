@@ -12,7 +12,7 @@ tags: [estado]
 |---|---|---|---|---|---|
 | Alex | PO + Frontend | 🟢 | GitHub configurado y equipo invitado; siguiente: app Expo en `frontend/mobile` | — | 2026-10-26 |
 | Rubén | Backend + chatbot | ⚪ | Pendiente: crear proyecto NestJS y primer borrador de [[endpoints]] | Esperando repo en GitHub | 2026-10-26 |
-| Marina | SM + Base de datos | 🟢 | Supabase local validado en VM Linux y borrador de [[modelo-datos]]; pendiente respuestas de Rubén y Kevin | — | 2026-10-26 |
+| Marina | SM + Base de datos | 🟢 | Supabase local validado en VM Linux; contrato de [[modelo-datos]] cerrado salvo la duda de Kevin sobre Stripe | — | 2026-10-26 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
 
 ## Bloqueos globales
