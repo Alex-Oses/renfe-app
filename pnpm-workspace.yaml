@@ -1,0 +1,5 @@
+# Paquetes del monorepo. face-service es Python y no entra en pnpm.
+packages:
+  - "frontend/*"
+  - "backend/api"
+  - "backend/gtfs-worker"

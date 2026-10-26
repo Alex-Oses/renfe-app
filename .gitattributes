@@ -1,0 +1,6 @@
+# Fuerza finales de línea LF para que Windows/Mac/Linux no generen diffs falsos
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ttf binary
+*.bat text eol=crlf

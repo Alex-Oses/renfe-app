@@ -1,0 +1,22 @@
+# CI placeholder (responsable: Kevin). Se completará en el Sprint 1.
+# Ahora solo instala dependencias para comprobar que el monorepo es válido.
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile=false
+      # TODO(Kevin): pnpm lint, pnpm test, build de imágenes Docker, tests de face-service

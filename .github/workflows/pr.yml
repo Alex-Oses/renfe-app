@@ -1,0 +1,46 @@
+# Reglas de PR: nombre de rama, rama destino y título (Conventional Commits). Check: "PR / reglas".
+name: PR
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [develop, main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  reglas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile=false
+      - name: Nombre de rama
+        if: github.head_ref != 'develop'
+        run: node scripts/validar-rama.mjs "$HEAD"
+        env:
+          HEAD: ${{ github.head_ref }}
+      - name: A main solo desde develop, release/* o hotfix/*
+        if: github.base_ref == 'main'
+        run: |
+          case "$HEAD" in
+            develop|release/*|hotfix/*) ;;
+            *) echo "✖ A main solo se llega desde develop, release/* o hotfix/* (rama: $HEAD)"; exit 1 ;;
+          esac
+        env:
+          HEAD: ${{ github.head_ref }}
+      - name: Título del PR
+        run: printf '%s\n' "$TITULO" | pnpm exec commitlint
+        env:
+          TITULO: ${{ github.event.pull_request.title }}
+
+  etiquetas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5

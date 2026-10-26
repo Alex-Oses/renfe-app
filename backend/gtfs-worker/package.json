@@ -1,0 +1,13 @@
+{
+  "name": "@renfe/gtfs-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Ingesta GTFS + GTFS-RT de Renfe (placeholder)",
+  "scripts": {
+    "dev": "echo \"worker sin implementar: ver backend/gtfs-worker/README.md\"",
+    "build": "echo \"sin build todavía\"",
+    "lint": "echo \"sin lint todavía\"",
+    "test": "echo \"sin tests todavía\""
+  }
+}
