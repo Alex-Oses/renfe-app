@@ -16,6 +16,7 @@ tags: [handoff, supabase, base-datos]
 - Layout ordenado al estándar de la CLI: `migrations/` y `seed.sql` movidos a `backend/database/supabase/`. Cero cambios en el contrato.
 - `backend/database/README.md` y `docs/primeros-pasos.md` actualizados (ya no hay que instalar la CLI a mano); `.gitignore` apunta a las rutas nuevas.
 - Decisión registrada en [[ADR-002-supabase-local]].
+- **Validado de punta a punta** en una VM Linux de Azure (Docker Desktop está bloqueado en el portátil corporativo): `pnpm db:start` ✅, Supabase inicializado ✅, `seed.sql` aplicado ✅, Studio/API/PostgreSQL accesibles ✅ y `pnpm db:stop` ✅.
 
 ## Qué queda
 - Marina (siguiente rama): borrador completo de [[modelo-datos]] tabla por tabla (columnas, RLS, índices) y, a partir de él, la primera migración (`create extension vector` + tablas).
@@ -24,7 +25,7 @@ tags: [handoff, supabase, base-datos]
 - Kevin: si el CI necesita Supabase para tests, la CLI ya está en el repo; hace falta decidir si se levanta la BD en el workflow.
 
 ## Bloqueos / preguntas para otros
-- **Sin probar `pnpm db:start` ni `pnpm db:reset`:** Docker Desktop estaba cerrado en mi PC (`failed to connect to the docker API`). La config se parsea bien (el CLI llega hasta el paso de Docker). El primero que lo arranque, que confirme que el `config.toml` vale.
+- ~~Sin probar `db:start` / `db:reset`: Docker Desktop bloqueado en el portátil corporativo.~~ **Resuelto:** validado en una VM Linux de Azure (ver arriba). Quien esté en Windows con Docker capado puede hacer lo mismo: clonar, `pnpm install` y los mismos `pnpm db:*`.
 - Nadie más necesita nada de momento.
 
 ## Cambios en contratos
