@@ -2,32 +2,56 @@
 
 **Responsable:** Rubén · IA: OpenCode
 
-> Esqueleto vacío. Se genera en el Sprint 0/1.
+API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../docs/arquitectura.md).
 
-## Crear el proyecto (una vez)
+## Estado
+
+Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger y
+`GET /health`. **Todavía sin datos**: `backend/database/` no tiene migraciones (Marina) y el
+worker GTFS no existe. Cuando lleguen, se añade `pg` y los módulos `estaciones` y `trenes`.
+
+## Arrancar
 
 ```bash
-cd backend
-# Borra el contenido de api/ salvo README.md y Dockerfile, y luego:
-pnpm dlx @nestjs/cli new api --package-manager pnpm --skip-git
+pnpm install
+pnpm dev:api        # desde la raíz del monorepo
 ```
 
-Cambia `"name"` en `package.json` a `"@renfe/api"` y asegúrate de que existe el script `"dev": "nest start --watch"`.
+- `GET /health` → estado del servicio
+- `GET /docs` → Swagger · `GET /docs-json` → OpenAPI
 
-## Módulos previstos (`src/modules/`)
+Variables: `API_PORT`, `CORS_ORIGINS`, `NODE_ENV` (ver `.env.example`). En producción
+`CORS_ORIGINS` es obligatorio y el arranque falla si falta.
+
+> En este PC el puerto 3000 lo ocupa `AMAgent`: pon `API_PORT=3100` en tu `.env`.
+
+## Estructura
+
+```
+src/
+  main.ts             CORS, ValidationPipe global, Swagger
+  app.module.ts       ConfigModule validado + módulos
+  config/entorno.ts   validación de variables de entorno
+  modules/
+    health/           GET /health
+  common/             guards, filtros y cliente de Supabase (pendiente)
+```
+
+## Módulos previstos
 
 | Módulo | Qué hace | Responsable |
 |---|---|---|
 | `auth` | Registro/login con Supabase Auth, login facial (llama a face-service) | Rubén |
-| `trenes` | Búsqueda por origen/destino/fecha sobre datos GTFS | Rubén |
+| `estaciones` | Búsqueda de estaciones sobre datos GTFS | Rubén |
+| `trenes` | Búsqueda por origen/destino/fecha, detalle, retrasos, posiciones | Rubén |
 | `reservas` | Asientos y reservas simulados | Rubén |
 | `pagos` | PaymentIntent de Stripe test + webhook | Kevin |
-| `billetes` | Genera QR firmado (Ed25519) y lo valida para el revisor | Rubén |
-| `chatbot` | Claude API con tool use (buscar trenes, ver billetes) | Rubén |
-
-`src/common/` guarda guards, pipes, filtros y el cliente de Supabase.
+| `billetes` | QR firmado (Ed25519) y validación para el revisor | Rubén |
+| `chatbot` | Claude API con tool use | Rubén |
 
 ## Reglas
 
-- Cada endpoint debe estar en `obsidian/02-contratos-api/endpoints.md` **antes** de implementarse.
-- Documenta con Swagger (`@nestjs/swagger`) en `/docs`.
+- Cada endpoint se escribe en `obsidian/02-contratos-api/endpoints.md` **antes** de implementarlo.
+- Swagger siempre al día: es la documentación viva de la API.
+- Sin ORM: `pg` + SQL para horarios (1,9 M filas). Ver ADR-002.
+- `pnpm --filter @renfe/api lint|test|test:e2e|build` en verde antes de cada PR.
