@@ -21,7 +21,7 @@ Los comandos se lanzan desde la raíz del repo con `--workdir backend/database` 
 ## Uso diario
 
 ```bash
-# Docker Desktop tiene que estar abierto
+# Docker tiene que estar corriendo (ver «Sin Docker en el portátil» abajo)
 pnpm db:start     # levanta Supabase local (Postgres 54322, API 54321, Studio 54323)
 pnpm db:status    # muestra las URLs y las claves
 pnpm db:stop      # para los contenedores
@@ -40,6 +40,13 @@ pnpm db:reset
 cópialas a tu `.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
 `DATABASE_URL` ya apunta a `localhost:54322` en `.env.example`.
 
+## Sin Docker en el portátil
+
+Sin Docker no hay Supabase local. Si tu portátil lo tiene bloqueado (caso de Marina, con el
+equipo corporativo), la vía que funciona es una VM Linux: clonar el repo, `corepack enable`,
+`pnpm install`, `cp .env.example .env` y los mismos `pnpm db:*`. Validado el 26/10 en una VM
+Linux de Azure: `db:start`, Studio/API/PostgreSQL, `seed.sql` y `db:stop`.
+
 ## Reglas
 
 - **El modelo de datos se diseña primero en** `obsidian/02-contratos-api/modelo-datos.md` y luego se migra. El contrato manda.
@@ -51,5 +58,5 @@ cópialas a tu `.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_RO
 
 ## Pendiente (Sprint 0)
 
-- Borrador completo de `../obsidian/02-contratos-api/modelo-datos.md`.
+- Cerrar las preguntas abiertas de `../obsidian/02-contratos-api/modelo-datos.md` §10.2.
 - Primera migración: extensión `vector` + tablas del contrato.
