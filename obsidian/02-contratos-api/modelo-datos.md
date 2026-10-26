@@ -22,7 +22,7 @@ tags: [contrato, base-datos]
 | 3 | **Estados como `text` + `CHECK`**, no `ENUM` de Postgres | Las Supabase migrations corren dentro de una transacción y `ALTER TYPE ... ADD VALUE` no puede ejecutarse ahí. Con `CHECK` añadir un estado es un `ALTER TABLE` normal. |
 | 4 | **`timestamptz` en todo**; horas de GTFS en `interval` | Renfe publica horas locales de Madrid (Europe/Madrid) y GTFS permite `25:30` para trenes que terminan pasada la medianoche: `time` no lo admite, `interval` sí. |
 | 5 | **Nada se borra en duro salvo catálogo** | Reservas, pagos, billetes y validaciones son historial: se cambian de estado. El catálogo GTFS sí se reemplaza en cada importación. |
-| 6 | **La API escribe siempre con `service_role`**; la app solo lee lo suyo | RLS protege el acceso directo de la app (sobre todo Realtime), no sustituye a la API. Ver §6. |
+| 6 | **La API escribe siempre con `service_role`**; la app solo lee lo suyo | RLS protege el acceso directo de la app (sobre todo Realtime), no sustituye a la API. Ver §7. |
 | 7 | **Asientos generados bajo demanda**, no materializados por feed | Materializar butacas de los ~30 000 viajes del feed son millones de filas para un dato simulado. Se generan al vuelo la primera vez que se consulta un viaje. |
 
 ## 2. Diagrama de entidades
@@ -198,7 +198,7 @@ el calendario del día pedido.
 | `recoge` | `boolean` | no | `pickup_type = 0`, default `true` |
 | `deja` | `boolean` | no | `drop_off_type = 0`, default `true` |
 
-**Diseño:** `interval` por las horas `> 24:00` de GTFS (§1.4). La interpretación es
+**Diseño:** `interval` por las horas `> 24:00` de GTFS (decisión 4 de §1). La interpretación es
 «tiempo desde el inicio del día de servicio», en hora local de Madrid.
 `recoge`/`deja` permiten excluir paradas técnicas de la búsqueda.
 
