@@ -10,6 +10,7 @@
   "scripts": {
     "prepare": "husky",
     "dev:mobile": "pnpm --filter @renfe/mobile dev",
+    "dev:web": "pnpm --filter @renfe/web dev",
     "dev:api": "pnpm --filter @renfe/api dev",
     "dev:worker": "pnpm --filter @renfe/gtfs-worker dev",
     "build": "pnpm -r build",
