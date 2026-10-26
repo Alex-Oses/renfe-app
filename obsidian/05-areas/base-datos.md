@@ -14,7 +14,7 @@ tags: [area]
 
 ## Notas técnicas
 - Supabase local inicializado: `backend/database/supabase/` (config, migraciones, seed).
-  CLI como devDependency; `pnpm db:start | db:stop | db:reset | db:status`. Ver [[ADR-002-supabase-local]].
+  CLI como devDependency; `pnpm db:start | db:stop | db:reset | db:status`. Ver [[ADR-003-supabase-local]].
 - **Validado de punta a punta** el 26/10 en una VM Linux de Azure (Docker Desktop está bloqueado en
   el portátil corporativo): `db:start`, Studio/API/PostgreSQL accesibles, `seed.sql` aplicado y `db:stop`.
 - [[modelo-datos]] está en borrador completo (contrato, sin SQL todavía): 14 tablas, claves naturales de GTFS, estados como `text + CHECK`, asientos generados bajo demanda y Realtime con una fila por viaje. Decisiones de Alex ya incorporadas (15 min, QR por butaca, sin histórico de posiciones, webhook comprueba `expira_en`).
