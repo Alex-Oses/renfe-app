@@ -31,6 +31,7 @@ Estado: propuesto | implementado | cambiado (fecha)
 | POST | `/auth/cara/verificar` | Login facial | propuesto |
 | GET | `/estaciones?q=` | Autocompletar estaciones | propuesto |
 | GET | `/trenes?origen=&destino=&fecha=` | Buscar trenes | propuesto |
+| GET | `/trenes/:id` | Detalle de un tren (lo pide la web al reservar) | propuesto (Alex, 2026-10-26) |
 | GET | `/trenes/:id/asientos` | Asientos disponibles (simulado) | propuesto |
 | POST | `/reservas` | Crear reserva | propuesto |
 | POST | `/pagos/intent` | PaymentIntent Stripe test | propuesto |
@@ -39,3 +40,8 @@ Estado: propuesto | implementado | cambiado (fecha)
 | GET | `/billetes/:id/qr` | QR firmado | propuesto |
 | POST | `/billetes/validar` | Revisor valida un QR | propuesto |
 | POST | `/chatbot/mensaje` | Mensaje al chatbot | propuesto |
+| GET | `/tiempo-real/trenes` | Posiciones de trenes (GTFS-RT) para el mapa | propuesto (Alex, 2026-10-26) |
+
+## Formas de respuesta propuestas por la web
+
+La web (`frontend/web/src/api/tipos.ts`) ya consume estos tipos con datos simulados: `Estacion`, `Tren`, `Asiento`, `Reserva`, `IntentoPago`, `Billete`, `Sesion`, `PosicionTren`. Rubén: si te encajan, se copian aquí como contrato; si no, se cambian en `tipos.ts`.
