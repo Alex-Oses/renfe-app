@@ -18,7 +18,7 @@ tags: [sprint]
 | Generar app Expo en `frontend/mobile` | Alex | ⚪ |
 | Generar proyecto NestJS en `backend/api` | Rubén | ⚪ |
 | Borrador de [[endpoints]] | Rubén | ⚪ |
-| `supabase init` + borrador de [[modelo-datos]] | Marina | ⚪ |
+| `supabase init` + borrador de [[modelo-datos]] | Marina | 🟡 `init` hecho + borrador del modelo; pendiente cerrar preguntas |
 | Investigar URLs GTFS/GTFS-RT de Renfe | Marina | ⚪ |
 | CI básica, protección de ramas, Docker Compose | Kevin | ⚪ |
 | Prueba de concepto InsightFace | Kevin | ⚪ |
