@@ -33,9 +33,16 @@ src/
   app.module.ts       ConfigModule validado + módulos
   config/entorno.ts   validación de variables de entorno
   common/auth/        SupabaseJwtGuard, RolesGuard y decorador @Roles
+  common/bd/          BdService: pool de Postgres opcional
   modules/
     health/           GET /health
 ```
+
+## Base de datos
+
+`BdService` (`common/bd/`) crea un pool de `pg` **solo si existe `DATABASE_URL`**. Sin ella la API
+arranca igual, `GET /health` devuelve `"baseDatos": "no configurada"` y los endpoints de datos
+responderán `503`. Sin ORM: `bd.consultar(sql, valores)` y SQL a mano (ver ADR-002).
 
 ## Auth
 
