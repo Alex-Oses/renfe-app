@@ -10,7 +10,7 @@ tags: [estado]
 
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
-| Alex | PO + Frontend | 🟢 | Esqueleto del monorepo creado; pendiente subir a GitHub y crear app Expo | — | 2026-10-26 |
+| Alex | PO + Frontend | 🟢 | Repo subido a GitHub y equipo invitado; siguiente: app Expo en `frontend/mobile` | — | 2026-10-26 |
 | Rubén | Backend + chatbot | ⚪ | Pendiente: crear proyecto NestJS y primer borrador de [[endpoints]] | Esperando repo en GitHub | 2026-10-26 |
 | Marina | SM + Base de datos | ⚪ | Pendiente: `supabase init` y borrador de [[modelo-datos]] | Esperando repo en GitHub | 2026-10-26 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
