@@ -29,6 +29,11 @@ export function validarEntorno(
     throw new Error('CORS_ORIGINS es obligatorio en producción');
   }
 
+  const secreto = config.SUPABASE_JWT_SECRET;
+  if (typeof secreto === 'string' && secreto.length > 0 && secreto.length < 32) {
+    throw new Error('SUPABASE_JWT_SECRET parece demasiado corto (secreto JWT de Supabase)');
+  }
+
   return {
     ...config,
     API_PORT: puerto,

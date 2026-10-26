@@ -32,10 +32,25 @@ src/
   main.ts             CORS, ValidationPipe global, Swagger
   app.module.ts       ConfigModule validado + módulos
   config/entorno.ts   validación de variables de entorno
+  common/auth/        SupabaseJwtGuard, RolesGuard y decorador @Roles
   modules/
     health/           GET /health
-  common/             guards, filtros y cliente de Supabase (pendiente)
 ```
+
+## Auth
+
+`SupabaseJwtGuard` verifica el `Bearer` contra `SUPABASE_JWT_SECRET` (HS256) y deja en
+`request.usuario` → `{ id, email, rol }`. El rol sale de `app_metadata.rol` (`viajero` por defecto,
+`revisor` explícito). `RolesGuard` + `@Roles('revisor')` limitan endpoints por rol.
+
+```ts
+@UseGuards(SupabaseJwtGuard, RolesGuard)
+@Roles('revisor')
+@Post('billetes/validar')
+```
+
+Todavía no hay endpoints privados: los guards están listos para cuando lleguen `/auth`, `/reservas`
+y `/billetes`. El contrato de auth está en `obsidian/02-contratos-api/endpoints.md`.
 
 ## Módulos previstos
 
