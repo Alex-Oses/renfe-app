@@ -25,6 +25,8 @@ tags: [handoff]
   firma ajena, caducado, sin secreto, y matriz de roles.
 - Contrato detallado de las 6 rutas de datos en [[endpoints]] (va en la rama
   `docs/api-arquitectura-renfe`, no en esta).
+- `common/bd/`: `BdService` con pool de `pg` **opcional**. Sin `DATABASE_URL` la API arranca igual
+  y `GET /health` devuelve `baseDatos: "no configurada"` (verificado en vivo en 3010).
 - Documentado en `backend/api/README.md` y `.env.example` (nuevas `NODE_ENV` y `CORS_ORIGINS`).
 - ADR-002 con las decisiones de base (Nest 12, sin ORM, contrato propio).
 
@@ -43,8 +45,8 @@ tags: [handoff]
 
 ## Cambios en contratos
 
-Ninguno: `/health` es infraestructura, no negocio. El detalle de las rutas de datos sigue pendiente
-en [[endpoints]] (allí están las 4 rutas propuestas sin request/response).
+Ninguno en las rutas de negocio. `GET /health` gana el campo `baseDatos`
+(`ok` | `no configurada` | `error`): es infraestructura, pero Docker y el CI lo consumen.
 
 ## Ficheros tocados
 
