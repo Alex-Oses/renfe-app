@@ -12,18 +12,21 @@ tags: [contrato, base-datos]
 > se cambia primero aquí y luego se implementa (ver `AGENTS.md`).
 >
 > Alcance de esta versión: **contrato, sin SQL**. No hay migraciones todavía a propósito.
+> Encaja con el contrato de [[endpoints]] de Rubén (dos feeds, `feed` en viajes/posiciones/incidencias
+> y estaciones unificadas con `feeds[]`).
 
 ## 1. Principios de diseño
 
 | # | Decisión | Motivo |
 |---|---|---|
-| 1 | **Claves naturales de GTFS** (`text`) en todo lo que viene del feed; **`uuid`** en lo que genera la app | Los `stop_id`, `route_id`, `trip_id` son estables entre importaciones → `upsert` idempotente sin tablas de mapeo. Los datos de usuario necesitan ids opacos y no adivinables. |
-| 2 | **Nombres en español y en plural** (`estaciones`, `viajes`), FKs `<tabla_singular>_id` | Coherente con el resto del proyecto; el móvil y la API leen lo mismo. |
-| 3 | **Estados como `text` + `CHECK`**, no `ENUM` de Postgres | Las Supabase migrations corren dentro de una transacción y `ALTER TYPE ... ADD VALUE` no puede ejecutarse ahí. Con `CHECK` añadir un estado es un `ALTER TABLE` normal. |
-| 4 | **`timestamptz` en todo**; horas de GTFS en `interval` | Renfe publica horas locales de Madrid (Europe/Madrid) y GTFS permite `25:30` para trenes que terminan pasada la medianoche: `time` no lo admite, `interval` sí. |
-| 5 | **Nada se borra en duro salvo catálogo** | Reservas, pagos, billetes y validaciones son historial: se cambian de estado. El catálogo GTFS sí se reemplaza en cada importación. |
-| 6 | **La API escribe siempre con `service_role`**; la app solo lee lo suyo | RLS protege el acceso directo de la app (sobre todo Realtime), no sustituye a la API. Ver §7. |
-| 7 | **Asientos generados bajo demanda**, no materializados por feed | Materializar butacas de los ~30 000 viajes del feed son millones de filas para un dato simulado. Se generan al vuelo la primera vez que se consulta un viaje. |
+| 1 | **Claves naturales `text` de GTFS**, con `feed` por delante; **`uuid`** en lo que genera la app | Renfe publica **dos feeds** (`cercanias` y `avld`) y el mismo `stop_id`/`trip_id` no significa lo mismo en cada uno: la clave es `(feed, id)`. Son ids estables entre importaciones → `upsert` idempotente sin tablas de mapeo. Los datos de usuario necesitan ids opacos. |
+| 2 | **`estaciones` unificadas** + tabla puente `estacion_feeds` | La app busca por nombre y la misma Atocha tiene `stop_id` distinto en cada feed. Una sola estación con un id estable y `feeds[]` (lo que ya promete `GET /estaciones`). |
+| 3 | **Nombres en español y en plural** (`estaciones`, `viajes`), FKs `<tabla_singular>_id` | Coherente con el resto del proyecto; el móvil y la API leen lo mismo. |
+| 4 | **Estados como `text` + `CHECK`**, no `ENUM` de Postgres | Las Supabase migrations corren dentro de una transacción y `ALTER TYPE ... ADD VALUE` no puede ejecutarse ahí. Con `CHECK` añadir un estado es un `ALTER TABLE` normal. |
+| 5 | **`timestamptz` en todo**; horas de GTFS en `interval` | Renfe publica horas locales de Madrid (Europe/Madrid) y GTFS permite `25:30` para trenes que terminan pasada la medianoche: `time` no lo admite, `interval` sí. La API las convierte a ISO 8601 con offset. |
+| 6 | **Nada se borra en duro salvo catálogo** | Reservas, pagos, billetes y validaciones son historial: se cambian de estado. El catálogo GTFS sí se reemplaza en cada importación. |
+| 7 | **La API escribe siempre con `service_role`**; la app solo lee lo suyo | RLS protege el acceso directo de la app (sobre todo Realtime), no sustituye a la API. Ver §7. |
+| 8 | **Asientos generados bajo demanda** por viaje **y fecha**, no materializados por feed | Materializar butacas de los ~30 000 viajes × días son millones de filas para un dato simulado. Se generan al vuelo la primera vez que se consulta. |
 
 ## 2. Diagrama de entidades
 
@@ -35,15 +38,15 @@ erDiagram
   perfiles ||--o{ billetes : "tiene"
   perfiles ||--o{ validaciones : "revisa"
 
+  estaciones ||--o{ estacion_feeds : "se publica en"
+  estaciones ||--o{ horarios : "se para en"
   rutas ||--o{ viajes : "agrupa"
   calendarios ||--o{ viajes : "días de servicio"
   calendarios ||--o{ calendario_excepciones : "excepciones"
   viajes ||--o{ horarios : "paradas"
-  estaciones ||--o{ horarios : "se para en"
-  estaciones ||--o{ estaciones : "padre"
 
-  viajes ||--o{ asientos : "butacas simuladas"
-  viajes ||--o{ reservas : "se reserva"
+  viajes ||--o{ asientos : "butacas simuladas (por fecha)"
+  viajes ||--o{ reservas : "se reserva (con fecha)"
   reservas ||--o{ asientos : "ocupa"
   reservas ||--o{ pagos : "intentos"
   reservas ||--o{ billetes : "emite"
@@ -52,6 +55,9 @@ erDiagram
 
   viajes ||--o| posiciones_trenes : "última posición (Realtime)"
 ```
+
+> Nota: `viajes` es una **plantilla** (sin fecha). Todo lo que apunta a un viaje concreto añade
+> `feed` + `fecha_servicio` (reservas, asientos) o hereda la caducidad del billete.
 
 ## 3. Identidad y acceso
 
@@ -75,8 +81,7 @@ transacción lógica que el alta.
 **RLS:** `select`/`update` del propio perfil. El `update` no puede tocar `rol`
 (política con `using (id = auth.uid())` y `with check` que compara `rol` con el actual).
 
-**Índices:** PK basta. `rol` tiene pocas filas pero se filtra en el panel del revisor:
-índice parcial `(rol) where rol = 'revisor'`.
+**Índices:** PK basta. Índice parcial `(rol) where rol = 'revisor'` para el panel del revisor.
 
 ### 3.2 `embeddings_faciales`
 
@@ -98,81 +103,109 @@ Solo `service_role` (la API). La comparación la hace la API o el face-service, 
 
 ## 4. Catálogo GTFS (datos reales de Renfe)
 
-Importado por `backend/gtfs-worker`. Este bloque **sí** se reemplaza en cada importación;
-el resto de tablas lo referencian, así que la importación nunca borra en cascada datos de usuario
-(ver §8).
+Importado por `backend/gtfs-worker`, que recorre **los dos feeds** (`cercanias` y `avld`). Todas
+las tablas de este bloque llevan `feed` salvo `estaciones`, que es única y se enlaza por
+`estacion_feeds`. Este bloque **sí** se reemplaza en cada importación.
 
-### 4.1 `estaciones` ← `stops.txt`
+### 4.1 `estaciones`
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `id` | `text` | no | PK = `stop_id` |
-| `nombre` | `text` | no | `stop_name` |
-| `lat` | `double precision` | no | `stop_lat` |
-| `lon` | `double precision` | no | `stop_lon` |
-| `tipo` | `text` | no | `estacion` \| `acceso`; `location_type` 0/1 |
-| `estacion_padre_id` | `text` | sí | FK a `estaciones(id)` (`parent_station`) |
-| `anden` | `text` | sí | `platform_code` |
+| `id` | `text` | no | PK. Estable y opaco; **hoy** es el `stop_id` de `avld` |
+| `nombre` | `text` | no | `stop_name` (el de `avld` si existe en los dos) |
+| `ciudad` | `text` | sí | columna de apoyo, rellenada a mano desde un CSV de municipios; si no se conoce, `null` y la API devuelve `""` (**nunca inventada**) |
+| `lat` | `double precision` | no | |
+| `lon` | `double precision` | no | |
 | `accesible` | `boolean` | sí | `wheelchair_boarding` |
-| `actualizado_en` | `timestamptz` | no | para depurar importaciones |
+| `actualizado_en` | `timestamptz` | no | |
 
-**Diseño:** `lat`/`lon` como `double precision`, **sin PostGIS**: no se hacen búsquedas
-geográficas (el mapa solo pinta posiciones). Si algún día se quiere «estaciones cerca de mí»,
-se añade PostGIS en una migración aparte sin tocar estas columnas.
+**Diseño:** `id` es opaco a propósito: [[endpoints]] promete «cadena opaca y estable, no
+garantizamos que sea un `stop_id`». Hoy coincide con el de `avld` por comodidad, pero si mañana
+se unifica otro feed no hay que tocar la API ni las reservas guardadas.
+`lat`/`lon` como `double precision`, **sin PostGIS**: el `bbox` de `GET /posiciones` se resuelve
+con un rango de lat/lon (§6.1) y no hay consultas por distancia.
 
 **RLS:** lectura pública (`anon` + `authenticated`). Escritura solo `service_role`.
+**Índices:** PK; `(nombre)` con `pg_trgm` para el autocompletado de `GET /estaciones?q=`.
 
-**Índices:** PK; `(nombre)` con `pg_trgm` para el autocompletado de `GET /estaciones?q=`;
-`(estacion_padre_id)`.
-
-### 4.2 `rutas` ← `routes.txt`
+### 4.2 `estacion_feeds`
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `id` | `text` | no | PK = `route_id` |
-| `nombre` | `text` | no | `route_long_name` («Madrid-Atocha → Barcelona-Sants») |
-| `nombre_corto` | `text` | sí | `route_short_name` («AVE», «C-1») |
-| `tipo_servicio` | `text` | no | `cercanias` \| `media_distancia` \| `larga_distancia` \| `ave` \| `avlo` \| `alvia` \| `regional` \| `otro` |
+| `estacion_id` | `text` | no | PK parte 1, FK a `estaciones` `on delete cascade` |
+| `feed` | `text` | no | PK parte 2, `cercanias` \| `avld` |
+| `stop_id` | `text` | no | `stop_id` de ese feed; **único por feed** |
+| `anden` | `text` | sí | `platform_code` |
+| `UNIQUE (feed, stop_id)` | | | |
+
+**Diseño:** es la tabla que hace posible la unificación. El worker importa `stops.txt` de cada feed,
+resuelve a qué `estacion_id` corresponde (por nombre + coordenadas, o por la tabla que se mantenga
+a mano para los casos raros) y deja aquí el `stop_id` de cada feed. `feeds[]` del endpoint sale de
+esta tabla. Sin ella, `(feed, stop_id)` sería la clave de estación en `horarios` y la app tendría
+dos «Atocha» distintas. **Pregunta de implementación** (no de contrato): el emparejamiento
+automático por nombre+coordenadas deja un margen de error; el worker debe escribir un log de
+estaciones sin emparejar para revisarlas a mano.
+
+**RLS:** lectura pública. Escritura solo `service_role`.
+**Índices:** PK; `UNIQUE (feed, stop_id)`; `(estacion_id)`.
+
+### 4.3 `rutas` ← `routes.txt` de cada feed
+
+| columna | tipo | null | notas |
+|---|---|---|---|
+| `feed` | `text` | no | PK parte 1, `cercanias` \| `avld` |
+| `id` | `text` | no | PK parte 2, `route_id` |
+| `nombre` | `text` | no | `route_long_name` |
+| `nombre_corto` | `text` | sí | `route_short_name` («AVE 02070», «C-1»); es la `linea` de la API |
+| `tipo_servicio` | `text` | no | `cercanias` \| `ave` \| `avlo` \| `avant` \| `alvia` \| `intercity` \| `media_distancia` \| `regional` \| `otro` |
 | `color` | `text` | sí | hex de `route_color`, para la UI |
 | `actualizado_en` | `timestamptz` | no | |
 
-**Diseño:** `route_type` de GTFS vale `2` (rail) para todo Renfe, así que no distingue producto.
-`tipo_servicio` lo deduce el worker del `route_short_name`/`route_long_name`
-(**pregunta abierta §10.1**). Es lo que usará la UI para el icono y el precio simulado.
+**Diseño:** `route_type` de GTFS vale `2` (rail) en todo Renfe, así que no distingue producto.
+`tipo_servicio` lo deduce **el worker** (decidido: Rubén, 26/10): en el feed `cercanias` todo es
+`cercanias`; en `avld` se clasifica por palabras clave sobre `route_short_name` +
+`route_long_name` normalizados (mayúsculas, sin acentos) con precedencia
+**AVE > AVLO > AVANT > ALVIA > INTERCITY > MEDIA DISTANCIA > REGIONAL** y `otro` de último recurso.
+El worker registra cuántas rutas caen en cada valor y **cuáles caen en `otro`**: se ajusta la lista
+y se reimporta, sin tocar la BD. Alternativa descartada: tabla manual de ~100 filas que habría que
+revisar en cada importación para un dato que solo elige icono y precio simulado.
 
 **RLS:** lectura pública. Escritura solo `service_role`.
-**Índices:** PK.
+**Índices:** PK; `(feed, nombre_corto)`.
 
-### 4.3 `calendarios` ← `calendar.txt`
+### 4.4 `calendarios` ← `calendar.txt`
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `id` | `text` | no | PK = `service_id` |
+| `feed` | `text` | no | PK parte 1 |
+| `id` | `text` | no | PK parte 2, `service_id` |
 | `lunes` … `domingo` | `boolean` | no | 7 columnas, `monday` … `sunday` |
 | `inicio` | `date` | no | `start_date` |
 | `fin` | `date` | no | `end_date` |
 
-### 4.4 `calendario_excepciones` ← `calendar_dates.txt`
+### 4.5 `calendario_excepciones` ← `calendar_dates.txt`
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `servicio_id` | `text` | no | PK parte 1, FK a `calendarios` `on delete cascade` |
-| `fecha` | `date` | no | PK parte 2 |
+| `feed` | `text` | no | PK parte 1, FK a `calendarios` `on delete cascade` |
+| `servicio_id` | `text` | no | PK parte 2 |
+| `fecha` | `date` | no | PK parte 3 |
 | `tipo` | `text` | no | `añadido` \| `eliminado` (`exception_type` 1/2) |
 
-**Diseño:** sin estas dos tablas la búsqueda por fecha miente en festivos y puentes, que es
-justo cuando más se usa la app. Son pequeñas y se importan tal cual.
+**Diseño:** sin estas dos tablas la búsqueda por fecha miente en festivos y puentes, que es justo
+cuando más se usa la app. Son pequeñas y se importan tal cual.
 
 **RLS:** lectura pública. Escritura solo `service_role`.
-**Índices:** `(fecha, tipo)` en excepciones; PK en calendarios.
+**Índices:** PK; `(fecha, tipo)` en excepciones.
 
-### 4.5 `viajes` ← `trips.txt`
+### 4.6 `viajes` ← `trips.txt`
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `id` | `text` | no | PK = `trip_id` |
-| `ruta_id` | `text` | no | FK a `rutas` |
-| `servicio_id` | `text` | no | FK a `calendarios` |
+| `feed` | `text` | no | PK parte 1 |
+| `id` | `text` | no | PK parte 2, `trip_id` (`tripId` en la API) |
+| `ruta_id` | `text` | no | FK a `rutas (feed, id)` |
+| `servicio_id` | `text` | no | FK a `calendarios (feed, id)` |
 | `destino` | `text` | sí | `trip_headsign` («Barcelona-Sants») |
 | `sentido` | `smallint` | sí | `direction_id` 0/1 |
 | `accesible` | `boolean` | sí | `wheelchair_accessible` |
@@ -180,42 +213,46 @@ justo cuando más se usa la app. Son pequeñas y se importan tal cual.
 
 **Diseño clave:** un viaje **no tiene fecha**. Es una plantilla («AVE 03070, laborables») y la
 fecha se resuelve con `calendarios` + `calendario_excepciones`. Duplicar el viaje por día
-multiplicaría por 365 el feed sin ganar nada. El endpoint `GET /trenes?fecha=` hace el join con
-el calendario del día pedido.
+multiplicaría por 365 el feed sin ganar nada. El `id` público de la API
+(`avld:3097L23537C1:2026-11-02`) es exactamente `feed:id:fecha_servicio`.
 
 **RLS:** lectura pública. Escritura solo `service_role`.
-**Índices:** `(ruta_id)`, `(servicio_id)`.
+**Índices:** PK; `(feed, ruta_id)`; `(feed, servicio_id)`.
 
-### 4.6 `horarios` ← `stop_times.txt`
+### 4.7 `horarios` ← `stop_times.txt`
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `viaje_id` | `text` | no | PK parte 1, FK a `viajes` `on delete cascade` |
-| `secuencia` | `integer` | no | PK parte 2, `stop_sequence` (orden de parada) |
-| `estacion_id` | `text` | no | FK a `estaciones` |
+| `feed` | `text` | no | PK parte 1, FK a `viajes (feed, id)` `on delete cascade` |
+| `viaje_id` | `text` | no | PK parte 2 |
+| `secuencia` | `integer` | no | PK parte 3, `stop_sequence` (`seq` en la API) |
+| `estacion_id` | `text` | no | FK a `estaciones (id)` — la **unificada**, no el `stop_id` del feed |
 | `llega` | `interval` | sí | `arrival_time`; nulo en la primera parada |
 | `sale` | `interval` | sí | `departure_time`; nulo en la última |
 | `recoge` | `boolean` | no | `pickup_type = 0`, default `true` |
 | `deja` | `boolean` | no | `drop_off_type = 0`, default `true` |
 
-**Diseño:** `interval` por las horas `> 24:00` de GTFS (decisión 4 de §1). La interpretación es
-«tiempo desde el inicio del día de servicio», en hora local de Madrid.
+**Diseño:** `interval` por las horas `> 24:00` de GTFS (decisión 5 de §1). La interpretación es
+«tiempo desde el inicio del día de servicio», en hora local de Madrid; la API suma la
+`fecha_servicio` y devuelve ISO 8601 con offset (`25:10` → `01:10` del día siguiente).
 `recoge`/`deja` permiten excluir paradas técnicas de la búsqueda.
+Los nombres (`llega`/`sale`, `recoge`/`deja`) se quedan así (decidido: Rubén, 26/10): son 1:1 con
+GTFS y la consulta se lee sola; la UI nunca los ve, la API devuelve `llegada`/`salida`.
 
 **Consulta tipo** (la que justifica los índices de abajo):
 
 ```sql
 -- origen → destino el mismo viaje, en orden
-select o.viaje_id, o.sale as sale, d.llega as llega
+select o.feed, o.viaje_id, o.sale as sale, d.llega as llega
 from horarios o
 join horarios d
-  on d.viaje_id = o.viaje_id and d.secuencia > o.secuencia
+  on d.feed = o.feed and d.viaje_id = o.viaje_id and d.secuencia > o.secuencia
 where o.estacion_id = $1 and d.estacion_id = $2
   and o.recoge and d.deja;
 ```
 
 **RLS:** lectura pública. Escritura solo `service_role`.
-**Índices:** PK `(viaje_id, secuencia)`; `(estacion_id, viaje_id)` para el join de arriba.
+**Índices:** PK `(feed, viaje_id, secuencia)`; `(estacion_id, feed, viaje_id)` para el join de arriba.
 Es la tabla más grande del catálogo.
 
 ## 5. Reserva, pago, billete
@@ -225,18 +262,23 @@ Es la tabla más grande del catálogo.
 | columna | tipo | null | notas |
 |---|---|---|---|
 | `id` | `uuid` | no | PK, default `gen_random_uuid()` |
-| `viaje_id` | `text` | no | FK a `viajes` `on delete cascade` |
+| `feed` | `text` | no | FK a `viajes (feed, id)` `on delete cascade` |
+| `viaje_id` | `text` | no | |
+| `fecha_servicio` | `date` | no | **la butaca es del viaje *de ese día*** |
 | `coche` | `smallint` | no | 1…N |
 | `numero` | `smallint` | no | 1…N dentro del coche |
 | `clase` | `text` | no | `turista` \| `preferente` |
 | `ventanilla` | `boolean` | no | para la UI |
 | `reserva_id` | `uuid` | sí | FK a `reservas` `on delete set null`; **nulo = libre** |
-| `UNIQUE (viaje_id, coche, numero)` | | | |
+| `UNIQUE (feed, viaje_id, fecha_servicio, coche, numero)` | | | |
 
 **Diseño:**
-- **Generación perezosa:** la primera vez que se pide `GET /trenes/:id/asientos`, la API crea las
-  butacas de ese viaje a partir de una plantilla según `tipo_servicio` y `clase`. Así el feed
-  entero no ocupa millones de filas.
+- **`fecha_servicio` en la clave (corregido: Rubén, 26/10).** El `viaje_id` de GTFS se repite todos
+  los días: sin la fecha, reservar la butaca 12 del AVE 03070 la bloquearía **para siempre**. Con la
+  fecha, la butaca 12 se puede vender el 2 de noviembre y el 3 de noviembre.
+- **Generación perezosa por viaje + fecha:** la primera vez que se pide
+  `GET /trenes/:feed/:tripId/asientos?fecha=`, la API crea las butacas de ese viaje *ese día* a
+  partir de una plantilla según `tipo_servicio`. Así el feed entero no ocupa millones de filas.
 - **La ocupación va en `reserva_id`, no en un `estado`**: no hay dos fuentes de verdad. La
   asignación es un `UPDATE` atómico, que resuelve las carreras sin bloqueos explícitos:
 
@@ -254,7 +296,8 @@ Es la tabla más grande del catálogo.
 
 **RLS:** `select` para `authenticated` (la app pinta el mapa de butacas); **escritura solo
 `service_role`**. El usuario no puede «reservar» una butaca escribiendo en la tabla.
-**Índices:** PK; `(viaje_id) where reserva_id is null` (butacas libres); `(reserva_id)`.
+**Índices:** PK; `(feed, viaje_id, fecha_servicio) where reserva_id is null` (butacas libres para
+`plazasLibres`); `(reserva_id)`.
 **Precio:** no se guarda por asiento. El importe va en la reserva (§5.2).
 
 ### 5.2 `reservas`
@@ -263,7 +306,9 @@ Es la tabla más grande del catálogo.
 |---|---|---|---|
 | `id` | `uuid` | no | PK |
 | `usuario_id` | `uuid` | no | FK a `perfiles` |
-| `viaje_id` | `text` | no | FK a `viajes` `on delete restrict`; **una reserva = un viaje** |
+| `feed` | `text` | no | FK a `viajes (feed, id)` `on delete restrict` |
+| `viaje_id` | `text` | no | **una reserva = un viaje de un día** |
+| `fecha_servicio` | `date` | no | **añadida (Rubén, 26/10)**: sin ella no hay caducidad de QR ni «mis viajes» |
 | `referencia` | `text` | no | `UNIQUE`, código corto legible (`R-7K3M9Q`) |
 | `estado` | `text` | no | `pendiente` \| `pagada` \| `cancelada` \| `caducada`, default `pendiente` |
 | `importe_centimos` | `integer` | no | `CHECK (>= 0)`; precio simulado |
@@ -275,11 +320,12 @@ Es la tabla más grande del catálogo.
 **15 minutos** para pagar (decidido: Alex, 26/10). Si no se paga, la API la pasa a `caducada` y
 libera butacas (barrido al consultar + cron opcional). `importe_centimos` en enteros para no
 arrastrar floats con dinero; `centimos` explícito en el nombre.
-Una reserva puede tener **varias butacas del mismo viaje** (familia): la relación es
-`asientos.reserva_id`.
+`fecha_servicio` la valida la API contra `calendarios` (mantener coherencia: el viaje debe circular
+ese día). Una reserva puede tener **varias butacas del mismo viaje y fecha** (familia): la relación
+es `asientos.reserva_id`.
 
 **RLS:** el dueño lee sus reservas; nunca escribe. Escritura solo `service_role`.
-**Índices:** `(usuario_id, creada_en desc)` (lista «mis reservas»); `(viaje_id)`;
+**Índices:** `(usuario_id, fecha_servicio)` («mis viajes»); `(usuario_id, creada_en desc)`;
 `UNIQUE (referencia)`; parcial `(expira_en) where estado = 'pendiente'` para el barrido.
 
 ### 5.3 `pagos`
@@ -334,24 +380,31 @@ El barrido que caduca reservas y el webhook escriben las mismas filas: la transa
 | `reserva_id` | `uuid` | no | FK a `reservas` |
 | `asiento_id` | `uuid` | no | `UNIQUE`, FK a `asientos` |
 | `usuario_id` | `uuid` | no | FK a `perfiles` (desnormalizado para RLS y consultas) |
-| `viaje_id` | `text` | no | FK a `viajes` (desnormalizado para el revisor) |
+| `feed` / `viaje_id` | `text` | no | FK a `viajes (feed, id)`; desnormalizado para el revisor |
 | `estado` | `text` | no | `valido` \| `usado` \| `anulado` \| `caducado` |
 | `emitido_en` | `timestamptz` | no | |
-| `expira_en` | `timestamptz` | no | fin del día de servicio + margen |
+| `expira_en` | `timestamptz` | no | **`fecha_servicio + 26 h`** = 02:00 del día siguiente (Europe/Madrid) |
 | `usado_en` | `timestamptz` | sí | |
 
 **Diseño:** **1 billete = 1 butaca = 1 viajero** (decidido: Alex, 26/10). Una reserva de 3 plazas
 genera 3 billetes con 3 QR distintos; es lo que espera un revisor y lo que permite anular uno sin
 tocar los demás.
-El contenido del QR (`{billete_id, viaje_id, usuario_id, exp}` firmado con Ed25519) **no se
+**Caducidad (decidido: Rubén, 26/10):** `expira_en = fecha_servicio + interval '26 hours'` → las
+02:00 del día siguiente; cubre los viajes `24:xx`/`25:xx` y un retraso normal. Se calcula al emitir
+(en la transacción del webhook) y **la misma marca va en el `exp` del QR**. Un barrido pasa a
+`caducado` los billetes con `estado = 'valido'` y `expira_en < now()`.
+`billetes` **no** lleva `fecha_servicio` (Rubén): hereda la caducidad de `expira_en`, que ya la
+codifica.
+El contenido del QR (`{billete_id, feed, viaje_id, usuario_id, exp}` firmado con Ed25519) **no se
 guarda**: solo la clave privada firma y la firma se verifica con la pública. Lo que manda es
 `estado` en BD: firma válida + estado `valido` = billete bueno.
-`usuario_id` y `viaje_id` están duplicados a propósito (evitan dos joins en la validación y
+`usuario_id`, `feed` y `viaje_id` están duplicados a propósito (evitan joins en la validación y
 simplifican la política RLS); se rellenan siempre desde la reserva.
 
 **RLS:** el dueño lee sus billetes; nunca escribe (no puede marcar `usado`). Escritura solo
 `service_role`. El revisor **no** lee la tabla directamente: llama a `POST /billetes/validar`.
-**Índices:** `UNIQUE (asiento_id)`; `(usuario_id, emitido_en desc)`; `(viaje_id, estado)`.
+**Índices:** `UNIQUE (asiento_id)`; `(usuario_id, emitido_en desc)`; `(feed, viaje_id, estado)`;
+`(expira_en) where estado = 'valido'` para el barrido.
 
 ### 5.5 `validaciones`
 
@@ -378,27 +431,60 @@ Escritura solo `service_role`.
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `viaje_id` | `text` | no | **PK**, FK a `viajes` |
+| `feed` | `text` | no | PK parte 1 |
+| `viaje_id` | `text` | no | PK parte 2, FK a `viajes (feed, id)` |
+| `vehiculo_id` | `text` | sí | `vehicle.id` (`vehicleId` en la API) |
 | `lat` | `double precision` | no | |
 | `lon` | `double precision` | no | |
-| `retraso_seg` | `integer` | sí | de `TripUpdate.delay` si viene |
 | `rumbo` | `smallint` | sí | 0–359 |
 | `velocidad_kmh` | `smallint` | sí | |
-| `proxima_estacion_id` | `text` | sí | FK a `estaciones` |
+| `estado` | `text` | sí | `INCOMING_AT` \| `STOPPED_AT` \| `IN_TRANSIT_TO` (enum de GTFS-RT, sin traducir) |
+| `parada_actual_id` | `text` | sí | FK a `estaciones`; `paradaActual` en la API |
+| `retraso_seg` | `integer` | sí | de `TripUpdate.delay` si viene |
 | `actualizado_en` | `timestamptz` | no | `VehiclePosition.timestamp` |
 
 **Diseño:** **una fila por viaje** (upsert), no un histórico. El mapa necesita el estado actual y
 Realtime manda un payload pequeño; si se insertara cada posición, el canal escupiría miles de
 eventos por minuto. **Sin histórico de posiciones** (decidido: Alex, 26/10): nada de
 `posiciones_historial` ni de estela en el mapa.
-El payload del canal respeta [[eventos-realtime]]: `{ viaje_id, lat, lon, retraso_seg, actualizado }`;
-`rumbo`, `velocidad_kmh` y `proxima_estacion_id` son **opcionales** y no rompen el contrato.
+El `bbox` de `GET /posiciones` se resuelve con `lat between … and lon between …` e índice
+`(feed, lat, lon)`: con ~540 filas no hace falta PostGIS.
 
 **RLS:** lectura `anon` + `authenticated` (el mapa puede verse antes de logarse, como en la app
 de Renfe). Escritura solo `service_role` (el worker).
-**Realtime:** publicación activada solo para `UPDATE` de esta tabla.
-**Índices:** PK. `(actualizado_en)` para limpiar posiciones viejas (un tren que desaparece del
-feed debe dejar de pintarse).
+**Realtime:** publicación activada solo para `INSERT`/`UPDATE` de esta tabla. Payload en
+[[eventos-realtime]].
+**Índices:** PK; `(feed, lat, lon)` para el bbox; `(actualizado_en)` para purgar posiciones viejas
+(un tren que desaparece del feed debe dejar de pintarse).
+
+### 6.2 `incidencias` ← GTFS-RT `Alert`
+
+| columna | tipo | null | notas |
+|---|---|---|---|
+| `feed` | `text` | no | PK parte 1 |
+| `id` | `text` | no | PK parte 2, `alert.id` (`AVISO_518335`) |
+| `titulo` | `text` | no | `headerText` |
+| `descripcion` | `text` | sí | `descriptionText`, en el idioma que publique Renfe |
+| `causa` | `text` | sí | enum de GTFS-RT, sin traducir (`MAINTENANCE`, `STRIKE`…) |
+| `efecto` | `text` | sí | enum de GTFS-RT (`DELAY`, `DETOUR`…) |
+| `inicio` | `timestamptz` | sí | `activePeriod.start`; nulo = activa desde siempre |
+| `fin` | `timestamptz` | sí | `activePeriod.end`; nulo = sin fin conocido |
+| `lineas` | `text[]` | no | `route_short_name` afectados (es lo que filtra `?linea=`); `{}` si no aplica |
+| `paradas` | `text[]` | no | `estacion_id` unificados afectados; `{}` si no aplica |
+| `actualizado_en` | `timestamptz` | no | |
+
+**Diseño:** tabla **nueva** (Rubén, 26/10): su contrato ya expone `GET /incidencias?feed=&linea=` y
+sin tabla no se puede cumplir. Se simplifica el `Alert` de GTFS-RT: las entidades afectadas se
+reducen a líneas y paradas, que es lo único que filtra y muestra la API; no se guardan los textos
+por idioma (se queda el que venga). Se refresca en cada sondeo del worker: las alertas que
+desaparecen del feed se borran (`delete` + `upsert` de las vigentes), porque **no** son historial:
+un aviso caducado no debe seguir pintándose.
+La alternativa (guardar el `Alert` como JSONB) se descarta: no se podría filtrar por línea sin
+`jsonb_path_query` y perderíamos el `CHECK` de los enums.
+
+**RLS:** lectura `anon` + `authenticated`. Escritura solo `service_role`.
+**Índices:** PK; GIN en `lineas` y en `paradas` (filtros de `?linea=` y de detalle de parada);
+`(feed, fin)` para el barrido.
 
 ## 7. Resumen de permisos (RLS)
 
@@ -410,30 +496,31 @@ nada que no toque.
 |---|---|---|---|
 | `perfiles` | — | lee/edita el suyo | todo |
 | `embeddings_faciales` | — | — | todo |
-| `estaciones`, `rutas`, `calendarios`, `calendario_excepciones`, `viajes`, `horarios` | lectura | lectura | todo |
+| `estaciones`, `estacion_feeds`, `rutas`, `calendarios`, `calendario_excepciones`, `viajes`, `horarios` | lectura | lectura | todo |
+| `incidencias`, `posiciones_trenes` | lectura | lectura | todo |
 | `asientos` | — | lectura | todo |
 | `reservas`, `pagos`, `billetes` | — | lee los suyos | todo |
 | `validaciones` | — | el revisor, las suyas | todo |
-| `posiciones_trenes` | lectura | lectura | todo |
 
 ## 8. Volumen, importación y retención
 
 | Tabla | Filas estimadas | Notas |
 |---|---|---|
-| `estaciones` | ~1 500 | según feed |
-| `rutas` | ~100 | |
-| `calendarios` + excepciones | ~1 000 | |
-| `viajes` | ~30 000 | plantillas, no por día |
+| `estaciones` / `estacion_feeds` | ~1 500 / ~2 500 | unificadas + una fila por feed |
+| `rutas` | ~100 por feed | |
+| `calendarios` + excepciones | ~1 000 por feed | |
+| `viajes` | ~30 000 entre los dos feeds | plantillas, no por día |
 | `horarios` | ~500 000 | **la tabla grande**; se reemplaza en cada importación |
-| `asientos` | bajo demanda | solo viajes consultados |
+| `asientos` | bajo demanda | solo viajes + fechas consultados |
 | `reservas`, `pagos`, `billetes` | crecimiento de la app | historial, no se borra |
 | `posiciones_trenes` | ≈ nº de trenes en circulación | upsert; filas viejas se purgan por `actualizado_en` |
+| `incidencias` | decenas | upsert + borrado de las que ya no vienen |
 
-- La importación GTFS es **idempotente** (`upsert` por clave natural) y corre en una transacción:
-  o entra el feed entero o no entra nada.
+- La importación GTFS es **idempotente** (`upsert` por clave natural) y corre en una transacción
+  por feed: o entra el feed entero o no entra nada.
 - Al importar un feed nuevo, los viajes que ya no existen se marcan/borran **antes** de tocar
-  `reservas`: la FK de `reservas.viaje_id` es `on delete restrict` para que un feed nuevo no se
-  lleve por delante reservas pagadas. Decisión fina de implementación en la rama del worker.
+  `reservas`: la FK de `reservas (feed, viaje_id)` es `on delete restrict` para que un feed nuevo
+  no se lleve por delante reservas pagadas. Decisión fina de implementación en la rama del worker.
 - **Borrado de cuenta:** `on delete cascade` desde `auth.users` → `perfiles` → `embeddings`,
   y las reservas/billetes quedan anonimizadas por la API (no se borran: son historial contable).
 
@@ -446,7 +533,8 @@ nada que no toque.
 | `shapes`, `transfers`, `frequencies`, `agency` de GTFS | No aportan a las pantallas del sprint; se pueden añadir sin romper nada |
 | Favoritos, notificaciones, historial del chatbot | No están en el Sprint 0/1; no se inventan |
 | Fotos de usuario | Prohibido: solo embeddings |
-| PostGIS | No hay consultas geográficas; Realtime solo pinta puntos |
+| PostGIS | El único filtro geográfico es el `bbox` de `/posiciones`, que se resuelve con rango lat/lon |
+| Histórico de posiciones e incidencias | El mapa y los avisos solo muestran lo vigente |
 
 ## 10. Preguntas del contrato
 
@@ -458,20 +546,31 @@ nada que no toque.
 | 2 | ¿Un QR por butaca o por reserva? | **Uno por butaca** (1 billete = 1 butaca = 1 viajero) | Alex, 26/10 |
 | 3 | ¿Histórico de posiciones para la estela del mapa? | **No**: solo posición actual | Alex, 26/10 |
 | 4 | ¿Qué hace el webhook si la reserva ya caducó? | **Comprueba `expira_en` antes de emitir billetes**; si caducó, reembolso y sin billetes (§5.3) | Alex, 26/10 |
+| 5 | `tipo_servicio` de las rutas | **Heurística en el worker** por palabras clave, con log de las que caen en `otro`. Sin tabla manual | Rubén, 26/10 |
+| 6 | Caducidad del QR | **`fecha_servicio + 26 h`** (02:00 del día siguiente); misma marca en el `exp` del QR | Rubén, 26/10 |
+| 7 | Nombres de las horas | **Se quedan** `llega`/`sale` y `recoge`/`deja` (1:1 con GTFS) | Rubén, 26/10 |
+| 8 | Hueco `reservas.fecha_servicio` | **Añadida** (`date`, no nulo) + índice `(usuario_id, fecha_servicio)` | Rubén, 26/10 |
+| 9 | Butaca bloqueada todos los días | **Corregido**: la clave de `asientos` incluye `fecha_servicio` | Rubén, 26/10 |
+| 10 | `feed` en las claves y tabla de `incidencias` | **Sí a los dos**: claves `(feed, id)` y tabla `incidencias` (§6.2) | Rubén, 26/10 |
 
-### 10.2 Abiertas (bloquean la migración)
+### 10.2 Abierta (la única que queda)
 
-5. **`tipo_servicio` (Rubén / Marina):** ¿lo deducimos del nombre de la ruta en el worker o lo
-   mantenemos a mano en una tabla pequeña? Propuesta: heurística en el worker y revisión manual.
-6. **Caducidad del QR (Rubén / Kevin):** ¿hasta el fin del día de servicio o unas horas después?
-7. **Nombre de las horas (Rubén):** he puesto `llega`/`sale` y `recoge`/`deja` en español.
-   Si prefieres `llegada`/`salida`, se cambia ahora y no después.
-8. **Campos del webhook (Kevin):** ¿`payment_intent_id` + `ultimo_evento_stripe` bastan para el
-   webhook en modo test, o Stripe exige algo más que haya que guardar?
+11. **Campos del webhook (Kevin):** ¿`payment_intent_id` + `ultimo_evento_stripe` bastan para el
+    webhook en modo test, o Stripe exige guardar algo más? Hoy `pagos` no guarda datos de tarjeta
+    (ni debe).
 
 ## 11. Próximos pasos
 
-1. Cerrar las preguntas de §10.2 (Rubén y Kevin).
-2. Primera migración: extensión `vector` + tablas de identidad y catálogo (§3 y §4).
-3. Después: reserva/pago/billete (§5) y Realtime (§6).
-4. Solo entonces, tipos compartidos y endpoints de [[endpoints]] contra nombres definitivos.
+1. Respuesta de Kevin a §10.2 → `modelo-datos` pasa a `estado: aceptado`.
+2. Primera migración: extensión `vector` + tablas de identidad y catálogo (§3, §4 y `incidencias`).
+3. Después: reserva/pago/billete (§5) y Realtime (§6.1).
+4. Solo entonces, tipos compartidos del frontend contra nombres definitivos.
+
+## 12. Historial de cambios
+
+- **2026-10-26 —** Integradas las respuestas de Alex (retención, un QR por butaca, sin histórico,
+  regla del webhook) y de Rubén (`tipo_servicio`, caducidad del QR, nombres de las horas).
+- **2026-10-26 —** Correcciones de Rubén aplicadas: `feed` en todas las claves de GTFS y en lo que
+  apunta a un viaje, `estaciones` unificadas con `estacion_feeds`, `reservas.fecha_servicio`,
+  `asientos` por viaje **y fecha** y tabla `incidencias`.
+- **2026-10-26 —** Borrador inicial (14 tablas) antes de la revisión del equipo.
