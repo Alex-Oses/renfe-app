@@ -20,13 +20,18 @@ tags: [handoff]
 - `main.ts` con `ValidationPipe` global, Swagger en `/docs` y `/docs-json`, y CORS desde entorno.
 - Tests: unitario del health controller y e2e (`GET /health` → 200). Verificado a mano con el
   servidor levantado en 3010: health 200, docs 200, cabecera CORS correcta para `localhost:5173`.
+- `common/auth/`: `SupabaseJwtGuard` (verifica HS256 contra `SUPABASE_JWT_SECRET` y expone
+  `request.usuario`), `RolesGuard` + `@Roles('revisor')`. 9 tests: token válido, sin cabecera,
+  firma ajena, caducado, sin secreto, y matriz de roles.
+- Contrato detallado de las 6 rutas de datos en [[endpoints]] (va en la rama
+  `docs/api-arquitectura-renfe`, no en esta).
 - Documentado en `backend/api/README.md` y `.env.example` (nuevas `NODE_ENV` y `CORS_ORIGINS`).
 - ADR-002 con las decisiones de base (Nest 12, sin ORM, contrato propio).
 
 ## Qué queda
 
-- **Rubén:** contrato detallado en [[endpoints]] (shapes de `/estaciones`, `/trenes`, `/incidencias`,
-  `/posiciones`) y luego F1/F2 cuando existan tablas.
+- **Rubén:** `/estaciones` y `/trenes` en cuanto haya tablas. El contrato ya está detallado en
+  [[endpoints]]; los guards de auth están listos.
 - **Marina:** migraciones de `estaciones`/`horarios` (y el worker). Sin esquema no hay `pg` ni F1.
 - **Kevin:** CI real con lint/test (el actual solo hace `pnpm install`), para que los PRs validen algo.
 
