@@ -2,20 +2,20 @@
 import type { BusquedaTrenes, Estacion, TipoTren, Tren } from "./tipos";
 
 export const ESTACIONES: Estacion[] = [
-  { id: "60000", nombre: "Madrid-Puerta de Atocha", ciudad: "Madrid" },
-  { id: "17000", nombre: "Madrid-Chamartín-Clara Campoamor", ciudad: "Madrid" },
-  { id: "71801", nombre: "Barcelona-Sants", ciudad: "Barcelona" },
-  { id: "65000", nombre: "València Joaquín Sorolla", ciudad: "Valencia" },
-  { id: "51003", nombre: "Sevilla-Santa Justa", ciudad: "Sevilla" },
-  { id: "50500", nombre: "Córdoba", ciudad: "Córdoba" },
-  { id: "54413", nombre: "Málaga María Zambrano", ciudad: "Málaga" },
-  { id: "04040", nombre: "Zaragoza-Delicias", ciudad: "Zaragoza" },
-  { id: "10600", nombre: "Valladolid Campo Grande", ciudad: "Valladolid" },
-  { id: "60911", nombre: "Alicante/Alacant", ciudad: "Alicante" },
-  { id: "05000", nombre: "Bilbao-Abando Indalecio Prieto", ciudad: "Bilbao" },
-  { id: "31412", nombre: "A Coruña", ciudad: "A Coruña" },
-  { id: "79300", nombre: "Girona", ciudad: "Girona" },
-  { id: "37606", nombre: "León", ciudad: "León" },
+  { id: "60000", nombre: "Madrid-Puerta de Atocha", ciudad: "Madrid", lat: 40.4066, lon: -3.6892 },
+  { id: "17000", nombre: "Madrid-Chamartín-Clara Campoamor", ciudad: "Madrid", lat: 40.4722, lon: -3.6825 },
+  { id: "71801", nombre: "Barcelona-Sants", ciudad: "Barcelona", lat: 41.3791, lon: 2.1404 },
+  { id: "65000", nombre: "València Joaquín Sorolla", ciudad: "Valencia", lat: 39.4594, lon: -0.3836 },
+  { id: "51003", nombre: "Sevilla-Santa Justa", ciudad: "Sevilla", lat: 37.3916, lon: -5.9756 },
+  { id: "50500", nombre: "Córdoba", ciudad: "Córdoba", lat: 37.8885, lon: -4.7899 },
+  { id: "54413", nombre: "Málaga María Zambrano", ciudad: "Málaga", lat: 36.7118, lon: -4.4325 },
+  { id: "04040", nombre: "Zaragoza-Delicias", ciudad: "Zaragoza", lat: 41.6587, lon: -0.9113 },
+  { id: "10600", nombre: "Valladolid Campo Grande", ciudad: "Valladolid", lat: 41.6449, lon: -4.729 },
+  { id: "60911", nombre: "Alicante/Alacant", ciudad: "Alicante", lat: 38.3442, lon: -0.4951 },
+  { id: "05000", nombre: "Bilbao-Abando Indalecio Prieto", ciudad: "Bilbao", lat: 43.2614, lon: -2.9268 },
+  { id: "31412", nombre: "A Coruña", ciudad: "A Coruña", lat: 43.3546, lon: -8.4097 },
+  { id: "79300", nombre: "Girona", ciudad: "Girona", lat: 41.979, lon: 2.817 },
+  { id: "37606", nombre: "León", ciudad: "León", lat: 42.593, lon: -5.58 },
 ];
 
 const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
@@ -75,4 +75,12 @@ export function buscarTrenes({ origen, destino, fecha }: BusquedaTrenes): Tren[]
 function iso(f: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${f.getFullYear()}-${p(f.getMonth() + 1)}-${p(f.getDate())}T${p(f.getHours())}:${p(f.getMinutes())}:00`;
+}
+
+// Los ids simulados son "<origen>-<destino>-<AAAA-MM-DD>-<n>": se regenera la búsqueda y se coge el tren.
+export function obtenerTren(id: string): Tren {
+  const [origen, destino, a, m, d] = id.split("-");
+  const tren = buscarTrenes({ origen, destino, fecha: `${a}-${m}-${d}` }).find((t) => t.id === id);
+  if (!tren) throw new Error("Ese tren no existe o ya no está a la venta.");
+  return tren;
 }

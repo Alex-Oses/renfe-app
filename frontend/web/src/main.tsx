@@ -1,35 +1,54 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
 import { usaDatosSimulados } from "./api/cliente";
+import { Cabecera } from "./componentes/Cabecera";
+import { ProveedorSesion } from "./estado/sesion";
 import { Inicio } from "./paginas/Inicio";
 import { Resultados } from "./paginas/Resultados";
-import "./estilos.css";
+import "./estilos/base.css";
+
+// Las páginas pesadas (mapa, cámara, QR) se cargan solo al entrar en ellas.
+const Reserva = lazy(() => import("./paginas/reserva/Reserva"));
+const MisBilletes = lazy(() => import("./paginas/MisBilletes"));
+const Billete = lazy(() => import("./paginas/Billete"));
+const Acceder = lazy(() => import("./paginas/Acceder"));
+const Cuenta = lazy(() => import("./paginas/Cuenta"));
+const Mapa = lazy(() => import("./paginas/Mapa"));
 
 function App() {
   return (
     <>
-      <header className="cabecera">
-        <div className="contenedor cabecera__fila">
-          <Link to="/" className="marca">
-            Andén
-          </Link>
-          <nav aria-label="Principal">
-            <Link to="/">Comprar billetes</Link>
-          </nav>
-        </div>
-      </header>
-      <main>
-        <Routes>
-          <Route path="/" element={<Inicio />} />
-          <Route path="/trenes" element={<Resultados />} />
-          <Route path="*" element={<p className="contenedor seccion">Esta página no existe. <Link to="/">Vuelve al inicio</Link>.</p>} />
-        </Routes>
+      <a className="saltar" href="#contenido">
+        Saltar al contenido
+      </a>
+      <Cabecera />
+      <main id="contenido">
+        <Suspense fallback={<p className="contenedor seccion cargando">Cargando…</p>}>
+          <Routes>
+            <Route path="/" element={<Inicio />} />
+            <Route path="/trenes" element={<Resultados />} />
+            <Route path="/reserva/:trenId" element={<Reserva />} />
+            <Route path="/billetes" element={<MisBilletes />} />
+            <Route path="/billetes/:id" element={<Billete />} />
+            <Route path="/acceder" element={<Acceder />} />
+            <Route path="/cuenta" element={<Cuenta />} />
+            <Route path="/mapa" element={<Mapa />} />
+            <Route
+              path="*"
+              element={
+                <p className="contenedor seccion">
+                  Esta página no existe. <Link to="/">Vuelve al inicio</Link>.
+                </p>
+              }
+            />
+          </Routes>
+        </Suspense>
       </main>
       <footer className="pie">
         <div className="contenedor">
           Proyecto académico (ASIX 2), sin relación con Renfe. Horarios basados en datos abiertos GTFS de Renfe (CC BY 4.0).
-          {usaDatosSimulados && " Ahora mismo los trenes y precios son simulados."}
+          {usaDatosSimulados && " Ahora mismo los trenes, precios, pagos y posiciones son simulados."}
         </div>
       </footer>
     </>
@@ -39,7 +58,9 @@ function App() {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <ProveedorSesion>
+        <App />
+      </ProveedorSesion>
     </BrowserRouter>
   </StrictMode>,
 );
