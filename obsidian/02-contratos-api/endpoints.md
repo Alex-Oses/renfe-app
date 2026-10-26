@@ -39,3 +39,12 @@ Estado: propuesto | implementado | cambiado (fecha)
 | GET | `/billetes/:id/qr` | QR firmado | propuesto |
 | POST | `/billetes/validar` | Revisor valida un QR | propuesto |
 | POST | `/chatbot/mensaje` | Mensaje al chatbot | propuesto |
+| GET | `/trenes/:tripId` | Detalle de un viaje con su retraso actual | propuesto |
+| GET | `/trenes/:tripId/posicion` | Última posición conocida del tren | propuesto |
+| GET | `/incidencias?feed=&linea=` | Avisos GTFS-RT | propuesto |
+| GET | `/posiciones?bbox=` | Posiciones para el mapa (alternativa al Realtime) | propuesto |
+
+> Añadidas el 2026-10-26 a partir de [`docs/arquitectura.md`](../../docs/arquitectura.md) §5. Detalle de
+> request/response **sin definir**: se escribe aquí antes de implementar.
+> Toda respuesta que venga de GTFS lleva `feed` (`cercanias` | `avld`).
+> `/posiciones` solo existe si se descarta el Realtime de Supabase (decisión abierta en §9).
