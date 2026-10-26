@@ -10,4 +10,7 @@
 /backend/face-service/    @keta372
 /docker-compose.yml       @keta372
 /.github/                 @keta372
+# Docs y vault sin dueño: basta la aprobación de cualquier compañero (los contratos sí tienen dueño)
+/docs/
+/obsidian/
 /obsidian/02-contratos-api/  @ruben-munoz-bl @maga369 @Alex-Oses

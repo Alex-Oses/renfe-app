@@ -87,6 +87,7 @@ Si después de `pnpm sync` la rama ya estaba subida: `git push --force-with-leas
 - 1 aprobación de CODEOWNERS + `CI / ok` + `PR / reglas` + conversaciones resueltas.
 - Quien abre el PR lo mergea tras la aprobación ("Squash and merge"). La rama se borra sola.
 - PRs pequeños: mejor 3 PRs de 150 líneas que uno de 450.
+- **PRs solo de documentación o vault** (`docs/`, `obsidian/`, PDF, Word, imágenes en `obsidian/adjuntos/`): no tienen dueño en CODEOWNERS: basta con que los apruebe cualquier compañero. Rama `docs/vault-<tema>` o `docs/docs-<tema>`.
 - Si cambias un contrato en `obsidian/02-contratos-api/`, CODEOWNERS pide revisión a Rubén, Marina y Alex.
 
 ## Fin de sprint (Alex, como PO)

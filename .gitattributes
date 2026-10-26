@@ -4,3 +4,12 @@
 *.jpg binary
 *.ttf binary
 *.bat text eol=crlf
+# Documentos y adjuntos del vault: binarios, sin conversión de finales de línea
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.zip binary
