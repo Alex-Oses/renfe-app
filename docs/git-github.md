@@ -2,7 +2,7 @@
 
 Usuario de GitHub: **Alex-Oses** · Repo: `Alex-Oses/renfe-app`
 
-Requisitos: Git for Windows (incluye Git Bash), Node 22 con `corepack enable`, y [GitHub CLI](https://cli.github.com/) (`winget install GitHub.cli`, luego `gh auth login`).
+Requisitos: Git for Windows (incluye Git Bash), Node 22 con `corepack enable`, y [GitHub CLI](https://cli.github.com/) (`winget install GitHub.cli`, luego `gh auth login` y `gh auth refresh -h github.com -s workflow`: sin el permiso `workflow` GitHub rechaza el push de `.github/workflows/`).
 
 ## 1. Crear el repositorio vacío
 
@@ -23,10 +23,10 @@ git add .
 git commit --no-verify -m "chore(infra): esqueleto inicial del monorepo"
 #            ^ única vez que se usa --no-verify: el hook no deja commitear en main
 git remote add origin https://github.com/Alex-Oses/renfe-app.git
-git push -u origin main
+HUSKY=0 git push -u origin main     # HUSKY=0 solo en este push inicial: el hook pre-push bloquea main/develop
 
 git switch -c develop
-git push -u origin develop
+HUSKY=0 git push -u origin develop
 ```
 
 ## 3. Configuración automática de GitHub
@@ -47,10 +47,12 @@ Hace todo esto:
 ## 4. Invitar al equipo
 
 ```bash
-gh api -X PUT repos/Alex-Oses/renfe-app/collaborators/USUARIO_RUBEN  -f permission=push
-gh api -X PUT repos/Alex-Oses/renfe-app/collaborators/USUARIO_MARINA -f permission=push
-gh api -X PUT repos/Alex-Oses/renfe-app/collaborators/USUARIO_KEVIN  -f permission=maintain
+gh api -X PUT repos/Alex-Oses/renfe-app/collaborators/ruben-munoz-bl -f permission=push
+gh api -X PUT repos/Alex-Oses/renfe-app/collaborators/maga369 -f permission=push
+gh api -X PUT repos/Alex-Oses/renfe-app/collaborators/keta372 -f permission=push
 ```
+
+En un repo de cuenta personal no existe el rol `maintain` (solo en organizaciones): Kevin entra con `push`.
 
 Comprueba que `.github/CODEOWNERS` tiene los usuarios correctos.
 
