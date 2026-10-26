@@ -15,7 +15,7 @@ tags: [handoff, supabase, base-datos]
 - CLI `supabase` añadida como **devDependency de la raíz** (versión fijada en `pnpm-lock.yaml`), más scripts `pnpm db:start | db:stop | db:reset | db:status` con `--workdir backend/database`.
 - Layout ordenado al estándar de la CLI: `migrations/` y `seed.sql` movidos a `backend/database/supabase/`. Cero cambios en el contrato.
 - `backend/database/README.md` y `docs/primeros-pasos.md` actualizados (ya no hay que instalar la CLI a mano); `.gitignore` apunta a las rutas nuevas.
-- Decisión registrada en [[ADR-002-supabase-local]].
+- Decisión registrada en [[ADR-003-supabase-local]].
 - **Validado de punta a punta** en una VM Linux de Azure (Docker Desktop está bloqueado en el portátil corporativo): `pnpm db:start` ✅, Supabase inicializado ✅, `seed.sql` aplicado ✅, Studio/API/PostgreSQL accesibles ✅ y `pnpm db:stop` ✅.
 
 ## Qué queda
@@ -35,4 +35,4 @@ Ninguno. [[modelo-datos]] sigue `estado: borrador` y sin tocar en esta rama.
 - `backend/database/README.md`
 - `backend/database/supabase/` (nuevo: `config.toml`, `.gitignore`, `migrations/`, `seed.sql`)
 - `package.json`, `pnpm-lock.yaml`, `.gitignore`, `docs/primeros-pasos.md`
-- `obsidian/03-decisiones/ADR-002-supabase-local.md`
+- `obsidian/03-decisiones/ADR-003-supabase-local.md`

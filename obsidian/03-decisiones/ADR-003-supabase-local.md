@@ -5,7 +5,10 @@ autor: Marina
 tags: [adr, supabase, base-datos]
 ---
 
-# ADR-002 — Supabase local: CLI como devDependency y layout `backend/database/supabase/`
+# ADR-003 — Supabase local: CLI como devDependency y layout `backend/database/supabase/`
+
+> Renumerado desde `ADR-002` el 26/10: el 002 lo ocupa [[ADR-002-web-primero-vercel-render]]
+> (web primero, API en Render). El contenido de esta decisión no ha cambiado.
 
 ## Contexto
 El Sprint 0 pide `supabase init` en `backend/database`. La CLI de Supabase no era

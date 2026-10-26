@@ -13,5 +13,5 @@ tags: [area]
 
 ## Notas técnicas
 - Supabase local inicializado: `backend/database/supabase/` (config, migraciones, seed).
-  CLI como devDependency; `pnpm db:start | db:stop | db:reset | db:status`. Ver [[ADR-002-supabase-local]].
+  CLI como devDependency; `pnpm db:start | db:stop | db:reset | db:status`. Ver [[ADR-003-supabase-local]].
 - `supabase start` necesita Docker Desktop abierto.
