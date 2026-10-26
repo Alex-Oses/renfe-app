@@ -1,0 +1,42 @@
+# Dependencias
+node_modules/
+.pnpm-store/
+__pycache__/
+*.pyc
+.venv/
+
+# Builds
+dist/
+build/
+.expo/
+web-build/
+coverage/
+
+# Entorno y secretos (NUNCA subir)
+.env
+.env.*
+!.env.example
+
+# Supabase local
+backend/database/.temp/
+backend/database/.branches/
+
+# Datos GTFS descargados
+backend/gtfs-worker/data/
+
+# Obsidian: se versionan las notas, no el estado personal de cada uno
+obsidian/.obsidian/workspace*.json
+obsidian/.obsidian/cache
+obsidian/.obsidian/plugins/*/data.json
+obsidian/.trash/
+
+# Claude Code: ajustes personales
+.claude/settings.local.json
+
+# Sistema / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

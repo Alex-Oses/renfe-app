@@ -1,0 +1,11 @@
+{
+  "name": "@renfe/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "description": "App Expo (placeholder: se sustituye al ejecutar create-expo-app)",
+  "scripts": {
+    "dev": "echo \"App sin crear todavía: ver frontend/mobile/README.md\"",
+    "lint": "echo \"sin lint todavía\"",
+    "test": "echo \"sin tests todavía\""
+  }
+}

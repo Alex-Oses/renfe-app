@@ -1,0 +1,13 @@
+# Revisores automáticos por carpeta.
+# Sustituye los @usuarios por los logins reales de GitHub de cada uno.
+# (Alex = Alex-Oses; el resto, pendiente)
+
+*                         @Alex-Oses
+/frontend/                @Alex-Oses
+/backend/api/             @ruben-munoz-bl
+/backend/database/        @maga369
+/backend/gtfs-worker/     @maga369
+/backend/face-service/    @keta372
+/docker-compose.yml       @keta372
+/.github/                 @keta372
+/obsidian/02-contratos-api/  @ruben-munoz-bl @maga369 @Alex-Oses
