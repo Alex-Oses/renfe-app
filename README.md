@@ -65,7 +65,7 @@ Subir el repo a GitHub por primera vez: [`docs/git-github.md`](docs/git-github.m
 
 | Persona | Rol | Área | IA que usa |
 |---|---|---|---|
-| Alex | Product Owner + Frontend | `frontend/` | Claude Code |
+| Alex | Product Owner + Frontend | `frontend/` | OpenCode |
 | Rubén | Backend + chatbot | `backend/api/` | OpenCode |
 | Marina | Scrum Master + Base de datos | `backend/database/`, `backend/gtfs-worker/` | OpenCode |
 | Kevin | DevOps + Stripe + face service | `docker-compose.yml`, `.github/`, `backend/face-service/` | OpenCode |
