@@ -1,0 +1,22 @@
+# Etiquetas automáticas por carpeta (actions/labeler v5). Mismos nombres que scripts/configurar-github.sh.
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: frontend/**
+api:
+  - changed-files:
+      - any-glob-to-any-file: backend/api/**
+database:
+  - changed-files:
+      - any-glob-to-any-file: backend/database/**
+gtfs:
+  - changed-files:
+      - any-glob-to-any-file: backend/gtfs-worker/**
+face:
+  - changed-files:
+      - any-glob-to-any-file: backend/face-service/**
+devops:
+  - changed-files:
+      - any-glob-to-any-file: [docker-compose.yml, .github/**, scripts/**]
+vault:
+  - changed-files:
+      - any-glob-to-any-file: obsidian/**

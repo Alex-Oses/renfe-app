@@ -1,0 +1,2 @@
+-- Datos de prueba (Marina). Vacío por ahora.
+-- Se cargará con: supabase db reset

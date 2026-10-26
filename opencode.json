@@ -1,0 +1,9 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    "obsidian/00-inicio/reglas-agentes.md",
+    "obsidian/01-estado/estado-equipo.md",
+    "obsidian/01-estado/sprint-actual.md"
+  ]
+}

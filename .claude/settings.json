@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/agent-context.mjs\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read(obsidian/**)",
+      "Edit(obsidian/**)",
+      "Bash(pnpm:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(node scripts/agent-context.mjs)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(**/.env)",
+      "Bash(git push --force:*)"
+    ]
+  }
+}

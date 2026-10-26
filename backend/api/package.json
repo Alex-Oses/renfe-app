@@ -1,0 +1,12 @@
+{
+  "name": "@renfe/api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "API NestJS (placeholder: se sustituye al ejecutar nest new)",
+  "scripts": {
+    "dev": "echo \"API sin crear todavía: ver backend/api/README.md\"",
+    "build": "echo \"sin build todavía\"",
+    "lint": "echo \"sin lint todavía\"",
+    "test": "echo \"sin tests todavía\""
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "renfe-app",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Monorepo de la app tipo Renfe (frontend Expo + backend NestJS/Supabase + vault Obsidian)",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "dev:mobile": "pnpm --filter @renfe/mobile dev",
+    "dev:api": "pnpm --filter @renfe/api dev",
+    "dev:worker": "pnpm --filter @renfe/gtfs-worker dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "contexto": "node scripts/agent-context.mjs",
+    "rama": "node scripts/nueva-rama.mjs",
+    "sync": "node scripts/sync-rama.mjs",
+    "validar-rama": "node scripts/validar-rama.mjs"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "husky": "^9.1.6"
+  }
+}
