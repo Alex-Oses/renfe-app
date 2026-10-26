@@ -78,6 +78,7 @@ export interface Billete {
   tren: Tren;
   asiento: Asiento;
   pasajero: Pasajero;
+  usuarioId?: string; // dueño del billete; sin sesión, undefined
   qr: string; // contenido firmado (Ed25519 en la API real); el frontend solo lo pinta
 }
 

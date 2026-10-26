@@ -1,0 +1,300 @@
+/* Acceder, Mi cuenta y cámara facial. */
+.acceso {
+  max-width: 30rem;
+  margin-inline: auto;
+}
+.acceso h1,
+.cuenta h1 {
+  color: var(--morado, #81005e);
+}
+.pestanas {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 999px;
+  background: var(--niebla, #eff3f6);
+}
+.pestanas button {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--grafito, #464646);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--dur-media, 240ms) var(--curva-salida, ease-out), color var(--dur-media, 240ms);
+}
+.pestanas button[aria-selected="true"] {
+  background: var(--blanco, #fff);
+  color: var(--morado, #81005e);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+}
+.formulario {
+  display: grid;
+  gap: 1rem;
+}
+.formulario .campo {
+  flex: none;
+}
+.campo input {
+  min-height: 44px;
+}
+.campo__error {
+  color: var(--frambuesa, #d62d61);
+  font-size: 0.85rem;
+  margin: 0;
+}
+.campo__clave {
+  position: relative;
+  display: flex;
+}
+.campo__clave input {
+  flex: 1;
+  padding-right: 3.25rem;
+}
+.campo__ver {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--gris, #6b6b6b);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.campo__ver svg,
+.icono {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.fuerza {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 0.35rem;
+}
+.fuerza span {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--linea, #ddd);
+  transition: background var(--dur-media, 240ms);
+}
+.fuerza[data-nivel="1"] span:nth-child(-n + 1) { background: var(--frambuesa, #d62d61); }
+.fuerza[data-nivel="2"] span:nth-child(-n + 2) { background: #c77700; }
+.fuerza[data-nivel="3"] span:nth-child(-n + 3),
+.fuerza[data-nivel="4"] span { background: #1d7a46; }
+.separador {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--gris, #6b6b6b);
+  font-size: 0.85rem;
+}
+.separador::before,
+.separador::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--linea, #ddd);
+}
+.boton {
+  min-height: 44px;
+}
+.boton--icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.aparece {
+  animation: aparece var(--dur-media, 240ms) var(--curva-salida, ease-out);
+}
+@keyframes aparece {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+/* Cámara */
+.camara {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: calc(var(--radio, 8px) * 2);
+  background: var(--niebla, #eff3f6);
+  text-align: center;
+  animation: aparece var(--dur-media, 240ms) var(--curva-salida, ease-out);
+}
+.camara__titulo {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.camara__visor {
+  position: relative;
+  width: min(15rem, 70vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--grafito, #464646);
+}
+.camara__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.camara__anillo {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.camara__anillo circle {
+  fill: none;
+  stroke-width: 3;
+}
+.camara__pista {
+  stroke: rgb(255 255 255 / 0.35);
+}
+.camara__visor--capturando .camara__pista,
+.camara__visor--cargando .camara__pista {
+  stroke: var(--frambuesa, #d62d61);
+  stroke-dasharray: 8 6;
+  animation: girar 6s linear infinite;
+  transform-origin: center;
+}
+.camara__barra {
+  stroke: var(--morado, #81005e);
+  stroke-width: 5 !important;
+  stroke-linecap: round;
+  transition: stroke-dasharray 120ms linear;
+}
+.camara__visor--exito .camara__barra {
+  stroke: #1d7a46;
+}
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+.camara__icono {
+  position: absolute;
+  inset: 25%;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  animation: aparece var(--dur-media, 240ms) var(--curva-salida, ease-out);
+}
+.camara__visor--exito { background: #1d7a46; }
+.camara__visor--error,
+.camara__visor--sin-permiso,
+.camara__visor--sin-camara { background: var(--frambuesa, #d62d61); }
+.camara__mensaje {
+  margin: 0;
+  font-weight: 600;
+  min-height: 1.5em;
+  max-width: 26rem;
+}
+.camara__progreso {
+  width: min(15rem, 70vw);
+  height: 6px;
+  border-radius: 3px;
+  background: var(--linea, #ddd);
+  overflow: hidden;
+}
+.camara__progreso span {
+  display: block;
+  height: 100%;
+  background: var(--morado, #81005e);
+  transition: width 120ms linear;
+}
+.camara__privacidad {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--gris, #6b6b6b);
+}
+.camara__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Mi cuenta */
+.cuenta {
+  max-width: 40rem;
+  margin-inline: auto;
+  display: grid;
+  gap: 1rem;
+}
+.tarjeta {
+  padding: 1.25rem;
+  border: 1px solid var(--linea, #ddd);
+  border-radius: calc(var(--radio, 8px) * 2);
+  background: var(--blanco, #fff);
+}
+.tarjeta h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+.tarjeta dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0;
+}
+.tarjeta dt { color: var(--gris, #6b6b6b); }
+.tarjeta dd { margin: 0; overflow-wrap: anywhere; }
+.etiqueta-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #e3f3ea;
+  color: #1d7a46;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.enlaces-cuenta {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+.enlaces-cuenta a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radio, 8px);
+  background: var(--niebla, #eff3f6);
+  color: var(--morado, #81005e);
+  font-weight: 600;
+  text-decoration: none;
+}
+.zona-salir {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--linea, #ddd);
+}
+.boton--peligro {
+  background: transparent;
+  color: var(--frambuesa, #d62d61);
+  border: 1px solid currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aparece,
+  .camara,
+  .camara__icono,
+  .camara__pista { animation: none !important; }
+  .camara__barra,
+  .camara__progreso span,
+  .pestanas button { transition: none; }
+}

@@ -40,7 +40,7 @@ async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise
 }
 
 // Simula la latencia de red para que los estados de carga se vean igual que con la API real.
-const simular = <T>(f: () => T, ms = 350): Promise<T> =>
+const simular = <T>(f: () => T | Promise<T>, ms = 350): Promise<T> =>
   new Promise((ok, ko) => setTimeout(() => (async () => f())().then(ok, ko), ms));
 
 // GET /estaciones?q=
@@ -69,7 +69,9 @@ export const crearIntentoPago = (reservaId: string): Promise<IntentoPago> =>
 
 // Simulado: en la API real lo confirma el webhook de Stripe (POST /pagos/webhook).
 export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
-  simular(() => reservas.confirmarPago(reservaId), 1200);
+  BASE
+    ? Promise.reject(new Error("Con la API real el pago lo confirma Stripe: falta conectar Stripe Elements."))
+    : simular(() => reservas.confirmarPago(reservaId), 1200);
 
 // GET /billetes
 export const misBilletes = (): Promise<Billete[]> =>
