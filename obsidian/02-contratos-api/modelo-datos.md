@@ -268,13 +268,13 @@ Es la tabla más grande del catálogo.
 | `estado` | `text` | no | `pendiente` \| `pagada` \| `cancelada` \| `caducada`, default `pendiente` |
 | `importe_centimos` | `integer` | no | `CHECK (>= 0)`; precio simulado |
 | `creada_en` | `timestamptz` | no | default `now()` |
-| `expira_en` | `timestamptz` | no | `CHECK (expira_en > creada_en)`; retención de butacas (propuesta: +15 min) |
+| `expira_en` | `timestamptz` | no | `CHECK (expira_en > creada_en)`; retención de butacas **+15 min** (aprobado por Alex, 26/10) |
 | `actualizada_en` | `timestamptz` | no | |
 
 **Diseño:** el estado `pendiente` es la **retención**: reserva creada, butacas bloqueadas,
-15 minutos para pagar. Si no se paga, la API la pasa a `caducada` y libera butacas
-(barrido al consultar + cron opcional). `importe_centimos` en enteros para no arrastrar floats
-con dinero; `centimos` explícito en el nombre.
+**15 minutos** para pagar (decidido: Alex, 26/10). Si no se paga, la API la pasa a `caducada` y
+libera butacas (barrido al consultar + cron opcional). `importe_centimos` en enteros para no
+arrastrar floats con dinero; `centimos` explícito en el nombre.
 Una reserva puede tener **varias butacas del mismo viaje** (familia): la relación es
 `asientos.reserva_id`.
 
@@ -302,6 +302,25 @@ puede repetir el mismo evento; `ultimo_evento_stripe` con `UNIQUE` lo hace idemp
 (`INSERT ... ON CONFLICT DO NOTHING`). El importe se copia para que un cambio de precio
 posterior no reescriba el histórico.
 
+#### Regla del webhook (decidido: Alex, 26/10)
+
+El webhook **no emite billetes porque llegue `payment_intent.succeeded`**. Antes de hacer nada
+comprueba, dentro de la misma transacción, el estado real de la reserva y su `expira_en`:
+
+| Situación al llegar el evento | Qué hace la API |
+|---|---|
+| `estado = 'pendiente'` y `expira_en > now()` | pago `exitoso` → reserva `pagada` → emite **un billete por butaca** |
+| `estado = 'pendiente'` y `expira_en <= now()` | reserva `caducada`, butacas liberadas, pago `reembolsado` (Stripe test) → **no emite billetes** |
+| `estado = 'pagada'` | evento repetido o pago duplicado: no hace nada (idempotente) |
+| `estado` es `cancelada` o `caducada` | pago `reembolsado` → **no emite billetes** |
+
+Motivo: entre que el usuario paga y llega el webhook pueden pasar segundos; si la retención ya
+caducó, las butacas pueden estar vendidas a otra persona. La regla evita billetes duplicados
+para la misma butaca (`billetes.asiento_id` es `UNIQUE`, así que el intento fallaría igualmente)
+y deja el dinero devuelto en lugar de una reserva fantasma.
+El barrido que caduca reservas y el webhook escriben las mismas filas: la transacción y el
+`UNIQUE (asiento_id)` son la red de seguridad.
+
 **RLS:** el dueño lee los pagos de sus reservas (vía `reservas.usuario_id`). Escritura solo
 `service_role` (y el webhook, que también usa `service_role`).
 **Índices:** `(reserva_id)`; `UNIQUE (payment_intent_id)`; unique parcial
@@ -321,8 +340,9 @@ posterior no reescriba el histórico.
 | `expira_en` | `timestamptz` | no | fin del día de servicio + margen |
 | `usado_en` | `timestamptz` | sí | |
 
-**Diseño:** **1 billete = 1 butaca = 1 viajero**. Una reserva de 3 plazas genera 3 billetes con
-3 QR distintos; es lo que espera un revisor y lo que permite anular uno sin tocar los demás.
+**Diseño:** **1 billete = 1 butaca = 1 viajero** (decidido: Alex, 26/10). Una reserva de 3 plazas
+genera 3 billetes con 3 QR distintos; es lo que espera un revisor y lo que permite anular uno sin
+tocar los demás.
 El contenido del QR (`{billete_id, viaje_id, usuario_id, exp}` firmado con Ed25519) **no se
 guarda**: solo la clave privada firma y la firma se verifica con la pública. Lo que manda es
 `estado` en BD: firma válida + estado `valido` = billete bueno.
@@ -369,8 +389,8 @@ Escritura solo `service_role`.
 
 **Diseño:** **una fila por viaje** (upsert), no un histórico. El mapa necesita el estado actual y
 Realtime manda un payload pequeño; si se insertara cada posición, el canal escupiría miles de
-eventos por minuto. Histórico (`posiciones_historial`, retención 24 h) solo si el mapa necesita
-estelas — **fuera de alcance**.
+eventos por minuto. **Sin histórico de posiciones** (decidido: Alex, 26/10): nada de
+`posiciones_historial` ni de estela en el mapa.
 El payload del canal respeta [[eventos-realtime]]: `{ viaje_id, lat, lon, retraso_seg, actualizado }`;
 `rumbo`, `velocidad_kmh` y `proxima_estacion_id` son **opcionales** y no rompen el contrato.
 
@@ -428,22 +448,30 @@ nada que no toque.
 | Fotos de usuario | Prohibido: solo embeddings |
 | PostGIS | No hay consultas geográficas; Realtime solo pinta puntos |
 
-## 10. Preguntas abiertas (para cerrar el contrato)
+## 10. Preguntas del contrato
 
-1. **`tipo_servicio` (Rubén / Marina):** ¿lo deducimos del nombre de la ruta en el worker o lo
+### 10.1 Resueltas
+
+| # | Pregunta | Decisión | Quién / cuándo |
+|---|---|---|---|
+| 1 | Retención de butaca | **15 minutos** | Alex, 26/10 |
+| 2 | ¿Un QR por butaca o por reserva? | **Uno por butaca** (1 billete = 1 butaca = 1 viajero) | Alex, 26/10 |
+| 3 | ¿Histórico de posiciones para la estela del mapa? | **No**: solo posición actual | Alex, 26/10 |
+| 4 | ¿Qué hace el webhook si la reserva ya caducó? | **Comprueba `expira_en` antes de emitir billetes**; si caducó, reembolso y sin billetes (§5.3) | Alex, 26/10 |
+
+### 10.2 Abiertas (bloquean la migración)
+
+5. **`tipo_servicio` (Rubén / Marina):** ¿lo deducimos del nombre de la ruta en el worker o lo
    mantenemos a mano en una tabla pequeña? Propuesta: heurística en el worker y revisión manual.
-2. **Retención de butacas (Alex / Rubén):** ¿15 minutos es suficiente para el flujo de pago de la
-   app? Afecta a `reservas.expira_en`.
-3. **Un billete por butaca o por reserva (Alex):** propuesta 1:1 con la butaca. Si el grupo quiere
-   un solo QR para toda la reserva, cambia §5.4.
-4. **Caducidad del QR (Rubén / Kevin):** ¿hasta el fin del día de servicio o unas horas después?
-5. **Histórico de posiciones (Alex):** ¿hace falta estela en el mapa o basta el punto actual?
-6. **Nombre de las horas (Rubén):** he puesto `llega`/`sale` y `recoge`/`deja` en español.
+6. **Caducidad del QR (Rubén / Kevin):** ¿hasta el fin del día de servicio o unas horas después?
+7. **Nombre de las horas (Rubén):** he puesto `llega`/`sale` y `recoge`/`deja` en español.
    Si prefieres `llegada`/`salida`, se cambia ahora y no después.
+8. **Campos del webhook (Kevin):** ¿`payment_intent_id` + `ultimo_evento_stripe` bastan para el
+   webhook en modo test, o Stripe exige algo más que haya que guardar?
 
 ## 11. Próximos pasos
 
-1. Cerrar las preguntas de §10.
+1. Cerrar las preguntas de §10.2 (Rubén y Kevin).
 2. Primera migración: extensión `vector` + tablas de identidad y catálogo (§3 y §4).
 3. Después: reserva/pago/billete (§5) y Realtime (§6).
 4. Solo entonces, tipos compartidos y endpoints de [[endpoints]] contra nombres definitivos.
