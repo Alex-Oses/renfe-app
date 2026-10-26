@@ -23,9 +23,8 @@ tags: [handoff]
 
 ## Qué queda
 
-- **Rubén:** `nest new` en `backend/api`; añadir a [[endpoints]] `/incidencias`, `/trenes/:tripId`,
-  `/trenes/:tripId/posicion`, `/posiciones` y el campo `feed`; ADR-002 "el worker es la única entrada
-  de datos Renfe". Después, `/estaciones` y búsqueda directa.
+- **Rubén:** contrato detallado ✅ (ver [[endpoints]]). Siguiente: guard de JWT y, en cuanto haya
+  tablas, `/estaciones` y `/trenes`.
 - **Marina:** import GTFS estático idempotente y worker GTFS-RT (ver §4 y §7 de `docs/arquitectura.md`).
   Empezar verificando que los `tripId` de AVE/LD casan con `trips.txt` al quitar la fecha.
 
@@ -37,8 +36,10 @@ tags: [handoff]
 
 ## Cambios en contratos
 
-- [[endpoints]]: 4 rutas nuevas en estado `propuesto` (`/trenes/:tripId`, `/trenes/:tripId/posicion`,
-  `/incidencias`, `/posiciones`) y la nota del campo `feed`. Sin request/response todavía.
+- [[endpoints]]: catálogo completo y **contrato detallado** de las 6 rutas de datos (`/estaciones`,
+  `/trenes`, `/trenes/:feed/:tripId`, `/trenes/:feed/:tripId/posicion`, `/incidencias`, `/posiciones`),
+  con convenciones (sobres, fechas con offset, `feed`, errores) y la sección de autenticación.
+  Renombradas las rutas de viaje a `/trenes/:feed/:tripId` para no meter ids compuestos en la URL.
 - [[modelo-datos]]: sin tocar (es de Marina); el worker necesitará las tablas `gtfs_*` y `rt_*`.
 
 ## Ficheros tocados
