@@ -1,4 +1,4 @@
-import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PosicionesService } from './posiciones.service.js';
@@ -62,6 +62,7 @@ describe('PosicionesService', () => {
         rumbo: null,
         velocidadKmh: null,
         estado: 'IN_TRANSIT_TO',
+        paradaActual: null,
         retrasoSeg: null,
         actualizado: ISO,
       },
@@ -182,6 +183,42 @@ describe('PosicionesService', () => {
 
     expect(datos).toHaveLength(1);
     expect(datos[0].retrasoSeg).toBeNull();
+  });
+
+  it('devuelve la posición de un viaje concreto por su tripId', async () => {
+    responder({
+      [URL_AVLD]: feed([entidad({ stopId: '04007' })]),
+      [URL_RETRASOS_AVLD]: retrasos('0309312026-10-26', 120),
+    });
+    const servicio = new PosicionesService(config());
+
+    const posicion = await servicio.posicionDe('avld', '0309312026-10-26');
+
+    expect(posicion).toMatchObject({
+      tripId: '0309312026-10-26',
+      paradaActual: '04007',
+      retrasoSeg: 120,
+    });
+  });
+
+  it('no confunde el mismo tripId de dos feeds distintos', async () => {
+    responder({
+      [URL_AVLD]: feed([entidad()]),
+      [URL_CERCANIAS]: feed([entidad()]),
+    });
+    const servicio = new PosicionesService(config());
+
+    const posicion = await servicio.posicionDe('cercanias', '0309312026-10-26');
+
+    expect(posicion.feed).toBe('cercanias');
+  });
+
+  it('responde 404 si el viaje no está circulando', async () => {
+    responder({ [URL_AVLD]: feed([entidad()]), [URL_CERCANIAS]: feed([]) });
+
+    await expect(
+      new PosicionesService(config()).posicionDe('avld', 'no-existe'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('no vuelve a descargar dentro del intervalo de sondeo', async () => {

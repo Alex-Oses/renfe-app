@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FEEDS, type Feed } from '../../common/gtfs/feeds.js';
 import { instanteAIso } from '../../common/gtfs/tiempo.js';
@@ -13,6 +13,7 @@ export interface Posicion {
   rumbo: number | null;
   velocidadKmh: number | null;
   estado: string | null;
+  paradaActual: string | null;
   retrasoSeg: number | null;
   actualizado: string;
 }
@@ -24,6 +25,7 @@ interface FeedRtJson {
       trip?: { tripId?: string };
       position?: { latitude?: number; longitude?: number; bearing?: number; speed?: number };
       currentStatus?: string;
+      stopId?: string;
       vehicle?: { id?: string };
     };
   }[];
@@ -85,6 +87,17 @@ export class PosicionesService {
     };
   }
 
+  /**
+   * Última posición conocida de un viaje. El `tripId` de GTFS-RT es el `trip_id` del GTFS estático,
+   * así que se busca tal cual: no hay que cruzarlo con nada.
+   */
+  async posicionDe(feed: Feed, tripId: string): Promise<Posicion> {
+    const { datos } = await this.instantaneaActual();
+    const posicion = datos.find((candidata) => candidata.feed === feed && candidata.tripId === tripId);
+    if (!posicion) throw new NotFoundException('Ese viaje no está circulando ahora');
+    return posicion;
+  }
+
   /** Snapshot en memoria: se refresca como mucho cada `TTL`, y una sola descarga a la vez. */
   private async instantaneaActual(): Promise<Instantanea> {
     if (this.instantanea && Date.now() < this.instantanea.expira) return this.instantanea;
@@ -142,6 +155,7 @@ export class PosicionesService {
         rumbo: posicion.bearing === undefined ? null : Math.round(posicion.bearing),
         velocidadKmh: posicion.speed === undefined ? null : Math.round(posicion.speed * 3.6),
         estado: vehicle.currentStatus ?? null,
+        paradaActual: vehicle.stopId ?? null,
         // Puede ser negativo: el tren va adelantado, no es un dato inválido.
         retrasoSeg: retrasos.get(vehicle.trip.tripId) ?? null,
         actualizado,
