@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FEEDS, type Feed } from '../../common/gtfs/feeds.js';
 import { instanteAIso } from '../../common/gtfs/tiempo.js';
-import { FEEDS_RT, type FeedRt, type PosicionesDto } from './dto/posiciones.dto.js';
+import type { PosicionesDto } from './dto/posiciones.dto.js';
 
 export interface Posicion {
-  feed: FeedRt;
+  feed: Feed;
   vehicleId: string | null;
   tripId: string;
   lat: number;
@@ -34,7 +35,7 @@ interface Instantanea {
   expira: number;
 }
 
-const URLS: Record<FeedRt, string> = {
+const URLS: Record<Feed, string> = {
   avld: 'https://gtfsrt.renfe.com/vehicle_positions_LD.json',
   cercanias: 'https://gtfsrt.renfe.com/vehicle_positions.json',
 };
@@ -99,7 +100,7 @@ export class PosicionesService {
     }
   }
 
-  private async descargar(feed: FeedRt, url: string): Promise<{ datos: Posicion[]; actualizado: string }> {
+  private async descargar(feed: Feed, url: string): Promise<{ datos: Posicion[]; actualizado: string }> {
     const respuesta = await fetch(url, { signal: AbortSignal.timeout(ESPERA_MAXIMA_MS) });
     if (!respuesta.ok) throw new Error(`${feed}: HTTP ${respuesta.status}`);
 
@@ -135,9 +136,9 @@ export class PosicionesService {
   }
 
   /** Pares feed→URL de los feeds configurados. Una variable vacía desactiva ese feed. */
-  private fuentes(): [FeedRt, string][] {
-    return FEEDS_RT.map(
-      (feed): [FeedRt, string] => [
+  private fuentes(): [Feed, string][] {
+    return FEEDS.map(
+      (feed): [Feed, string] => [
         feed,
         this.config.get<string>(`GTFS_RT_URL_${feed.toUpperCase()}`) || URLS[feed],
       ],

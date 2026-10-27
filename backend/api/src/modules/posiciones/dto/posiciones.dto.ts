@@ -1,8 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, Matches } from 'class-validator';
-
-export const FEEDS_RT = ['avld', 'cercanias'] as const;
-export type FeedRt = (typeof FEEDS_RT)[number];
+import { FEEDS, type Feed } from '../../../common/gtfs/feeds.js';
 
 export class PosicionesDto {
   @ApiPropertyOptional({
@@ -15,8 +13,8 @@ export class PosicionesDto {
   })
   bbox?: string;
 
-  @ApiPropertyOptional({ enum: FEEDS_RT })
+  @ApiPropertyOptional({ enum: FEEDS })
   @IsOptional()
-  @IsIn(FEEDS_RT)
-  feed?: FeedRt;
+  @IsIn(FEEDS)
+  feed?: Feed;
 }
