@@ -57,7 +57,7 @@ Estado: propuesto | implementado | cambiado (fecha)
 | GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | propuesto · **detallado** |
 | GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | propuesto · **detallado** |
 | GET | `/incidencias?feed=&linea=` | Avisos GTFS-RT | propuesto · **detallado** |
-| GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa (alternativa al Realtime) | propuesto · **detallado** |
+| GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa (alternativa al Realtime) | **implementado** · **detallado** |
 | GET | `/health` | Estado del servicio (infra) | implementado |
 | POST | `/auth/registro` | Alta de usuario | propuesto |
 | POST | `/auth/login` | Login email/contraseña | propuesto |
@@ -320,9 +320,26 @@ Response 200:
 }
 ```
 
-Errores: `400` `bbox` mal formada · `503` BD caída.
+Errores: `400` `bbox` mal formada o con los mínimos al revés · `503` Renfe no responde **y** no hay
+datos previos.
 
-Notas: `bbox` es obligatoria si hay más de 500 posiciones; sin ella se devuelven todas (hoy ~540).
+Notas:
+
+- `bbox` es siempre opcional. Hoy el feed completo son ~500 posiciones (210 AVE/LD + 298
+  Cercanías), así que la regla de «obligatoria si hay más de 500» no se aplica.
+- La API **sondea Renfe cada `GTFS_RT_POLL_SECONDS` (30 s por defecto) en memoria**, sin worker y
+  sin BD: `/posiciones` funciona aunque Supabase esté caído. Las dos peticiones del intervalo se
+  agrupan en una sola descarga.
+- Si Renfe falla, se sigue sirviendo el último snapshot bueno y `actualizado` deja de avanzar. Solo
+  hay `503` si nunca se ha podido leer.
+- `actualizado` es el del feed **más antiguo** de los dos: es el que se queda corto.
+- `rumbo` y `velocidadKmh` son `null` **siempre** hoy: el feed JSON de Renfe no publica ni `bearing`
+  ni `speed`. `retrasoSeg` es `null` porque el retraso vive en `trip_updates`, que no se lee.
+- Un mismo `vehicleId` aparece varias veces con `tripId` distintos (un tren encadenando viajes): no
+  se deduplica, cada fila es un viaje.
+- `tripId` es el de GTFS-RT tal cual (`0029112026-10-27`), que **no coincide** con el `trip_id` del
+  GTFS estático (`3097L23537C1`): no se puede cruzar con `viajes` por id. Para el mapa da igual;
+  para `/trenes/:feed/:tripId/posicion` es un bloqueo.
 
 ## Pendientes de detallar
 

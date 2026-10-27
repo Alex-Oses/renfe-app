@@ -4,6 +4,7 @@ import { BdModule } from './common/bd/bd.module.js';
 import { validarEntorno } from './config/entorno.js';
 import { EstacionesModule } from './modules/estaciones/estaciones.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { PosicionesModule } from './modules/posiciones/posiciones.module.js';
 import { TrenesModule } from './modules/trenes/trenes.module.js';
 
 @Module({
@@ -13,6 +14,7 @@ import { TrenesModule } from './modules/trenes/trenes.module.js';
     HealthModule,
     EstacionesModule,
     TrenesModule,
+    PosicionesModule,
   ],
 })
 export class AppModule {}
