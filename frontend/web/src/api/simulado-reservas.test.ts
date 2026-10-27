@@ -39,4 +39,17 @@ describe("reservas simuladas", () => {
     expect(billetes).toHaveLength(2);
     expect(JSON.parse(obtenerBillete(billetes[0].id).qr)).toMatchObject({ loc: r.localizador, firma: "simulada" });
   });
+
+  it("cobra según tarifa, tipo de viajero y extras", () => {
+    const [a, b] = obtenerAsientos(tren.id).filter((x) => x.libre && x.clase === "Estándar");
+    const r = crearReserva({
+      trenId: tren.id,
+      asientos: [a.id, b.id],
+      pasajeros: [viajero, { ...viajero, tipo: "nino" }],
+      tarifa: "elige",
+      extras: ["equipaje"],
+    });
+    expect(r.total).toBeCloseTo(a.precio * 1.25 + b.precio * 1.25 * 0.6 + 15, 2);
+    expect(r.tarifa).toBe("elige");
+  });
 });

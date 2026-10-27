@@ -3,13 +3,25 @@ import { useNavigate } from "react-router-dom";
 import { ESTACIONES } from "../api/simulado";
 import { Desplegable } from "./Desplegable";
 import { SelectorNumero } from "./ui/SelectorNumero";
+import { DESCUENTOS } from "../api/simulado-precios";
+import type { IdDescuento } from "../api/tipos";
+import "./buscador.css";
 
 const porNombre = (nombre: string) => ESTACIONES.find((e) => e.nombre === nombre.trim());
 const hoy = () => new Date().toISOString().slice(0, 10);
-const textoPasajeros = (n: number) => `${n} ${n === 1 ? "pasajero" : "pasajeros"}`;
+const contar = (uno: string, varios: string) => (n: number) => `${n} ${n === 1 ? uno : varios}`;
+export const CLAVE_DESCUENTO = "anden-descuento";
+// Descuento guardado en la cuenta (Cuenta > Tarjetas y descuentos), solo como valor por defecto.
+export function descuentoGuardado(): IdDescuento {
+  try {
+    return (localStorage.getItem(CLAVE_DESCUENTO) as IdDescuento | null) ?? "ninguno";
+  } catch {
+    return "ninguno";
+  }
+}
 
 interface Props {
-  inicial?: { origen?: string; destino?: string; fecha?: string; pasajeros?: number };
+  inicial?: { origen?: string; destino?: string; fecha?: string; vuelta?: string; pasajeros?: number; ninos?: number; bebes?: number; descuento?: string };
   compacto?: boolean;
 }
 
@@ -19,7 +31,13 @@ export function Buscador({ inicial, compacto }: Props) {
   const [origen, setOrigen] = useState(nombreDe(inicial?.origen));
   const [destino, setDestino] = useState(nombreDe(inicial?.destino));
   const [fecha, setFecha] = useState(inicial?.fecha ?? hoy());
-  const [pasajeros, setPasajeros] = useState(inicial?.pasajeros ?? 1);
+  const [vuelta, setVuelta] = useState(inicial?.vuelta ?? "");
+  const [idaVuelta, setIdaVuelta] = useState(!!inicial?.vuelta);
+  // "pasajeros" en la URL son las plazas (adultos + niños); los bebés van en brazos.
+  const [ninos, setNinos] = useState(inicial?.ninos ?? 0);
+  const [adultos, setAdultos] = useState(Math.max((inicial?.pasajeros ?? 1) - (inicial?.ninos ?? 0), 1));
+  const [bebes, setBebes] = useState(inicial?.bebes ?? 0);
+  const [descuento, setDescuento] = useState<string>(inicial?.descuento ?? descuentoGuardado());
   const [giro, setGiro] = useState(0);
   const [error, setError] = useState("");
 
@@ -29,8 +47,16 @@ export function Buscador({ inicial, compacto }: Props) {
     const d = porNombre(destino);
     if (!o || !d) return setError("Elige el origen y el destino de la lista de estaciones.");
     if (o.id === d.id) return setError("El origen y el destino tienen que ser estaciones distintas.");
+    if (idaVuelta && (!vuelta || vuelta < fecha)) return setError("La fecha de vuelta tiene que ser igual o posterior a la de ida.");
+    if (adultos + ninos > 9) return setError("Como máximo 9 viajeros con asiento por compra.");
+    if (bebes > adultos) return setError("Cada bebé tiene que viajar con un adulto.");
     setError("");
-    navegar(`/trenes?${new URLSearchParams({ origen: o.id, destino: d.id, fecha, pasajeros: String(pasajeros) })}`);
+    const q = new URLSearchParams({ origen: o.id, destino: d.id, fecha, pasajeros: String(adultos + ninos) });
+    if (idaVuelta) q.set("vuelta", vuelta);
+    if (ninos) q.set("ninos", String(ninos));
+    if (bebes) q.set("bebes", String(bebes));
+    if (descuento !== "ninguno") q.set("descuento", descuento);
+    navegar(`/trenes?${q}`);
   }
 
   function intercambiar() {
@@ -52,12 +78,39 @@ export function Buscador({ inicial, compacto }: Props) {
         <Desplegable etiqueta="Hasta" texto={destino} onTexto={setDestino} placeholder="Estación de destino" />
       </div>
 
+      <div className="buscador__modo" role="radiogroup" aria-label="Tipo de viaje">
+        <button type="button" role="radio" className="chip" aria-checked={!idaVuelta} onClick={() => setIdaVuelta(false)}>
+          Solo ida
+        </button>
+        <button type="button" role="radio" className="chip" aria-checked={idaVuelta} onClick={() => setIdaVuelta(true)}>
+          Ida y vuelta
+        </button>
+      </div>
+
       <div className="buscador__pie">
         <label className="campo">
           <span>Fecha de ida</span>
           <input type="date" value={fecha} min={hoy()} onChange={(e) => setFecha(e.target.value)} required />
         </label>
-        <SelectorNumero etiqueta="Pasajeros" valor={pasajeros} min={1} max={9} onCambio={setPasajeros} texto={textoPasajeros} />
+        {idaVuelta && (
+          <label className="campo">
+            <span>Fecha de vuelta</span>
+            <input type="date" value={vuelta} min={fecha} onChange={(e) => setVuelta(e.target.value)} required />
+          </label>
+        )}
+        <SelectorNumero etiqueta="Adultos" valor={adultos} min={1} max={9} onCambio={setAdultos} texto={contar("adulto", "adultos")} />
+        <SelectorNumero etiqueta="Niños (4-13)" valor={ninos} min={0} max={8} onCambio={setNinos} texto={contar("niño", "niños")} />
+        <SelectorNumero etiqueta="Bebés (0-3)" valor={bebes} min={0} max={4} onCambio={setBebes} texto={contar("bebé", "bebés")} />
+        <label className="campo campo--select">
+          <span>Tarjeta o descuento</span>
+          <select value={descuento} onChange={(e) => setDescuento(e.target.value)}>
+            {DESCUENTOS.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
         <button type="submit" className="boton">Buscar trenes</button>
       </div>
       {error && (

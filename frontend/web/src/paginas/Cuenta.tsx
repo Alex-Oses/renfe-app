@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { registrarCara } from "../api/cliente";
+import { misBilletes, registrarCara } from "../api/cliente";
+import { DESCUENTOS } from "../api/simulado-precios";
+import { CLAVE_DESCUENTO, descuentoGuardado } from "../componentes/Buscador";
 import { useSesion } from "../estado/sesion";
 import { CamaraFacial } from "./cuenta/CamaraFacial";
 import "./cuenta/cuenta.css";
@@ -8,6 +10,20 @@ import "./cuenta/cuenta.css";
 export default function Cuenta() {
   const { sesion, salir, actualizarUsuario } = useSesion();
   const [camara, setCamara] = useState(false);
+  const [descuento, setDescuento] = useState(descuentoGuardado);
+  const [puntos, setPuntos] = useState<number | null>(null);
+  useEffect(() => {
+    // shortcut: 1 punto por euro de asiento, calculado en el navegador; la API real los guardará.
+    misBilletes().then((bs) => setPuntos(Math.floor(bs.reduce((s, b) => s + b.asiento.precio, 0))), () => setPuntos(0));
+  }, []);
+  const guardarDescuento = (v: string) => {
+    setDescuento(v as typeof descuento);
+    try {
+      localStorage.setItem(CLAVE_DESCUENTO, v);
+    } catch {
+      /* sin almacenamiento: vale solo para esta visita */
+    }
+  };
 
   if (!sesion) return <Navigate to="/acceder?volver=/cuenta" replace />;
   const { usuario } = sesion;
@@ -24,6 +40,30 @@ export default function Cuenta() {
           <dt>Email</dt>
           <dd>{usuario.email}</dd>
         </dl>
+      </section>
+
+      <section className="tarjeta" aria-labelledby="cuenta-tarjetas">
+        <h2 id="cuenta-tarjetas">Tarjetas y descuentos</h2>
+        <p>El buscador usará este descuento por defecto. Llévalo encima al viajar: el interventor puede pedírtelo.</p>
+        <label className="campo campo--select cuenta__descuento">
+          <span>Tu tarjeta o descuento</span>
+          <select value={descuento} onChange={(e) => guardarDescuento(e.target.value)}>
+            {DESCUENTOS.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nombre}
+                {d.pct ? ` (−${d.pct} %)` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
+
+      <section className="tarjeta" aria-labelledby="cuenta-puntos">
+        <h2 id="cuenta-puntos">Tus puntos</h2>
+        <p className="cuenta__puntos">
+          <strong>{puntos === null ? "…" : puntos}</strong> puntos
+        </p>
+        <p>Sumas un punto por cada euro de tus billetes. Es una simulación: todavía no se pueden canjear.</p>
       </section>
 
       <section className="tarjeta" aria-labelledby="cuenta-cara">

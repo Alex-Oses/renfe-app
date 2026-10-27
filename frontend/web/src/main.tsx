@@ -1,8 +1,9 @@
 import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Link, Route, Routes } from "react-router-dom";
-import { usaDatosSimulados } from "./api/cliente";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Cabecera } from "./componentes/Cabecera";
+import { Pie } from "./componentes/Pie";
+import { ProveedorAvisos } from "./estado/avisos";
 import { ProveedorSesion } from "./estado/sesion";
 import { Inicio } from "./paginas/Inicio";
 import { Resultados } from "./paginas/Resultados";
@@ -16,6 +17,9 @@ const Billete = lazy(() => import("./paginas/Billete"));
 const Acceder = lazy(() => import("./paginas/Acceder"));
 const Cuenta = lazy(() => import("./paginas/Cuenta"));
 const Mapa = lazy(() => import("./paginas/Mapa"));
+const MisLineas = lazy(() => import("./paginas/MisLineas"));
+// Cualquier otra ruta: página de contenido (o 404 si no existe).
+const PaginaContenido = lazy(() => import("./paginas/PaginaContenido"));
 
 function App() {
   return (
@@ -35,23 +39,12 @@ function App() {
             <Route path="/acceder" element={<Acceder />} />
             <Route path="/cuenta" element={<Cuenta />} />
             <Route path="/mapa" element={<Mapa />} />
-            <Route
-              path="*"
-              element={
-                <p className="contenedor seccion">
-                  Esta página no existe. <Link to="/">Vuelve al inicio</Link>.
-                </p>
-              }
-            />
+            <Route path="/lineas" element={<MisLineas />} />
+            <Route path="*" element={<PaginaContenido />} />
           </Routes>
         </Suspense>
       </main>
-      <footer className="pie">
-        <div className="contenedor">
-          Proyecto académico (ASIX 2), sin relación con Renfe. Horarios basados en datos abiertos GTFS de Renfe (CC BY 4.0).
-          {usaDatosSimulados && " Ahora mismo los trenes, precios, pagos y posiciones son simulados."}
-        </div>
-      </footer>
+      <Pie />
     </>
   );
 }
@@ -60,7 +53,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <ProveedorSesion>
-        <App />
+        <ProveedorAvisos>
+          <App />
+        </ProveedorAvisos>
       </ProveedorSesion>
     </BrowserRouter>
   </StrictMode>,

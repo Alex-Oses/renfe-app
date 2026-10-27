@@ -232,12 +232,11 @@
   border: 0;
 }
 
-.tren-marca__flecha {
+.tren-marca__dibujo {
   position: absolute;
   inset: 3px;
   display: grid;
   place-items: center;
-  color: var(--c);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
@@ -273,6 +272,137 @@
   .tren-marca--activa .tren-marca__anillo {
     animation: none;
   }
+}
+
+/* Estaciones y etiquetas */
+.estacion-marca {
+  background: none;
+  border: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.leaflet-tooltip.estacion-etiqueta,
+.leaflet-tooltip.parada-etiqueta {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.92);
+  color: #464646;
+  font-weight: 600;
+  font-size: 0.78rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-tooltip.parada-etiqueta--pasada {
+  opacity: 0.6 !important;
+  font-weight: 400;
+}
+
+/* Leyenda plegable sobre el mapa */
+.mapa-leyenda {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 500;
+  max-width: 220px;
+  padding: 0 14px;
+  font-size: 0.85rem;
+}
+
+.mapa-leyenda summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.mapa-leyenda summary:focus-visible {
+  outline: 3px solid #d62d61;
+  outline-offset: 2px;
+}
+
+.mapa-leyenda ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.mapa-leyenda li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mapa-leyenda__icono {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 36px;
+  flex: none;
+}
+
+.mapa-leyenda__estacion {
+  height: 22px;
+  border-radius: 6px;
+  background: #464646;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.mapa-leyenda__linea {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  flex: none;
+}
+
+/* Paradas del tren elegido */
+.mapa-paradas {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.mapa-parada {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.mapa-parada--pasada {
+  opacity: 0.55;
+}
+
+.mapa-parada__punto {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: 3px solid;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.mapa-parada__info {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.mapa-parada__aviso {
+  min-height: 44px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.mapa-parada__aviso--activo {
+  background: #81005e;
+  color: #fff;
 }
 
 /* Móvil: mapa a pantalla y la lista como hoja inferior. */
