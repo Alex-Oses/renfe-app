@@ -18,12 +18,12 @@ gh api -X PATCH "repos/$REPO" \
   -f squash_merge_commit_message=PR_BODY >/dev/null
 echo "✔ Ajustes generales"
 
-# 2. Protección de ramas (main y develop)
+# 2. Protección de ramas (main y develop). Los checks se llaman por el id del job: ci.yml → ok, pr.yml → reglas
 proteger() {
   local rama="$1" aprobaciones="$2"
   gh api -X PUT "repos/$REPO/branches/$rama/protection" --input - >/dev/null <<JSON
 {
-  "required_status_checks": { "strict": true, "contexts": ["CI / ok", "PR / reglas"] },
+  "required_status_checks": { "strict": true, "contexts": ["ok", "reglas"] },
   "enforce_admins": false,
   "required_pull_request_reviews": {
     "required_approving_review_count": $aprobaciones,
