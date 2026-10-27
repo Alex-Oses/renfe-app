@@ -21,7 +21,7 @@ export function EntradaTren() {
       const recorrido = r.height - innerHeight;
       const p = recorrido > 0 ? Math.min(1, Math.max(0, -r.top / recorrido)) : 1;
       el.style.setProperty("--p", p.toFixed(4));
-      el.dataset.listo = p > 0.62 ? "si" : "no";
+      el.dataset.listo = p > 0.62 / 1.6 ? "si" : "no"; // mismo umbral que antes, medido en --t (ver inicio.css)
       if (p > 0.005) el.dataset.empezado = "si";
       else delete el.dataset.empezado;
     };
@@ -88,7 +88,7 @@ export function EntradaTren() {
           <div className="entrada__catenaria" />
         </div>
         <div className="entrada__lema" aria-hidden="true">
-          <span>Andén</span>
+          <span>Renfe</span>
         </div>
         <div className="entrada__tren">
           <div className="entrada__estela" aria-hidden="true" />

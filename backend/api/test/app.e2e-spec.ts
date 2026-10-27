@@ -24,6 +24,10 @@ describe('API (e2e)', () => {
     expect(respuesta.body).toMatchObject({ estado: 'ok' });
   });
 
+  it('GET /estaciones sin q responde 400', async () => {
+    await request(app.getHttpServer()).get('/estaciones').expect(400);
+  });
+
   it('GET /trenes sin parámetros responde 400', async () => {
     await request(app.getHttpServer()).get('/trenes').expect(400);
   });

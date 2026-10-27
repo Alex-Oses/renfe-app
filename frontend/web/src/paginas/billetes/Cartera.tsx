@@ -105,7 +105,7 @@ async function dibujar(b: Billete): Promise<HTMLCanvasElement> {
     x.textAlign = alinear;
     x.fillText(t, xx, y, 580);
   };
-  texto("Andén", 36, 100, "#fff", 800);
+  texto("Renfe", 36, 100, "#fff", 800);
   texto(`${b.tren.tipo} ${b.tren.numero}`, 26, 100, "#fff", 600, "right", 650);
   texto(ciudadDe(b.tren.origen), 48, 220, "#464646", 800);
   texto(hora(b.tren.salida), 34, 265, "#D62D61");
