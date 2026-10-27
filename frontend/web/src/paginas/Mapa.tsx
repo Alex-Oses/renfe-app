@@ -83,6 +83,9 @@ function ciudadCorta(estacion: string): string {
   return primera.length > 1 || !segunda ? primera : `${primera} ${segunda}`;
 }
 
+// "2026-10-27T12:41:00+01:00" → "12:41" (mismo formato que la lista de paradas).
+const horaCorta = (iso: string) => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
 export default function Mapa() {
   const [params, setParams] = useSearchParams();
   const seleccion = params.get("tren");
@@ -197,12 +200,8 @@ export default function Mapa() {
               <>
                 <h2 id="detalle-titulo">
                   {elegido.tipo} {elegido.numero}
+                  {elegido.linea && <span className="mapa-detalle__linea"> · Línea {elegido.linea}</span>}
                 </h2>
-                {elegido.origen && (
-                  <p className="mapa-detalle__ruta">
-                    {elegido.origen} → {elegido.destino}
-                  </p>
-                )}
                 {elegido.progreso > 0 && (
                 <div
                   className="progreso"
@@ -215,24 +214,41 @@ export default function Mapa() {
                   <span style={{ width: `${elegido.progreso * 100}%`, background: COLOR_TIPO[elegido.tipo] }} />
                 </div>
                 )}
-                <dl className="mapa-detalle__datos">
+                <dl className="mapa-detalle__datos mapa-detalle__viaje">
+                  {elegido.origen && (
+                    <div>
+                      <dt>Sale de</dt>
+                      <dd>{elegido.origen}</dd>
+                    </div>
+                  )}
+                  {elegido.destino && (
+                    <div>
+                      <dt>Va a</dt>
+                      <dd>
+                        {elegido.destino}
+                        {elegido.llegadaDestino && <> · llega a las {horaCorta(elegido.llegadaDestino)}</>}
+                      </dd>
+                    </div>
+                  )}
+                  {elegido.proximaParada && (
+                    <div>
+                      <dt>Próxima parada</dt>
+                      <dd>
+                        {elegido.proximaParada}
+                        {elegido.llegadaProxima && <> · a las {horaCorta(elegido.llegadaProxima)}</>}
+                      </dd>
+                    </div>
+                  )}
                   <div>
                     <dt>Retraso</dt>
                     <dd>
                       <Retraso min={elegido.retrasoMin} />
                     </dd>
                   </div>
-                  <div>
-                    <dt>Velocidad</dt>
-                    <dd>{elegido.velocidad} km/h</dd>
-                  </div>
-                  {elegido.proximaParada && (
-                    <div>
-                      <dt>Próxima parada</dt>
-                      <dd>{elegido.proximaParada}</dd>
-                    </div>
-                  )}
                 </dl>
+                {!elegido.origen && (
+                  <p className="mapa-detalle__nota">Renfe todavía no publica el origen y el destino de este tren en tiempo real.</p>
+                )}
                 <Paradas tren={elegido} ahora={ahora} />
               </>
             ) : (
@@ -266,10 +282,12 @@ export default function Mapa() {
                   <strong>
                     {t.origen ? `${t.numero} · ${ciudadCorta(t.origen)} → ${ciudadCorta(t.destino)}` : `${t.tipo} ${t.numero}`}
                   </strong>
-                  <span>
-                    {t.proximaParada ? `Próxima: ${t.proximaParada} · ` : ""}
-                    {t.velocidad} km/h
-                  </span>
+                  {t.proximaParada && (
+                    <span>
+                      Próxima: {t.proximaParada}
+                      {t.llegadaProxima && ` · ${horaCorta(t.llegadaProxima)}`}
+                    </span>
+                  )}
                 </span>
                 <Retraso min={t.retrasoMin} />
               </button>

@@ -130,10 +130,12 @@ export interface PosicionTren {
   lat: number;
   lon: number;
   rumbo: number; // grados, 0 = norte
-  velocidad: number; // km/h
   retrasoMin: number;
   progreso: number; // 0..1 del trayecto
-  proximaParada: string;
+  proximaParada: string; // "" si no se conoce
+  llegadaProxima?: string; // ISO, hora prevista en la próxima parada (con retraso)
+  llegadaDestino?: string; // ISO, hora prevista en el destino (con retraso)
+  linea?: string; // Cercanías: C-1, R2…
   actualizado: string; // ISO
   ruta: [number, number][]; // [lat, lon] del recorrido completo, para pintar la línea
   paradas: ParadaRuta[];

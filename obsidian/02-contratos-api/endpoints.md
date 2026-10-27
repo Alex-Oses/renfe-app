@@ -355,6 +355,29 @@ Notas:
   GTFS estático (`3097L23537C1`): no se puede cruzar con `viajes` por id. Para el mapa da igual;
   para `/trenes/:feed/:tripId/posicion` es un bloqueo.
 
+### Campos del viaje para el mapa — propuesto (Alex, 2026-10-27) · para Rubén
+
+Al pulsar un tren, la web quiere enseñar **qué tren es, de dónde sale, adónde va, la próxima parada
+y las horas**. Propuesta: añadir a cada elemento de `datos` estos campos, **todos opcionales**
+(`null` si no se pueden cruzar con el GTFS estático). La web ya los lee
+(`frontend/web/src/api/cliente.ts`, `aPosicion`) y oculta los que lleguen vacíos.
+
+```json
+{
+  "nombre": "AVE 02070",
+  "linea": "C-4",
+  "origen": { "id": "60000", "nombre": "Madrid-Puerta de Atocha" },
+  "destino": { "id": "71801", "nombre": "Barcelona-Sants" },
+  "proximaParada": { "id": "04040", "nombre": "Zaragoza-Delicias", "llegada": "2026-10-27T12:41:00+01:00" },
+  "llegadaDestino": "2026-10-27T14:05:00+01:00"
+}
+```
+
+- `nombre`: tipo y número comercial (lo que se ve en los paneles). Sustituye al `vehicleId` en la UI.
+- `linea`: solo en Cercanías (`C-1`, `R2`…); `null` en AVE/LD.
+- Las horas son las **previstas con el retraso aplicado** si se conoce; con offset, como el resto.
+- `velocidadKmh` y `rumbo` se pueden quitar: Renfe no los publica y la web ya no los usa.
+
 ## Pendientes de detallar
 
 `/auth/*`, `/trenes/:feed/:tripId/asientos`, `/reservas`, `/pagos/*`, `/billetes*` y `/chatbot/mensaje`
