@@ -1,0 +1,349 @@
+.inicio .sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Entrada del tren (tramo sticky) ---------- */
+.entrada {
+  --p: 0;
+  position: relative;
+  height: 250vh;
+  /* Desliza a lo largo del tramo: 0 tren parado, ~0.6 fuera de cuadro, 1 buscador listo */
+  --avance: clamp(0, (var(--p) - 0.08) * 1.8, 1);
+  --aparece: clamp(0, (var(--p) - 0.42) * 3.4, 1);
+  --velocidad: clamp(0, 1 - (var(--p) - 0.35) * (var(--p) - 0.35) * 16, 1);
+}
+
+.entrada__fijo {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  /* Solo se recorta en horizontal: el desplegable de estaciones puede salir por abajo */
+  overflow-x: clip;
+  background: linear-gradient(#f7e9f1 0%, var(--niebla, #eff3f6) 62%);
+  display: grid;
+  place-items: center;
+}
+
+.entrada__fondo,
+.entrada__paisaje,
+.entrada__catenaria,
+.entrada__anden,
+.entrada__tren,
+.entrada__lema {
+  position: absolute;
+  will-change: transform;
+}
+
+.entrada__fondo {
+  inset: 0;
+}
+
+/* Colinas lejanas: se mueven poco (parallax) */
+.entrada__paisaje {
+  left: -10%;
+  right: -60%;
+  bottom: 38%;
+  height: 22vh;
+  background:
+    radial-gradient(60% 100% at 20% 100%, #d9c6d3 60%, transparent 61%),
+    radial-gradient(50% 90% at 60% 100%, #e3d3dd 60%, transparent 61%),
+    radial-gradient(45% 80% at 95% 100%, #d9c6d3 60%, transparent 61%);
+  transform: translateX(calc(var(--avance) * -12vw));
+}
+
+/* Postes y cable de catenaria: más rápidos que el paisaje */
+.entrada__catenaria {
+  left: 0;
+  width: 300vw;
+  bottom: 30%;
+  height: 34vh;
+  background:
+    linear-gradient(#464646, #464646) 0 12% / 100% 2px no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 23vw, #6b6b6b 23vw calc(23vw + 4px)) 0 0 / 100% 100%;
+  opacity: 0.55;
+  transform: translateX(calc(var(--avance) * -60vw));
+}
+
+.entrada__anden {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30%;
+  background:
+    linear-gradient(#d62d61, #d62d61) 0 0 / 100% 6px no-repeat,
+    repeating-linear-gradient(90deg, #cfd6dd 0 4px, transparent 4px 9vw) 0 6px / 100% 14px no-repeat,
+    #dfe5ea;
+}
+
+.entrada__lema {
+  top: 14%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--morado-oscuro, #5c0043);
+  opacity: calc(1 - var(--avance) * 2.5);
+}
+
+.entrada__lema span {
+  display: block;
+  font-size: clamp(2.5rem, 9vw, 6rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.entrada__lema small {
+  font-size: 1rem;
+  color: var(--grafito, #464646);
+}
+
+.entrada__tren {
+  left: 4vw;
+  bottom: calc(30% - 0.5vh);
+  width: max(110vw, 760px);
+  transform: translateX(calc(var(--avance) * (100vw + max(110vw, 760px))));
+}
+
+.tren__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 12px rgb(70 0 50 / 0.18));
+}
+
+/* Líneas de movimiento detrás del tren; solo visibles a velocidad alta */
+.entrada__estela {
+  position: absolute;
+  right: 100%;
+  top: 20%;
+  width: 70vw;
+  height: 60%;
+  background: repeating-linear-gradient(transparent 0 14px, rgb(129 0 94 / 0.35) 14px 16px);
+  mask-image: linear-gradient(90deg, transparent, #000);
+  opacity: var(--velocidad);
+  transform: scaleX(calc(0.3 + var(--velocidad)));
+  transform-origin: right;
+}
+
+.entrada__panel {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 2rem, 44rem);
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border-radius: 18px;
+  background: rgb(255 255 255 / 0.78);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: 0 20px 50px rgb(70 0 50 / 0.16);
+  opacity: var(--aparece);
+  transform: translateY(calc((1 - var(--aparece)) * 6vh)) scale(calc(0.96 + var(--aparece) * 0.04));
+}
+
+.entrada[data-listo="no"] .entrada__panel {
+  pointer-events: none;
+}
+
+.entrada__panel h1 {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrada {
+    --p: 1;
+    height: auto;
+  }
+  .entrada__fijo {
+    position: relative;
+    height: auto;
+    min-height: 70vh;
+    padding-block: 3rem;
+  }
+  .entrada__tren,
+  .entrada__lema {
+    display: none;
+  }
+  .entrada__panel {
+    pointer-events: auto !important;
+  }
+}
+
+/* ---------- Secciones ---------- */
+.revela {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity var(--dur-media, 280ms) var(--curva-salida, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    transform var(--dur-media, 280ms) var(--curva-salida, cubic-bezier(0.2, 0.8, 0.2, 1));
+  transition-duration: calc(var(--dur-media, 280ms) * 2);
+}
+
+.revela--visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .revela {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+.inicio__intro {
+  margin-top: -0.25rem;
+  color: var(--gris, #6b6b6b);
+}
+
+.destinos,
+.ventajas {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+}
+
+.destino {
+  display: grid;
+  gap: 0.25rem;
+  min-height: 44px;
+  padding: 1.25rem;
+  border-radius: 14px;
+  background: var(--blanco, #fff);
+  border: 1px solid var(--linea, #d9dfe5);
+  color: var(--grafito, #464646);
+  text-decoration: none;
+  transition: transform var(--dur-media, 280ms) var(--curva-salida, ease-out);
+}
+
+.destino:hover {
+  transform: translateY(-3px);
+  border-color: var(--frambuesa, #d62d61);
+}
+
+.destino__ruta {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--morado-oscuro, #5c0043);
+}
+
+.destino__dato {
+  font-size: 0.9rem;
+  color: var(--gris, #6b6b6b);
+}
+
+.destino__precio {
+  margin-top: 0.5rem;
+}
+
+.destino__precio strong {
+  font-size: 1.4rem;
+  color: var(--morado, #81005e);
+}
+
+.ventaja {
+  padding: 1.25rem;
+  border-radius: 14px;
+  background: var(--blanco, #fff);
+}
+
+.ventaja__icono {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--niebla, #eff3f6);
+  color: var(--morado, #81005e);
+}
+
+.ventaja h3 {
+  margin: 0.75rem 0 0.25rem;
+  color: var(--morado-oscuro, #5c0043);
+}
+
+.ventaja a {
+  display: inline-block;
+  padding-block: 0.6rem;
+  font-weight: 600;
+}
+
+.directo {
+  margin-block: 2rem;
+  padding-block: 3rem;
+  background: var(--morado, #81005e);
+  color: #fff;
+}
+
+.directo h2 {
+  color: #fff;
+}
+
+.directo__interior {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.directo__boton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 1.5rem;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--morado, #81005e);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.directo__boton:focus-visible {
+  outline-color: #fff;
+}
+
+.faq {
+  max-width: 48rem;
+}
+
+.faq details {
+  border-bottom: 1px solid var(--linea, #d9dfe5);
+}
+
+.faq summary {
+  min-height: 44px;
+  padding: 0.9rem 0;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--morado-oscuro, #5c0043);
+}
+
+.faq details p {
+  margin: 0 0 1rem;
+}
+
+.faq details[open] p {
+  animation: faq-abre var(--dur-media, 280ms) var(--curva-salida, ease-out);
+}
+
+@keyframes faq-abre {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faq details[open] p {
+    animation: none;
+  }
+}

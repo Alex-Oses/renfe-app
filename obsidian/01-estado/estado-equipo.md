@@ -10,9 +10,9 @@ tags: [estado]
 
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
-| Alex | PO + Frontend | 🟢 | GitHub configurado y equipo invitado; siguiente: app Expo en `frontend/mobile` | — | 2026-10-26 |
+| Alex | PO + Frontend | 🟢 | Web completa en `frontend/web` con datos simulados (PR #17); siguiente: adaptar `tipos.ts` al contrato de [[endpoints]] de Rubén | — | 2026-10-27 |
 | Rubén | Backend + chatbot | 🟡 | API (Nest, auth, guards), contrato de [[endpoints]] y respuestas 5–7 de [[modelo-datos]] entregadas a Marina | Esperando esquema de Marina para `/estaciones` y `/trenes` | 2026-10-26 |
-| Marina | SM + Base de datos | ⚪ | Pendiente: `supabase init` y borrador de [[modelo-datos]] | Esperando repo en GitHub | 2026-10-26 |
+| Marina | SM + Base de datos | 🟢 | Supabase local validado en VM Linux; contrato de [[modelo-datos]] cerrado salvo la duda de Kevin sobre Stripe | — | 2026-10-26 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
 
 ## Bloqueos globales

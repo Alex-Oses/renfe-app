@@ -18,9 +18,9 @@ coverage/
 .env.*
 !.env.example
 
-# Supabase local
-backend/database/.temp/
-backend/database/.branches/
+# Supabase local (backend/database/supabase/.gitignore cubre .temp y .branches)
+backend/database/supabase/.temp/
+backend/database/supabase/.branches/
 
 # Datos GTFS descargados
 backend/gtfs-worker/data/
@@ -42,3 +42,4 @@ Thumbs.db
 !.vscode/extensions.json
 *.log
 obsidian/.obsidian/graph.json
+*.tsbuildinfo

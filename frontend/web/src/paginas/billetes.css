@@ -1,0 +1,244 @@
+@import "./reserva/reserva.css";
+
+.billetes h2 {
+  margin: 2rem 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.billetes__vacio {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 2.5rem 1rem;
+  background: var(--niebla, #eff3f6);
+  border-radius: 12px;
+  color: var(--morado, #81005e);
+}
+
+.billetes__vacio p {
+  color: var(--grafito, #464646);
+  max-width: 28rem;
+  margin: 0;
+}
+
+.billetes__vacio .boton {
+  flex: none;
+  text-decoration: none;
+}
+
+.billetes__lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.billete-fila {
+  display: grid;
+  gap: 0.2rem 1rem;
+  grid-template-columns: 1fr auto;
+  padding: 1rem 1.25rem;
+  min-height: 44px;
+  border: 1px solid var(--linea, #d9dfe5);
+  border-left: 5px solid var(--frambuesa, #d62d61);
+  border-radius: 10px;
+  background: var(--blanco, #fff);
+  color: var(--grafito, #464646);
+  text-decoration: none;
+  transition: box-shadow var(--dur-media, 200ms) var(--curva-salida, ease-out);
+}
+
+.billete-fila:hover {
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.08);
+}
+
+.billete-fila--pasado {
+  border-left-color: var(--linea, #d9dfe5);
+  opacity: 0.8;
+}
+
+.billete-fila__ruta {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.billete-fila__dato {
+  grid-column: 1;
+  font-size: 0.9rem;
+  color: var(--gris, #6b6b6b);
+}
+
+.billete-fila__loc {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--morado, #81005e);
+}
+
+/* Pase de embarque */
+.billete-pagina {
+  max-width: 32rem;
+}
+
+.pase {
+  margin-top: 0.5rem;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--blanco, #fff);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.1);
+  border: 1px solid var(--linea, #d9dfe5);
+}
+
+.pase__cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  background: var(--morado, #81005e);
+  color: #fff;
+  font-weight: 600;
+}
+
+.pase__marca {
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.pase__ruta {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem;
+}
+
+.pase__ruta > div {
+  display: grid;
+  min-width: 0;
+}
+
+.pase__destino {
+  text-align: right;
+}
+
+.pase__ciudad {
+  font-size: clamp(1.4rem, 6vw, 2rem);
+  font-weight: 800;
+  color: var(--grafito, #464646);
+  overflow-wrap: anywhere;
+}
+
+.pase__hora {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--frambuesa, #d62d61);
+}
+
+.pase__est {
+  font-size: 0.75rem;
+  color: var(--gris, #6b6b6b);
+}
+
+.pase__via {
+  color: var(--morado, #81005e);
+}
+
+.pase__datos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0 1.25rem 1.25rem;
+}
+
+.pase__datos dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gris, #6b6b6b);
+}
+
+.pase__datos dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.pase__ancho {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 420px) {
+  .pase__datos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.pase__corte {
+  border-top: 2px dashed var(--linea, #d9dfe5);
+  margin: 0 1rem;
+}
+
+.pase__pie {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  padding: 1.25rem;
+}
+
+.pase__qr {
+  width: 9rem;
+  flex: none;
+}
+
+.pase__qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.pase__etiqueta {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--gris, #6b6b6b);
+}
+
+.pase__loc {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--morado, #81005e);
+}
+
+.pase__nota {
+  font-size: 0.85rem;
+  color: var(--gris, #6b6b6b);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .billete-fila {
+    transition: none;
+  }
+}
+
+@media print {
+  .cabecera,
+  .pie,
+  .saltar,
+  .no-imprimir {
+    display: none !important;
+  }
+  .pase {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+  .pase__cabeza {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
