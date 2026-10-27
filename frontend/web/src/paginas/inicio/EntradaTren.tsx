@@ -21,7 +21,7 @@ export function EntradaTren() {
       const recorrido = r.height - innerHeight;
       const p = recorrido > 0 ? Math.min(1, Math.max(0, -r.top / recorrido)) : 1;
       el.style.setProperty("--p", p.toFixed(4));
-      el.dataset.listo = p > 0.62 ? "si" : "no";
+      el.dataset.listo = p > 0.62 / 1.6 ? "si" : "no"; // mismo umbral que antes, medido en --t (ver inicio.css)
       if (p > 0.005) el.dataset.empezado = "si";
       else delete el.dataset.empezado;
     };
