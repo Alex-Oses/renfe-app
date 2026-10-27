@@ -77,7 +77,7 @@ export default function Billete() {
       )}
       <article className="pase" aria-label={`Billete de ${b.tren.origen.nombre} a ${b.tren.destino.nombre}`}>
         <header className="pase__cabeza">
-          <span className="pase__marca">Andén</span>
+          <span className="pase__marca">Renfe</span>
           <span>
             {b.tren.tipo} {b.tren.numero}
           </span>
