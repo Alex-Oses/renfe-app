@@ -1,6 +1,6 @@
 ---
 fecha: 2026-10-27
-autor: Alex (con Claude Code)
+autor: Alex
 area: mobile
 para: todos
 rama: feat/mobile-tipos-contrato-y-pulido
