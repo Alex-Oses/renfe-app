@@ -78,9 +78,10 @@ export default function Billete() {
       <article className="pase" aria-label={`Billete de ${b.tren.origen.nombre} a ${b.tren.destino.nombre}`}>
         <header className="pase__cabeza">
           <span className="pase__marca">Renfe</span>
-          <span>
+          <span className="pase__tren">
             {b.tren.tipo} {b.tren.numero}
           </span>
+          <EstadoViaje salida={b.tren.salida} llegada={b.tren.llegada} />
         </header>
         <div className="pase__ruta">
           <div>
@@ -88,9 +89,12 @@ export default function Billete() {
             <span className="pase__hora">{hora(b.tren.salida)}</span>
             <span className="pase__est">{b.tren.origen.nombre}</span>
           </div>
-          <svg className="pase__via" width="40" height="24" viewBox="0 0 40 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <path d="M2 12h34M28 5l8 7-8 7" />
-          </svg>
+          <div className="pase__trayecto">
+            <svg className="pase__via" width="40" height="24" viewBox="0 0 40 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M2 12h34M28 5l8 7-8 7" />
+            </svg>
+            <span className="pase__duracion">{duracion(b.tren.salida, b.tren.llegada)}</span>
+          </div>
           <div className="pase__destino">
             <span className="pase__ciudad">{ciudadDe(b.tren.destino)}</span>
             <span className="pase__hora">{hora(b.tren.llegada)}</span>
@@ -126,12 +130,10 @@ export default function Billete() {
         </dl>
         <div className="pase__corte" aria-hidden="true" />
         <div className="pase__pie">
-          <div className="pase__qr" role="img" aria-label="Código QR del billete" dangerouslySetInnerHTML={{ __html: qr }} />
-          <div>
-            <p className="pase__etiqueta">Localizador</p>
-            <p className="pase__loc">{b.localizador}</p>
-            <p className="pase__nota">Enseña este código en el control de acceso.</p>
-          </div>
+          <div className="pase__qr pase__qr--grande" role="img" aria-label="Código QR del billete" dangerouslySetInnerHTML={{ __html: qr }} />
+          <p className="pase__etiqueta">Localizador</p>
+          <p className="pase__loc">{b.localizador}</p>
+          <p className="pase__nota">Enseña este código al revisor o en el control de acceso. Sube el brillo de la pantalla.</p>
         </div>
       </article>
       <div className="reserva__acciones no-imprimir">
@@ -142,6 +144,21 @@ export default function Billete() {
       <Cartera billete={b} />
     </div>
   );
+}
+
+// "2 h 25 min" entre salida y llegada.
+function duracion(salida: string, llegada: string) {
+  const min = Math.max(0, Math.round((Date.parse(llegada) - Date.parse(salida)) / 60_000));
+  return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")} min`;
+}
+
+// Etiqueta en la cabecera del billete según cuándo es el viaje.
+function EstadoViaje({ salida, llegada }: { salida: string; llegada: string }) {
+  const ahora = Date.now();
+  const s = Date.parse(salida);
+  const texto =
+    ahora > Date.parse(llegada) ? "Viaje realizado" : ahora >= s ? "En viaje" : new Date(s).toDateString() === new Date().toDateString() ? "Sale hoy" : "Próximo viaje";
+  return <span className="pase__estado">{texto}</span>;
 }
 
 function Flecha({ d }: { d: string }) {
