@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { buscarTrenes } from "../api/cliente";
-import type { TipoTren, Tren } from "../api/tipos";
+import { ciudadDe, type TipoTren, type Tren } from "../api/tipos";
 import { Buscador } from "../componentes/Buscador";
 
 const minutos = (iso: string) => {
@@ -86,7 +86,7 @@ export function Resultados() {
 
       <div className="resultados__cabecera">
         <h1>
-          {trenes?.[0] ? `${trenes[0].origen.ciudad} a ${trenes[0].destino.ciudad}` : "Trenes"}
+          {trenes?.[0] ? `${ciudadDe(trenes[0].origen)} a ${ciudadDe(trenes[0].destino)}` : "Trenes"}
           <span className="resultados__fecha">
             {fechaLarga} · {pasajeros} {pasajeros === 1 ? "pasajero" : "pasajeros"}
           </span>
