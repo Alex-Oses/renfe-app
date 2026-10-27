@@ -7,8 +7,10 @@ services:
     plan: free
     region: frankfurt
     branch: main
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @renfe/api build
-    startCommand: pnpm --filter @renfe/api start:prod
+    # npx pnpm: corepack enable necesita permisos que Render no da. --prod=false: con NODE_ENV=production
+    # pnpm se saltaría las devDependencies y sin @nestjs/cli no compila.
+    buildCommand: npx pnpm@9.12.0 install --frozen-lockfile --prod=false && npx pnpm@9.12.0 --filter @renfe/api build
+    startCommand: node backend/api/dist/main.js
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
