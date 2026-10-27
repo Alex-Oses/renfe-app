@@ -10,6 +10,7 @@ export const COLOR_TIPO: Record<TipoTren, string> = {
   Intercity: "#2e7d32",
   "Media Distancia": "#9a5a00",
   Cercanías: "#0e7c86",
+  "Larga Distancia": "#5c0043",
 };
 
 export const SIGLA_TIPO: Record<TipoTren, string> = {
@@ -19,6 +20,7 @@ export const SIGLA_TIPO: Record<TipoTren, string> = {
   Intercity: "IC",
   "Media Distancia": "MD",
   Cercanías: "C",
+  "Larga Distancia": "LD",
 };
 
 const INTERVALO = 5000;
@@ -31,6 +33,7 @@ const CUERPO: Record<TipoTren, string> = {
   Intercity: "M10 6C13.5 7 15 9 15 12V35H5V12C5 9 6.5 7 10 6Z",
   "Media Distancia": "M6.5 8H13.5Q15 8 15 10V35H5V10Q5 8 6.5 8Z",
   Cercanías: "M5 9H15Q16 9 16 10V35H4V10Q4 9 5 9Z",
+  "Larga Distancia": "M10 6C13.5 7 15 9 15 12V35H5V12C5 9 6.5 7 10 6Z",
 };
 const CRISTAL: Record<TipoTren, string> = {
   AVE: "M10 8C12 10 12.6 12 12.8 14H7.2C7.4 12 8 10 10 8Z",
@@ -39,6 +42,7 @@ const CRISTAL: Record<TipoTren, string> = {
   Intercity: "M7.5 9.5H12.5L13 12.5H7Z",
   "Media Distancia": "M7 10H13V12.5H7Z",
   Cercanías: "M6 10.5H14V13H6Z",
+  "Larga Distancia": "M7.5 9.5H12.5L13 12.5H7Z",
 };
 // Cercanías: franjas de puertas para que no se confunda con el regional.
 const EXTRA: Partial<Record<TipoTren, string>> = {

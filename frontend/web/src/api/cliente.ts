@@ -18,6 +18,7 @@ import * as trenes from "./simulado";
 import * as reservas from "./simulado-reservas";
 import * as cuenta from "./simulado-cuenta";
 import * as tiempoReal from "./simulado-tiempo-real";
+import type { PosicionApi } from "./gtfs-rt";
 
 const BASE = import.meta.env.VITE_API_URL as string | undefined;
 export const usaDatosSimulados = !BASE;
@@ -53,22 +54,12 @@ export function rutaViaje(trenId: string, sufijo = ""): string {
   return `/trenes/${feed}/${encodeURIComponent(tripId)}${sufijo}?fecha=${fecha}`;
 }
 
-// Forma de GET /posiciones según el contrato; se traduce a la PosicionTren que pinta el mapa.
-interface PosicionApi {
-  feed: string;
-  vehicleId: string;
-  tripId: string;
-  lat: number;
-  lon: number;
-  rumbo: number | null;
-  velocidadKmh: number | null;
-  retrasoSeg: number | null;
-  actualizado: string;
-}
+// GET /posiciones devuelve PosicionApi (contrato); el mapa pinta PosicionTren.
+// Renfe no da origen, destino ni paradas en tiempo real: esos campos van vacíos y el mapa no los muestra.
 const aPosicion = (p: PosicionApi): PosicionTren => ({
   trenId: `${p.feed}:${p.tripId}`,
-  tipo: p.feed === "cercanias" ? "Media Distancia" : "AVE",
-  numero: p.vehicleId,
+  tipo: p.feed === "cercanias" ? "Cercanías" : "Larga Distancia",
+  numero: p.vehicleId ?? p.tripId,
   origen: "",
   destino: "",
   lat: p.lat,
@@ -78,10 +69,22 @@ const aPosicion = (p: PosicionApi): PosicionTren => ({
   retrasoMin: Math.round((p.retrasoSeg ?? 0) / 60),
   progreso: 0,
   proximaParada: "",
-  ruta: [], // /posiciones no trae recorrido: el mapa solo pinta el tren
+  ruta: [],
   paradas: [],
   actualizado: p.actualizado,
 });
+
+// Tiempo real sin API desplegada: en producción (Vercel) lo sirve api/posiciones.ts.
+// Con VITE_TIEMPO_REAL=simulado se fuerzan los trenes simulados (plan B de la demo).
+const TIEMPO_REAL_VERCEL = import.meta.env.PROD && import.meta.env.VITE_TIEMPO_REAL !== "simulado";
+export let posicionesReales = false;
+
+async function posicionesVercel(): Promise<PosicionTren[]> {
+  const r = await fetch("/api/posiciones");
+  if (!r.ok) throw new Error(`Tiempo real no disponible (${r.status})`);
+  const { datos: lista } = (await r.json()) as Lista<PosicionApi>;
+  return lista.map(aPosicion);
+}
 
 // Simula la latencia de red para que los estados de carga se vean igual que con la API real.
 const simular = <T>(f: () => T | Promise<T>, ms = 350): Promise<T> =>
@@ -142,8 +145,21 @@ export const verificarCara = (datos: { email: string; embedding: EmbeddingFacial
   BASE ? pedir("/auth/cara/verificar", "POST", datos) : simular(() => cuenta.verificarCara(datos), 900);
 
 // GET /posiciones (alternativa a Supabase Realtime, ver contrato)
-export const posicionesTrenes = (): Promise<PosicionTren[]> =>
-  BASE ? datos<PosicionApi>("/posiciones").then((l) => l.map(aPosicion)) : simular(() => tiempoReal.posiciones(), 150);
+// Orden: API de Render si hay VITE_API_URL; si no, la función de Vercel con datos reales de Renfe;
+// si falla (o en local con `pnpm dev`), trenes simulados para que el mapa nunca se quede vacío.
+export async function posicionesTrenes(): Promise<PosicionTren[]> {
+  if (BASE) return datos<PosicionApi>("/posiciones").then((l) => l.map(aPosicion));
+  if (TIEMPO_REAL_VERCEL) {
+    try {
+      const reales = await posicionesVercel();
+      posicionesReales = true;
+      return reales;
+    } catch {
+      posicionesReales = false;
+    }
+  }
+  return simular(() => tiempoReal.posiciones(), 150);
+}
 
 // GET /billetes/:id/wallet?plataforma=apple|google  (nuevo: lo firma la API; hay que añadirlo al contrato)
 export const enlaceWallet = (billeteId: string, plataforma: EnlaceWallet["plataforma"]): Promise<EnlaceWallet> =>

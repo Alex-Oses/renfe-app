@@ -44,7 +44,9 @@ export function Resultados() {
   const [params] = useSearchParams();
   const origen = params.get("origen") ?? "";
   const destino = params.get("destino") ?? "";
-  const fecha = params.get("fecha") ?? "";
+  // Sin fecha o con una fecha mal escrita en la URL se busca para hoy, en vez de romper la página.
+  const fechaUrl = params.get("fecha") ?? "";
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(fechaUrl) && !Number.isNaN(Date.parse(fechaUrl)) ? fechaUrl : new Date().toISOString().slice(0, 10);
   const pasajeros = Math.min(9, Math.max(1, Number(params.get("pasajeros")) || 1));
   const vuelta = params.get("vuelta") ?? "";
   const tramo = params.get("tramo") === "vuelta" ? "vuelta" : "ida";
@@ -52,6 +54,14 @@ export function Resultados() {
   const extra = new URLSearchParams();
   for (const k of ["ninos", "bebes", "descuento", "vuelta", "tramo"]) if (params.get(k)) extra.set(k, params.get(k)!);
   const [abierto, setAbierto] = useState<string | null>(null);
+  // Al abrir las tarifas de un tren, se colocan en pantalla para no tener que buscarlas.
+  useEffect(() => {
+    if (!abierto) return;
+    const marco = requestAnimationFrame(() =>
+      document.querySelector(".tarifas")?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+    );
+    return () => cancelAnimationFrame(marco);
+  }, [abierto]);
   const [preciosDia, setPreciosDia] = useState<Record<string, number | null>>({});
   const [trenes, setTrenes] = useState<Tren[] | null>(null);
   const [error, setError] = useState("");

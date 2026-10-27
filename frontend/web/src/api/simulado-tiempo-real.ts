@@ -68,6 +68,7 @@ const VELOCIDAD: Record<TipoTren, number> = {
   Intercity: 150,
   "Media Distancia": 120,
   Cercanías: 70,
+  "Larga Distancia": 200,
 };
 
 const NUM_TRENES = 30;

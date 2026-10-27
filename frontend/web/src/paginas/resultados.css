@@ -101,3 +101,91 @@
 .tarifa .boton {
   justify-content: center;
 }
+
+/* El botón hereda flex: 1 1 10rem de .boton; en esta columna lo estiraba en vertical (óvalo) */
+.tarifa .boton {
+  flex: none;
+}
+
+/* ---------- Tarifas como un tren: cada tarifa es un coche ---------- */
+.tarifas {
+  gap: var(--esp-4);
+  padding-bottom: var(--esp-4); /* sitio para las ruedas */
+}
+
+/* .tarifas .tarifa: base.css (.cristal) se carga después y pisaría el fondo con la misma especificidad */
+.tarifas .tarifa {
+  position: relative;
+  padding-top: calc(var(--esp-4) + 1.6rem); /* franja de ventanillas */
+  border-radius: 18px 18px 10px 10px;
+  /* Ventanillas arriba y franja de la marca abajo */
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 0.9rem, rgb(92 0 67 / 0.78) 0.9rem 2.6rem, transparent 2.6rem 3.4rem),
+    linear-gradient(var(--frambuesa), var(--frambuesa)),
+    linear-gradient(var(--morado), var(--morado)),
+    linear-gradient(var(--cristal-2, #fff), var(--cristal-2, #fff));
+  background-size:
+    calc(100% - 1.8rem) 0.9rem,
+    100% 5px,
+    100% 4px,
+    100% 100%;
+  background-position:
+    0.9rem 0.85rem,
+    0 calc(100% - 9px),
+    0 calc(100% - 4px),
+    0 0;
+  background-repeat: no-repeat;
+  background-origin: padding-box;
+  background-clip: padding-box;
+}
+
+/* Ruedas: dos bogies por coche */
+.tarifa::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -0.7rem;
+  height: 1.3rem;
+  background:
+    radial-gradient(circle at 0.65rem 50%, #3b3b3b 0 0.5rem, transparent 0.55rem),
+    radial-gradient(circle at 2rem 50%, #3b3b3b 0 0.5rem, transparent 0.55rem),
+    radial-gradient(circle at calc(100% - 2rem) 50%, #3b3b3b 0 0.5rem, transparent 0.55rem),
+    radial-gradient(circle at calc(100% - 0.65rem) 50%, #3b3b3b 0 0.5rem, transparent 0.55rem);
+  pointer-events: none;
+}
+
+/* Enganche entre coches (solo cuando van en fila) */
+@media (min-width: 48rem) {
+  .tarifa:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    top: 62%;
+    right: calc(-1 * var(--esp-4));
+    width: var(--esp-4);
+    height: 6px;
+    border-radius: 3px;
+    background: #4a4a4a;
+  }
+
+  /* El último coche (Prémium) es la cabeza: morro redondeado */
+  .tarifa:last-child {
+    border-top-right-radius: 70px 90px;
+    padding-right: calc(var(--esp-4) + 1rem);
+  }
+}
+
+.tarifa--premium {
+  border-width: 2px;
+}
+
+.tarifa:hover {
+  transform: translateY(-2px);
+  transition: transform var(--dur-corta, 160ms) var(--curva-salida, ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tarifa:hover {
+    transform: none;
+  }
+}

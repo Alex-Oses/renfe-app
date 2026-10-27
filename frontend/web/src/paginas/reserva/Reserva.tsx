@@ -57,7 +57,11 @@ export default function Reserva() {
   const paso = PASOS[indice].id;
 
   const titulo = useRef<HTMLHeadingElement>(null);
-  useEffect(() => titulo.current?.focus(), [paso]);
+  // Cada paso empieza arriba; el foco va al título sin que el navegador vuelva a mover el scroll.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    titulo.current?.focus({ preventScroll: true });
+  }, [paso]);
 
   const ir = (p: IdPaso) => {
     const s = new URLSearchParams(params);
