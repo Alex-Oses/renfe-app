@@ -173,7 +173,7 @@ a {
   position: sticky;
   top: var(--esp-3);
   z-index: var(--z-cabecera);
-  width: min(100% - 1.5rem, 72rem);
+  width: min(100% - 1.5rem, 88rem);
   margin: var(--esp-3) auto 0;
   transition: transform var(--dur-media) var(--curva-salida);
 }

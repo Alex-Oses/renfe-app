@@ -11,13 +11,16 @@
 .entrada {
   --p: 0;
   position: relative;
-  height: 250vh;
+  /* Más alto que la animación: al final queda una pausa larga con el buscador quieto para no pasárselo */
+  height: 340vh;
   /* Sube la altura de la cabecera para que el tramo quede pegado arriba desde scrollY=0 */
   margin-top: calc(-1 * var(--cab, 0px));
+  /* --t es el progreso de la animación: corre 1,6 veces más rápido que el scroll y termina hacia --p = 0,5 */
+  --t: calc(var(--p) * 1.6);
   /* Sin zona muerta: el tren se mueve desde el primer píxel; 1 = buscador listo */
-  --avance: clamp(0, var(--p) * 1.7, 1);
-  --aparece: clamp(0, (var(--p) - 0.4) * 2.6, 1);
-  --velocidad: clamp(0, 1 - (var(--p) - 0.3) * (var(--p) - 0.3) * 16, 1);
+  --avance: clamp(0, var(--t) * 1.7, 1);
+  --aparece: clamp(0, (var(--t) - 0.4) * 2.6, 1);
+  --velocidad: clamp(0, 1 - (var(--t) - 0.3) * (var(--t) - 0.3) * 16, 1);
 }
 
 .entrada__fijo {
