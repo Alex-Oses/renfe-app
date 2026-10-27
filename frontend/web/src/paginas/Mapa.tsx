@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import "./mapa/mapa.css";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 import { useSearchParams } from "react-router-dom";
 import { posicionesReales, posicionesTrenes } from "../api/cliente";
@@ -98,6 +98,12 @@ export default function Mapa() {
   const [siguiendo, setSiguiendo] = useState(true);
   const [reducido, setReducido] = useState(reducidoInicial);
   const [intento, setIntento] = useState(0);
+  const panel = useRef<HTMLElement>(null);
+
+  // Al elegir un tren, la barra sube arriba del todo, donde está su detalle.
+  useEffect(() => {
+    if (seleccion) panel.current?.scrollTo({ top: 0, behavior: reducido ? "auto" : "smooth" });
+  }, [seleccion, reducido]);
 
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -171,7 +177,7 @@ export default function Mapa() {
         <Leyenda />
       </div>
 
-      <aside className="mapa-panel cristal" aria-label="Trenes en circulación">
+      <aside ref={panel} className="mapa-panel cristal" aria-label="Trenes en circulación">
         <div className="mapa-panel__cabecera">
           <label className="mapa-filtro">
             <span>Buscar por número, tipo o ciudad</span>
