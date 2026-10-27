@@ -5,20 +5,56 @@ import type { PosicionTren, TipoTren } from "../../api/tipos";
 
 export const COLOR_TIPO: Record<TipoTren, string> = {
   AVE: "#81005e",
-  Avlo: "#d62d61",
+  Avlo: "#b5489a",
   Alvia: "#1f5fa8",
   Intercity: "#2e7d32",
   "Media Distancia": "#9a5a00",
+  Cercanías: "#0e7c86",
+};
+
+export const SIGLA_TIPO: Record<TipoTren, string> = {
+  AVE: "AVE",
+  Avlo: "Avlo",
+  Alvia: "Alvia",
+  Intercity: "IC",
+  "Media Distancia": "MD",
+  Cercanías: "C",
 };
 
 const INTERVALO = 5000;
 
+// Silueta vista desde arriba, morro hacia el norte (viewBox 0 0 20 36). El morro dice el tipo.
+const CUERPO: Record<TipoTren, string> = {
+  AVE: "M10 1C14 7 15 11 15 15V35H5V15C5 11 6 7 10 1Z",
+  Avlo: "M10 1C14 7 15 11 15 15V35H5V15C5 11 6 7 10 1Z",
+  Alvia: "M10 6C13.5 7 15 9 15 12V35H5V12C5 9 6.5 7 10 6Z",
+  Intercity: "M10 6C13.5 7 15 9 15 12V35H5V12C5 9 6.5 7 10 6Z",
+  "Media Distancia": "M6.5 8H13.5Q15 8 15 10V35H5V10Q5 8 6.5 8Z",
+  Cercanías: "M5 9H15Q16 9 16 10V35H4V10Q4 9 5 9Z",
+};
+const CRISTAL: Record<TipoTren, string> = {
+  AVE: "M10 8C12 10 12.6 12 12.8 14H7.2C7.4 12 8 10 10 8Z",
+  Avlo: "M10 8C12 10 12.6 12 12.8 14H7.2C7.4 12 8 10 10 8Z",
+  Alvia: "M7.5 9.5H12.5L13 12.5H7Z",
+  Intercity: "M7.5 9.5H12.5L13 12.5H7Z",
+  "Media Distancia": "M7 10H13V12.5H7Z",
+  Cercanías: "M6 10.5H14V13H6Z",
+};
+// Cercanías: franjas de puertas para que no se confunda con el regional.
+const EXTRA: Partial<Record<TipoTren, string>> = {
+  Cercanías: '<path d="M4 20H16M4 27H16" stroke="#fff" stroke-width="1.4"/>',
+  "Media Distancia": '<path d="M5 24H15" stroke="#fff" stroke-width="1.2"/>',
+};
+
+export const svgTren = (tipo: TipoTren) =>
+  `<svg viewBox="0 0 20 36" width="20" height="36" aria-hidden="true" focusable="false"><path d="${CUERPO[tipo]}" fill="${COLOR_TIPO[tipo]}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="${CRISTAL[tipo]}" fill="#1d2433" opacity=".75"/>${EXTRA[tipo] ?? ""}</svg>`;
+
 const icono = (t: PosicionTren) =>
   L.divIcon({
     className: "tren-marca",
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    html: `<span class="tren-marca__anillo"></span><span class="tren-marca__flecha" style="--c:${COLOR_TIPO[t.tipo]};transform:rotate(${t.rumbo}deg)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 2 20 21 12 16.5 4 21Z" fill="currentColor" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></span>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    html: `<span class="tren-marca__anillo"></span><span class="tren-marca__dibujo" style="transform:rotate(${t.rumbo}deg)">${svgTren(t.tipo)}</span>`,
   });
 
 interface Marca {
@@ -65,8 +101,8 @@ export function CapaTrenes({
       } else {
         x.desde = x.m.getLatLng();
         x.hasta = destino;
-        const flecha = x.m.getElement()?.querySelector<HTMLElement>(".tren-marca__flecha");
-        if (flecha) flecha.style.transform = `rotate(${t.rumbo}deg)`;
+        const dibujo = x.m.getElement()?.querySelector<HTMLElement>(".tren-marca__dibujo");
+        if (dibujo) dibujo.style.transform = `rotate(${t.rumbo}deg)`;
         if (reducido) x.m.setLatLng(destino);
       }
     }

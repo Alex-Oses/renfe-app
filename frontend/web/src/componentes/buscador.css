@@ -1,0 +1,21 @@
+/* Añadidos del buscador: ida/vuelta y descuento. El resto vive en base.css. */
+.buscador__modo {
+  display: flex;
+  gap: var(--esp-2);
+  margin-top: var(--esp-4);
+}
+
+.campo select {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--grafito);
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: rgb(255 255 255 / 0.85);
+}
+
+.campo--select {
+  flex-basis: 14rem;
+}

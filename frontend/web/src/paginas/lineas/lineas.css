@@ -1,0 +1,58 @@
+.lineas h1 { color: var(--morado-oscuro); margin-bottom: var(--esp-2); }
+.lineas__intro { color: var(--gris); margin-top: 0; }
+
+.lineas__form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--esp-3);
+  align-items: end;
+  padding: var(--esp-4);
+  border-radius: 24px;
+  margin-block: var(--esp-4);
+}
+.lineas__error { grid-column: 1 / -1; margin: 0; color: var(--color-error); min-height: 1.2em; }
+
+.lineas__vacio { padding: var(--esp-4); border-radius: 24px; }
+.lineas__vacio h2 { margin-top: 0; color: var(--morado-oscuro); font-size: 1.15rem; }
+
+.lineas__lista { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--esp-4); grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+.linea { padding: var(--esp-4); border-radius: 24px; }
+.linea__cabecera { display: flex; justify-content: space-between; gap: var(--esp-2); align-items: start; }
+.linea__cabecera h2 { margin: 0; font-size: 1.05rem; color: var(--morado-oscuro); }
+.linea__acciones { display: flex; flex: none; }
+.linea__icono {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--grafito);
+  cursor: pointer;
+}
+.linea__icono:hover:not(:disabled) { background: rgb(129 0 94 / 0.08); }
+.linea__icono:disabled { opacity: 0.3; cursor: default; }
+
+.linea__trenes { list-style: none; padding: 0; margin: var(--esp-3) 0 0; display: grid; gap: var(--esp-2); }
+.linea__tren {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2) var(--esp-3);
+  padding: var(--esp-3);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.55);
+}
+.linea__cuenta { font-weight: 700; color: var(--morado); min-width: 8.5rem; font-variant-numeric: tabular-nums; }
+.linea__hora { font-variant-numeric: tabular-nums; }
+.linea__tipo { font-size: 0.85rem; color: var(--gris); }
+.linea__retraso { font-size: 0.85rem; font-weight: 600; color: var(--color-error); }
+.linea__reservar { margin-left: auto; font-weight: 600; color: var(--frambuesa); }
+.linea__nada { color: var(--gris); }
+
+@media (max-width: 640px) {
+  .lineas__form { grid-template-columns: 1fr; }
+  .lineas__lista { grid-template-columns: 1fr; }
+}

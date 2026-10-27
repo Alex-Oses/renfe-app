@@ -1,0 +1,122 @@
+.herr {
+  padding: 1.25rem;
+  border-radius: var(--radio-grande);
+  margin-block: 1.5rem;
+}
+.herr__titulo {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  color: var(--color-titulo);
+}
+.herr__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: start;
+}
+.herr__form > .boton {
+  align-self: end;
+}
+.herr__form > .herr__ancho,
+.herr__form > p,
+.herr__form > fieldset {
+  flex-basis: 100%;
+}
+.herr__campo select,
+.herr__campo textarea {
+  font: inherit;
+  font-size: 1rem;
+  color: var(--color-texto);
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: rgb(255 255 255 / 0.85);
+}
+.herr__campo [aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+.herr__error {
+  color: var(--color-error);
+  font-weight: 600;
+  margin: 0;
+}
+.herr__exito {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: var(--radio);
+  background: var(--color-resalte);
+  color: var(--color-texto);
+}
+.herr__exito strong {
+  color: var(--color-titulo);
+}
+.herr__resumen {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 1rem 0;
+}
+.herr__resumen dt {
+  color: var(--color-texto-suave);
+}
+.herr__resumen dd {
+  margin: 0;
+  font-weight: 600;
+}
+.herr__tabla {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.herr__desliza {
+  overflow-x: auto;
+}
+.herr__tabla th,
+.herr__tabla td {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-borde);
+}
+.herr__opciones {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.herr__opciones label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 44px;
+}
+.herr__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.herr__lista {
+  padding-left: 1.2rem;
+}
+.herr mark {
+  background: var(--color-resalte);
+  color: inherit;
+}
+.herr details {
+  border-bottom: 1px solid var(--color-borde);
+  padding: 0.75rem 0;
+}
+.herr summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

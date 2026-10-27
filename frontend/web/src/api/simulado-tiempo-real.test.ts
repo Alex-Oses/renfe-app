@@ -33,4 +33,24 @@ describe("tiempo real simulado", () => {
     const max = (tipo: string) => Math.max(...a.filter((x) => x.tipo === tipo).map((x) => x.velocidad));
     expect(max("AVE")).toBeGreaterThan(max("Media Distancia"));
   });
+
+  it("da ruta de origen a destino y paradas ordenadas con llegadas crecientes", () => {
+    const p = posicionesEn(t + 13 * 60_000);
+    expect(p.some((x) => x.tipo === "Cercanías")).toBe(true);
+    for (const x of p) {
+      const [o, d] = [x.paradas[0], x.paradas[x.paradas.length - 1]];
+      expect(o.nombre).toBe(x.origen);
+      expect(d.nombre).toBe(x.destino);
+      expect(x.ruta[0]).toEqual([o.lat, o.lon]);
+      expect(x.ruta[x.ruta.length - 1]).toEqual([d.lat, d.lon]);
+      const horas = x.paradas.map((s) => Date.parse(s.llegada));
+      for (let i = 1; i < horas.length; i++) expect(horas[i]).toBeGreaterThan(horas[i - 1]);
+      // Las pasadas van primero y la próxima parada no está pasada.
+      const k = x.paradas.findIndex((s) => !s.pasada);
+      expect(x.paradas.slice(k).every((s) => !s.pasada)).toBe(true);
+      expect(x.paradas[k].nombre).toBe(x.proximaParada);
+      // La hora de la próxima parada no queda en el pasado (sin contar el retraso).
+      expect(horas[k] - x.retrasoMin * 60_000).toBeGreaterThanOrEqual(t + 13 * 60_000 - 1000);
+    }
+  });
 });

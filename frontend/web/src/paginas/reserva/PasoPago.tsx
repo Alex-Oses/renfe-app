@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { confirmarPagoSimulado, crearIntentoPago, crearReserva } from "../../api/cliente";
-import type { Pasajero, Reserva } from "../../api/tipos";
+import type { IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva } from "../../api/tipos";
+import { EXTRAS, precioExtra } from "../../api/simulado-precios";
 import { euros } from "./formato";
 
 interface Props {
@@ -8,11 +9,16 @@ interface Props {
   asientos: string[];
   pasajeros: Pasajero[];
   total: number;
+  tarifa: IdTarifa;
+  descuento: IdDescuento;
+  bebes: number;
+  extras: IdExtra[];
+  onExtras: (e: IdExtra[]) => void;
   onPagada: (r: Reserva) => void;
   onAsientoOcupado: () => void;
 }
 
-export function PasoPago({ trenId, asientos, pasajeros, total, onPagada, onAsientoOcupado }: Props) {
+export function PasoPago({ trenId, asientos, pasajeros, total, tarifa, descuento, bebes, extras, onExtras, onPagada, onAsientoOcupado }: Props) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);
@@ -21,7 +27,7 @@ export function PasoPago({ trenId, asientos, pasajeros, total, onPagada, onAsien
     setCargando(true);
     setError("");
     try {
-      const r = await crearReserva({ trenId, asientos, pasajeros });
+      const r = await crearReserva({ trenId, asientos, pasajeros, tarifa, descuento, extras, bebes });
       await crearIntentoPago(r.id);
       onPagada(await confirmarPagoSimulado(r.id));
     } catch (e) {
@@ -34,6 +40,27 @@ export function PasoPago({ trenId, asientos, pasajeros, total, onPagada, onAsien
 
   return (
     <div className="pago">
+      <fieldset className="extras">
+        <legend>Añade a tu viaje</legend>
+        {EXTRAS.map((e) => {
+          const precio = precioExtra(e.id, asientos.length, tarifa);
+          return (
+            <label key={e.id} className="extra">
+              <input
+                type="checkbox"
+                checked={extras.includes(e.id)}
+                disabled={cargando}
+                onChange={(ev) => onExtras(ev.target.checked ? [...extras, e.id] : extras.filter((x) => x !== e.id))}
+              />
+              <span className="extra__nombre">{e.nombre}</span>
+              <span className="extra__precio">
+                {precio === 0 ? "Incluido" : `${euros.format(precio)}${e.porViajero && asientos.length > 1 ? ` (${asientos.length} viajeros)` : ""}`}
+              </span>
+            </label>
+          );
+        })}
+      </fieldset>
+
       <div className="pago__panel cristal">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <rect x="3" y="5" width="18" height="14" rx="2" />

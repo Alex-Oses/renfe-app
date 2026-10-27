@@ -8,25 +8,15 @@ export interface Estacion {
   lon: number;
 }
 
-export type TipoTren = "AVE" | "Avlo" | "Alvia" | "Intercity" | "Media Distancia";
-
-// En /trenes la API solo manda id y nombre de las estaciones; ciudad puede faltar o venir vacía.
-export type EstacionTren = Pick<Estacion, "id" | "nombre"> & Partial<Estacion>;
-
-// Nombre corto para la UI: la ciudad si se conoce; si no, el nombre de la estación.
-export const ciudadDe = (e: EstacionTren) => e.ciudad || e.nombre;
+export type TipoTren = "AVE" | "Avlo" | "Alvia" | "Intercity" | "Media Distancia" | "Cercanías";
 
 export interface Tren {
-  id: string; // "feed:tripId:fecha" (contrato); en simulado, cualquier id único
+  id: string;
   tipo: TipoTren;
   numero: string;
-  origen: EstacionTren;
-  destino: EstacionTren;
-  feed?: "cercanias" | "avld";
-  tripId?: string;
-  fecha?: string; // AAAA-MM-DD
-  retrasoSeg?: number | null;
-  salida: string; // ISO 8601 con offset
+  origen: Estacion;
+  destino: Estacion;
+  salida: string; // ISO 8601, hora local
   llegada: string;
   precioDesde: number; // euros; simulado
   plazasLibres: number; // simulado
@@ -57,12 +47,17 @@ export interface Pasajero {
   apellidos: string;
   documento: string; // DNI/NIE/pasaporte; solo se guarda en la reserva
   email: string;
+  tipo?: TipoViajero; // sin tipo = adulto
 }
 
 export interface NuevaReserva {
   trenId: string;
   asientos: string[]; // ids de Asiento
   pasajeros: Pasajero[]; // uno por asiento
+  tarifa?: IdTarifa; // sin tarifa = básico
+  descuento?: IdDescuento;
+  extras?: IdExtra[];
+  bebes?: number; // viajan gratis en brazos, sin asiento
 }
 
 export interface Reserva {
@@ -72,6 +67,10 @@ export interface Reserva {
   asientos: Asiento[];
   pasajeros: Pasajero[];
   total: number;
+  tarifa?: IdTarifa;
+  descuento?: IdDescuento;
+  extras?: IdExtra[];
+  bebes?: number;
   estado: "pendiente_pago" | "pagada" | "cancelada";
   creada: string;
 }
@@ -125,4 +124,54 @@ export interface PosicionTren {
   progreso: number; // 0..1 del trayecto
   proximaParada: string;
   actualizado: string; // ISO
+  ruta: [number, number][]; // [lat, lon] del recorrido completo, para pintar la línea
+  paradas: ParadaRuta[];
 }
+
+export interface ParadaRuta {
+  estacionId: string;
+  nombre: string;
+  lat: number;
+  lon: number;
+  llegada: string; // ISO, hora prevista ya con el retraso aplicado
+  pasada: boolean;
+}
+
+// --- Favoritos y avisos (en local; la API real los guardará por usuario) ---
+
+export interface LineaFavorita {
+  id: string; // "<origen>-<destino>"
+  origen: string; // id de estación
+  destino: string;
+}
+
+export type TipoAviso = "retraso" | "llegada" | "cambio" | "info";
+
+export interface Aviso {
+  id: string;
+  tipo: TipoAviso;
+  titulo: string;
+  texto: string;
+  enlace?: string; // ruta interna, p. ej. /mapa?tren=...
+  creado: string; // ISO
+  leido: boolean;
+}
+
+// Seguimiento: avisar cuando un tren se acerque a una parada.
+export interface Seguimiento {
+  trenId: string;
+  estacionId: string;
+  minutosAntes: number;
+}
+
+export interface EnlaceWallet {
+  plataforma: "apple" | "google";
+  url: string; // .pkpass firmado (Apple) o enlace "Guardar en Google Wallet"
+}
+
+// --- Tarifas, viajeros y extras (simulado; reglas aproximadas a las de Renfe) ---
+
+export type TipoViajero = "adulto" | "nino" | "bebe"; // niño: 4-13 años; bebé: 0-3 sin asiento
+export type IdTarifa = "basico" | "elige" | "elige-confort" | "premium";
+export type IdDescuento = "ninguno" | "joven" | "dorada" | "fn-general" | "fn-especial";
+export type IdExtra = "equipaje" | "mascota" | "bici" | "comida" | "seguro";

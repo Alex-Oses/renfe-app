@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { buscarTrenes } from "../api/cliente";
-import { ciudadDe, type TipoTren, type Tren } from "../api/tipos";
+import type { TipoTren, Tren } from "../api/tipos";
 import { Buscador } from "../componentes/Buscador";
+import { TARIFAS, precioViajero } from "../api/simulado-precios";
+import "./resultados.css";
 
 const minutos = (iso: string) => {
   const [h, m] = iso.slice(11, 16).split(":").map(Number);
@@ -43,6 +45,13 @@ export function Resultados() {
   const destino = params.get("destino") ?? "";
   const fecha = params.get("fecha") ?? "";
   const pasajeros = Math.min(9, Math.max(1, Number(params.get("pasajeros")) || 1));
+  const vuelta = params.get("vuelta") ?? "";
+  const tramo = params.get("tramo") === "vuelta" ? "vuelta" : "ida";
+  // Viajeros y descuento pasan tal cual a la reserva y a los enlaces de otros días.
+  const extra = new URLSearchParams();
+  for (const k of ["ninos", "bebes", "descuento", "vuelta", "tramo"]) if (params.get(k)) extra.set(k, params.get(k)!);
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const [preciosDia, setPreciosDia] = useState<Record<string, number | null>>({});
   const [trenes, setTrenes] = useState<Tren[] | null>(null);
   const [error, setError] = useState("");
   const [tipos, setTipos] = useState<Set<TipoTren>>(new Set());
@@ -56,6 +65,21 @@ export function Resultados() {
       .then(setTrenes)
       .catch((e: Error) => setError(e.message));
   }, [origen, destino, fecha]);
+
+  // Calendario con el precio más barato de cada día, como el de Renfe.
+  useEffect(() => {
+    if (!fecha) return;
+    let vivo = true;
+    const dias = [-3, -2, -1, 0, 1, 2, 3].map((d) => moverDia(fecha, d));
+    Promise.all(dias.map((f) => buscarTrenes({ origen, destino, fecha: f }).catch(() => [] as Tren[]))).then((rs) => {
+      if (!vivo) return;
+      const libres = (ts: Tren[]) => ts.filter((t) => t.plazasLibres >= pasajeros).map((t) => t.precioDesde);
+      setPreciosDia(Object.fromEntries(dias.map((f, i) => [f, libres(rs[i]).length ? Math.min(...libres(rs[i])) : null])));
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [origen, destino, fecha, pasajeros]);
 
   const tiposDisponibles = useMemo(() => [...new Set(trenes?.map((t) => t.tipo))], [trenes]);
   const visibles = useMemo(
@@ -73,8 +97,9 @@ export function Resultados() {
   const fechaLarga = fecha
     ? new Date(`${fecha}T12:00:00`).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })
     : "";
-  const enlaceDia = (d: number) =>
-    `/trenes?${new URLSearchParams({ origen, destino, fecha: moverDia(fecha, d), pasajeros: String(pasajeros) })}`;
+  const enlaceFecha = (f: string) => `/trenes?${new URLSearchParams({ origen, destino, fecha: f, pasajeros: String(pasajeros), ...Object.fromEntries(extra) })}`;
+  const enlaceDia = (d: number) => enlaceFecha(moverDia(fecha, d));
+  const hoy = new Date().toISOString().slice(0, 10);
   const limpiar = () => {
     setTipos(new Set());
     setFranjas(new Set());
@@ -82,11 +107,25 @@ export function Resultados() {
 
   return (
     <div className="contenedor seccion">
-      <Buscador key={`${origen}${destino}${fecha}${pasajeros}`} inicial={{ origen, destino, fecha, pasajeros }} compacto />
+      <Buscador
+        key={params.toString()}
+        inicial={{
+          origen,
+          destino,
+          fecha,
+          pasajeros,
+          vuelta: tramo === "ida" ? vuelta : undefined,
+          ninos: Number(params.get("ninos")) || 0,
+          bebes: Number(params.get("bebes")) || 0,
+          descuento: params.get("descuento") ?? undefined,
+        }}
+        compacto
+      />
 
       <div className="resultados__cabecera">
         <h1>
-          {trenes?.[0] ? `${ciudadDe(trenes[0].origen)} a ${ciudadDe(trenes[0].destino)}` : "Trenes"}
+          {vuelta && <span className="resultados__tramo">{tramo === "ida" ? "Ida" : "Vuelta"}</span>}
+          {trenes?.[0] ? `${trenes[0].origen.ciudad} a ${trenes[0].destino.ciudad}` : "Trenes"}
           <span className="resultados__fecha">
             {fechaLarga} · {pasajeros} {pasajeros === 1 ? "pasajero" : "pasajeros"}
           </span>
@@ -96,6 +135,27 @@ export function Resultados() {
           <Link to={enlaceDia(1)}>Día siguiente</Link>
         </nav>
       </div>
+
+      {fecha && (
+        <nav className="calendario-precios" aria-label="Precios por día">
+          <ul>
+            {[-3, -2, -1, 0, 1, 2, 3].map((d) => {
+              const f = moverDia(fecha, d);
+              if (f < hoy) return null;
+              const p = preciosDia[f];
+              const texto = new Date(`${f}T12:00:00`).toLocaleDateString("es-ES", { weekday: "short", day: "numeric" });
+              return (
+                <li key={f}>
+                  <Link to={enlaceFecha(f)} aria-current={d === 0 ? "date" : undefined}>
+                    <span>{texto}</span>
+                    <strong>{p === undefined ? "…" : p === null ? "Sin plazas" : `desde ${euros.format(p)}`}</strong>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
 
       {trenes && trenes.length > 0 && (
         <div className="filtros">
@@ -180,16 +240,42 @@ export function Resultados() {
                   ) : (
                     <>
                       <span className="tren__precio">{euros.format(t.precioDesde)}</span>
-                      <Link
+                      <button
+                        type="button"
                         className="boton boton--secundario"
-                        to={`/reserva/${encodeURIComponent(t.id)}?pasajeros=${pasajeros}`}
-                        aria-label={`Elegir ${t.tipo} ${t.numero} de las ${t.salida.slice(11, 16)}`}
+                        aria-expanded={abierto === t.id}
+                        aria-controls={`tarifas-${i}`}
+                        onClick={() => setAbierto((a) => (a === t.id ? null : t.id))}
+                        aria-label={`Ver tarifas del ${t.tipo} ${t.numero} de las ${t.salida.slice(11, 16)}`}
                       >
-                        Elegir
-                      </Link>
+                        {abierto === t.id ? "Cerrar" : "Elegir"}
+                      </button>
                     </>
                   )}
                 </div>
+                {abierto === t.id && (
+                  <ul className="tarifas" id={`tarifas-${i}`} aria-label={`Tarifas del ${t.tipo} ${t.numero}`}>
+                    {TARIFAS.map((ta) => {
+                      const q = new URLSearchParams({ pasajeros: String(pasajeros), tarifa: ta.id, ...Object.fromEntries(extra) });
+                      return (
+                        <li key={ta.id} className={`tarifa cristal tarifa--${ta.id}`}>
+                          <h3>{ta.nombre}</h3>
+                          <p className="tarifa__precio">
+                            <span>desde</span> {euros.format(precioViajero(t.precioDesde, ta.id))}
+                          </p>
+                          <ul className="tarifa__incluye">
+                            {ta.incluye.map((x) => (
+                              <li key={x}>{x}</li>
+                            ))}
+                          </ul>
+                          <Link className="boton" to={`/reserva/${encodeURIComponent(t.id)}?${q}`} aria-label={`Elegir tarifa ${ta.nombre}`}>
+                            Elegir {ta.nombre}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </li>
             );
           })}

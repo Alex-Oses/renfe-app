@@ -1,8 +1,8 @@
 import { useRef, useState, type FormEvent } from "react";
-import type { Asiento, Pasajero } from "../../api/tipos";
+import type { Asiento, Pasajero, TipoViajero } from "../../api/tipos";
 import { useSesion } from "../../estado/sesion";
 
-type Campo = keyof Pasajero;
+type Campo = Exclude<keyof Pasajero, "tipo">;
 const CAMPOS: { id: Campo; etiqueta: string; tipo: string; auto: string }[] = [
   { id: "nombre", etiqueta: "Nombre", tipo: "text", auto: "given-name" },
   { id: "apellidos", etiqueta: "Apellidos", tipo: "text", auto: "family-name" },
@@ -23,10 +23,11 @@ const vacio = (): Pasajero => ({ nombre: "", apellidos: "", documento: "", email
 interface Props {
   asientos: Asiento[];
   iniciales: Pasajero[];
+  tipos?: TipoViajero[];
   onSeguir: (p: Pasajero[]) => void;
 }
 
-export function PasoViajeros({ asientos, iniciales, onSeguir }: Props) {
+export function PasoViajeros({ asientos, iniciales, tipos, onSeguir }: Props) {
   const { sesion } = useSesion();
   const [datos, setDatos] = useState<Pasajero[]>(() =>
     asientos.map((_, i) => {
@@ -64,7 +65,8 @@ export function PasoViajeros({ asientos, iniciales, onSeguir }: Props) {
       {asientos.map((a, i) => (
         <fieldset key={a.id} className="viajero">
           <legend>
-            Viajero {i + 1} <span>· coche {a.coche}, asiento {a.fila}{a.letra}</span>
+            Viajero {i + 1}
+            {tipos?.[i] === "nino" ? " (niño)" : ""} <span>· coche {a.coche}, asiento {a.fila}{a.letra}</span>
           </legend>
           <div className="viajero__campos">
             {CAMPOS.map((c) => {

@@ -234,9 +234,20 @@
 }
 .tarjeta {
   padding: 1.25rem;
-  border: 1px solid var(--linea, #ddd);
-  border-radius: calc(var(--radio, 8px) * 2);
-  background: var(--blanco, #fff);
+  border: 1px solid var(--cristal-borde, #ddd);
+  border-radius: var(--radio-grande, 20px);
+  background: var(--cristal-fondo, #fff);
+  box-shadow: var(--cristal-brillo), var(--sombra-2);
+  -webkit-backdrop-filter: var(--cristal-desenfoque);
+  backdrop-filter: var(--cristal-desenfoque);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .tarjeta {
+    background: var(--blanco, #fff);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 .tarjeta h2 {
   margin: 0 0 0.5rem;
@@ -297,4 +308,24 @@
   .camara__barra,
   .camara__progreso span,
   .pestanas button { transition: none; }
+}
+
+/* Tarjetas y puntos */
+.cuenta__descuento select {
+  font: inherit;
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: rgb(255 255 255 / 0.85);
+  color: var(--grafito);
+}
+
+.cuenta__puntos {
+  font-size: 1.1rem;
+}
+
+.cuenta__puntos strong {
+  font-size: 2rem;
+  color: var(--color-marca);
 }
