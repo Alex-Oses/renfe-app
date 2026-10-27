@@ -11,7 +11,7 @@ tags: [estado]
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
 | Alex | PO + Frontend | 🟢 | GitHub configurado y equipo invitado; siguiente: app Expo en `frontend/mobile` | — | 2026-10-26 |
-| Rubén | Backend + chatbot | 🟢 | Arquitectura y plan de datos Renfe en `docs/arquitectura.md`; pendiente `nest new` y borrador de [[endpoints]] | — | 2026-10-26 |
+| Rubén | Backend + chatbot | 🟡 | API lista hasta donde se puede sin BD: esqueleto, auth, salud con ping a Postgres | Esperando esquema de Marina para `/estaciones` y `/trenes` | 2026-10-26 |
 | Marina | SM + Base de datos | ⚪ | Pendiente: `supabase init` y borrador de [[modelo-datos]] | Esperando repo en GitHub | 2026-10-26 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
 
