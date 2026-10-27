@@ -197,7 +197,7 @@ Chatbot        POST /chatbot/mensaje → API → Claude API (tool use)
 | # | Trampa | Qué hacer |
 |---|---|---|
 | 1 | Cercanías y AVE/LD son **dos feeds separados**: posiciones y retrasos en ficheros distintos | Guardar columna `feed` en todas las tablas y sondear los 4 JSON |
-| 2 | Los `tripId` de AVE/LD llevan la fecha pegada (`3560412026-10-24`) | Quitarla para cruzar con `trips.txt`; verificar en el primer import |
+| 2 | Los `tripId` de AVE/LD llevan la fecha pegada (`3560412026-10-24`) | **No quitar nada**: el `trip_id` de `trips.txt` la lleva igual (comprobado el 27/10 con el fichero real). Cada `trip_id` es un viaje de un día |
 | 3 | 1,8 M filas de horarios | `COPY`, nunca `INSERT` fila a fila |
 | 4 | Horas GTFS pueden pasar de 24:00 (tren de las 25:10) | Guardar segundos enteros, no tipo `time` |
 | 5 | Cercanías no trae `pickup_type` / `drop_off_type` | No se puede filtrar paradas técnicas por campo; en AVE sí vienen |
@@ -221,11 +221,12 @@ Chatbot        POST /chatbot/mensaje → API → Claude API (tool use)
 | Decisión | Opciones | Recomendación |
 |---|---|---|
 | Estaciones entre feeds | Una estación lógica con dos `stop_id` / dos estaciones | Una sola en la UI (evita "Atocha" duplicada) |
-| Tiempo real | Worker → tabla + Realtime (ADR-001) / caché en memoria en la API | Worker + Realtime: da historial y desacopla de Renfe |
+| Tiempo real | Worker → tabla + Realtime (ADR-001) / caché en memoria en la API | **Decidido (27/10): caché en memoria en la API** para la entrega, sin worker; el worker + Realtime queda fuera de alcance |
 | Transbordos | Fuera de alcance en fase 1 / implementar routing | Fuera: solo `transfers.txt` de Cercanías, +1 semana |
 | Atribución CC BY | Créditos en la app | Obligatoria en Ajustes/Acerca de |
 
-Ninguna de estas está cerrada: si se decide, va a `obsidian/03-decisiones/` (ADR-002).
+Ninguna de estas está cerrada salvo la de tiempo real, que se resolvió el 27/10 a favor de la caché
+en memoria para la entrega. Si se decide otra, va a `obsidian/03-decisiones/` (ADR-002).
 
 ## 10. Alcance por sprint
 
