@@ -374,12 +374,12 @@ Notas:
 - `paradaActual` es el `stop_id` del feed, no el `id` unificado de `estaciones` (ver la nota de
   `/trenes/:feed/:tripId/posicion`).
 
-### Campos del viaje para el mapa — propuesto (Alex, 2026-10-27) · para Rubén
+### Campos del viaje para el mapa — aceptado (Rubén, 2026-10-27) · **bloqueado por la BD**
 
 Al pulsar un tren, la web quiere enseñar **qué tren es, de dónde sale, adónde va, la próxima parada
-y las horas**. Propuesta: añadir a cada elemento de `datos` estos campos, **todos opcionales**
-(`null` si no se pueden cruzar con el GTFS estático). La web ya los lee
-(`frontend/web/src/api/cliente.ts`, `aPosicion`) y oculta los que lleguen vacíos.
+y las horas**. Alex propuso estos campos y la web ya los lee (`frontend/web/src/api/cliente.ts`,
+`aPosicion`) ocultando los que lleguen vacíos. **La forma se acepta tal cual**: añadir campos
+opcionales no rompe nada, así que se pueden ir rellenando sin tocar la web.
 
 ```json
 {
@@ -392,10 +392,31 @@ y las horas**. Propuesta: añadir a cada elemento de `datos` estos campos, **tod
 }
 ```
 
-- `nombre`: tipo y número comercial (lo que se ve en los paneles). Sustituye al `vehicleId` en la UI.
-- `linea`: solo en Cercanías (`C-1`, `R2`…); `null` en AVE/LD.
-- Las horas son las **previstas con el retraso aplicado** si se conoce; con offset, como el resto.
-- `velocidadKmh` y `rumbo` se pueden quitar: Renfe no los publica y la web ya no los usa.
+**Estado: los seis son `null` hoy.** No es que falte código: **los seis salen del GTFS estático**, que
+vive en Supabase, y Supabase no tiene migraciones todavía. `vehicle_positions` solo publica
+`tripId`, `vehicleId`, `stopId`, latitud y longitud: ni nombres de estación ni horas.
+
+De dónde sale cada uno cuando exista la BD:
+
+| Campo | Origen |
+|---|---|
+| `nombre` | `rutas.nombre_corto` del viaje (`AVE 02070`) |
+| `linea` | `rutas.nombre_corto` en `cercanias` (`C-4`); `null` en `avld` |
+| `origen` | primera parada del viaje en `horarios` + `estaciones.nombre` |
+| `destino` | última parada del viaje en `horarios` + `estaciones.nombre` |
+| `proximaParada` | primera parada con `secuencia > paradaActual.secuencia`, con su `llega` |
+| `llegadaDestino` | `llega` de la última parada |
+
+Dos avisos:
+
+- `paradaActual` (el `stopId` de GTFS-RT) es el `stop_id` **del feed**, no el `id` unificado de
+  `estaciones`. Para traducirlo hace falta `estacion_feeds`, que también es BD. Sin eso no hay ni
+  `proximaParada.nombre` ni `origen`/`destino`.
+- Las horas, cuando lleguen, van **con el retraso aplicado** si se conoce, y con offset de Madrid.
+
+**`velocidadKmh` y `rumbo` se quedan** (siempre `null`), aunque Alex propuso quitarlos: `aPosicion`
+todavía los mapea (`rumbo: p.rumbo ?? 0`) y quitarlos no arregla nada. Quedan como obsoletos; se
+pueden borrar cuando la web deje de leerlos.
 
 ## Formato del QR del billete — propuesto (Alex, 2026-10-27)
 
