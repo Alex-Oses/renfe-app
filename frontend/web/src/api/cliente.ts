@@ -39,25 +39,66 @@ async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise
   return r.json() as Promise<T>;
 }
 
+// Respuestas de lista del contrato: { datos, total }.
+interface Lista<T> {
+  datos: T[];
+  total?: number;
+}
+const datos = <T>(ruta: string) => pedir<Lista<T>>(ruta).then((r) => r.datos);
+
+// El id de tren del contrato es "feed:tripId:fecha"; las rutas de viaje lo piden por partes.
+export function rutaViaje(trenId: string, sufijo = ""): string {
+  const [feed, tripId, fecha] = trenId.split(":");
+  return `/trenes/${feed}/${encodeURIComponent(tripId)}${sufijo}?fecha=${fecha}`;
+}
+
+// Forma de GET /posiciones según el contrato; se traduce a la PosicionTren que pinta el mapa.
+interface PosicionApi {
+  feed: string;
+  vehicleId: string;
+  tripId: string;
+  lat: number;
+  lon: number;
+  rumbo: number | null;
+  velocidadKmh: number | null;
+  retrasoSeg: number | null;
+  actualizado: string;
+}
+const aPosicion = (p: PosicionApi): PosicionTren => ({
+  trenId: `${p.feed}:${p.tripId}`,
+  tipo: p.feed === "cercanias" ? "Media Distancia" : "AVE",
+  numero: p.vehicleId,
+  origen: "",
+  destino: "",
+  lat: p.lat,
+  lon: p.lon,
+  rumbo: p.rumbo ?? 0,
+  velocidad: p.velocidadKmh ?? 0,
+  retrasoMin: Math.round((p.retrasoSeg ?? 0) / 60),
+  progreso: 0,
+  proximaParada: "",
+  actualizado: p.actualizado,
+});
+
 // Simula la latencia de red para que los estados de carga se vean igual que con la API real.
 const simular = <T>(f: () => T | Promise<T>, ms = 350): Promise<T> =>
   new Promise((ok, ko) => setTimeout(() => (async () => f())().then(ok, ko), ms));
 
 // GET /estaciones?q=
 export const buscarEstaciones = (q: string): Promise<Estacion[]> =>
-  BASE ? pedir(`/estaciones?q=${encodeURIComponent(q)}`) : simular(() => trenes.buscarEstaciones(q), 0);
+  BASE ? datos<Estacion>(`/estaciones?q=${encodeURIComponent(q)}`) : simular(() => trenes.buscarEstaciones(q), 0);
 
 // GET /trenes?origen=&destino=&fecha=
 export const buscarTrenes = (b: BusquedaTrenes): Promise<Tren[]> =>
-  BASE ? pedir(`/trenes?${new URLSearchParams({ ...b })}`) : simular(() => trenes.buscarTrenes(b));
+  BASE ? datos<Tren>(`/trenes?${new URLSearchParams({ ...b })}`) : simular(() => trenes.buscarTrenes(b));
 
-// GET /trenes/:id
+// GET /trenes/:feed/:tripId?fecha=
 export const obtenerTren = (id: string): Promise<Tren> =>
-  BASE ? pedir(`/trenes/${encodeURIComponent(id)}`) : simular(() => trenes.obtenerTren(id));
+  BASE ? pedir(rutaViaje(id)) : simular(() => trenes.obtenerTren(id));
 
-// GET /trenes/:id/asientos
+// GET /trenes/:feed/:tripId/asientos?fecha=
 export const obtenerAsientos = (trenId: string): Promise<Asiento[]> =>
-  BASE ? pedir(`/trenes/${encodeURIComponent(trenId)}/asientos`) : simular(() => reservas.obtenerAsientos(trenId));
+  BASE ? datos<Asiento>(rutaViaje(trenId, "/asientos")) : simular(() => reservas.obtenerAsientos(trenId));
 
 // POST /reservas
 export const crearReserva = (r: NuevaReserva): Promise<Reserva> =>
@@ -75,7 +116,7 @@ export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
 
 // GET /billetes
 export const misBilletes = (): Promise<Billete[]> =>
-  BASE ? pedir("/billetes") : simular(() => reservas.misBilletes());
+  BASE ? datos<Billete>("/billetes") : simular(() => reservas.misBilletes());
 
 // GET /billetes/:id/qr  (devuelve el billete con su QR firmado)
 export const obtenerBillete = (id: string): Promise<Billete> =>
@@ -97,6 +138,6 @@ export const registrarCara = (embedding: EmbeddingFacial): Promise<{ ok: true }>
 export const verificarCara = (datos: { email: string; embedding: EmbeddingFacial }): Promise<Sesion> =>
   BASE ? pedir("/auth/cara/verificar", "POST", datos) : simular(() => cuenta.verificarCara(datos), 900);
 
-// GET /tiempo-real/trenes  (nuevo: posiciones GTFS-RT; hay que añadirlo al contrato)
+// GET /posiciones (alternativa a Supabase Realtime, ver contrato)
 export const posicionesTrenes = (): Promise<PosicionTren[]> =>
-  BASE ? pedir("/tiempo-real/trenes") : simular(() => tiempoReal.posiciones(), 150);
+  BASE ? datos<PosicionApi>("/posiciones").then((l) => l.map(aPosicion)) : simular(() => tiempoReal.posiciones(), 150);
