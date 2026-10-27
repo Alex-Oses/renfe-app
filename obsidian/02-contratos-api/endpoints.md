@@ -243,36 +243,44 @@ Notas:
 
 ## GET /trenes/:feed/:tripId/posicion
 
-Descripción: última posición conocida del tren que hace ese viaje **hoy**.
+Descripción: última posición conocida del tren que hace ese viaje **ahora**.
 Auth: **no**
 
-> ⚠️ **Bloqueado (2026-10-27).** El `tripId` de GTFS-RT no coincide con el `trip_id` del GTFS
-> estático (`0029112026-10-27` vs `3097L23537C1`), así que hoy no se puede cruzar la posición con
-> el viaje. Opciones: cruzar por número de tren + fecha, o retirar este endpoint y usar solo
-> `/posiciones`. Sin decisión tomada.
+> **El `tripId` de GTFS-RT es el `trip_id` del GTFS estático.** Comprobado el 27/10 contra el
+> `trips.txt` real de AVE/LD de Renfe: `0327212026-10-26` existe tal cual. Es decir, el `tripId` que
+> devuelve `/posiciones` se puede pasar **directo** a esta ruta: el mapa puede enlazar a la ficha
+> del viaje. Confirmado solo en `avld`; en `cercanias` falta el GTFS estático para comprobarlo
+> (el `Fichero_CERCA` público da 404), aunque el formato encaja.
 
 Response 200:
 
 ```json
 {
-  "feed": "cercanias",
-  "tripId": "3097L23537C1",
-  "vehicleId": "23537",
-  "lat": 37.18487,
-  "lon": -5.79046,
-  "rumbo": 45,
-  "velocidadKmh": 78,
-  "estado": "INCOMING_AT",
-  "paradaActual": "51200",
-  "retrasoSeg": 180,
-  "actualizado": "2026-10-26T12:00:30+01:00"
+  "feed": "avld",
+  "tripId": "0327212026-10-26",
+  "vehicleId": "03272",
+  "lat": 40.399803,
+  "lon": -3.6778688,
+  "rumbo": null,
+  "velocidadKmh": null,
+  "estado": "IN_TRANSIT_TO",
+  "paradaActual": "60000",
+  "retrasoSeg": 2280,
+  "actualizado": "2026-10-27T10:27:18+01:00"
 }
 ```
 
-Errores: `404` el viaje no circula ahora o no hay dato (Renfe caída / feed sin esa posición).
+Errores: `400` `feed` no es `avld`/`cercanias` · `404` el viaje no está circulando ahora o Renfe no
+publica su posición · `503` Renfe no responde y no hay datos previos.
 
-Notas: `estado` es el enum de GTFS-RT (`INCOMING_AT`, `STOPPED_AT`, `IN_TRANSIT_TO`). Si no se
-conoce el rumbo o la velocidad, `null`.
+Notas:
+
+- `estado` es el enum de GTFS-RT (`INCOMING_AT`, `STOPPED_AT`, `IN_TRANSIT_TO`). Si no se conoce el
+  rumbo o la velocidad, `null`.
+- `paradaActual` es el **`stop_id` del feed**, no el `id` unificado de `estaciones`. Para `avld`
+  coinciden; para `cercanias` **no**: para traducirlo a una estación hay que pasar por
+  `estacion_feeds`. Hasta que exista la BD, la web solo puede mostrar el id.
+- El viaje se busca en el snapshot de `/posiciones`, así que no gasta ni una consulta más a Renfe.
 
 ## GET /incidencias
 
@@ -330,6 +338,7 @@ Response 200:
       "rumbo": 45,
       "velocidadKmh": 78,
       "estado": "INCOMING_AT",
+      "paradaActual": "60000",
       "retrasoSeg": 180,
       "actualizado": "2026-10-26T12:00:30+01:00"
     }
@@ -359,9 +368,11 @@ Notas:
   así que la web no debe tratarlo como «0 o tarde».
 - Un mismo `vehicleId` aparece varias veces con `tripId` distintos (un tren encadenando viajes): no
   se deduplica, cada fila es un viaje.
-- `tripId` es el de GTFS-RT tal cual (`0029112026-10-27`), que **no coincide** con el `trip_id` del
-  GTFS estático (`3097L23537C1`): no se puede cruzar con `viajes` por id. Para el mapa da igual;
-  para `/trenes/:feed/:tripId/posicion` es un bloqueo.
+- `tripId` es el de GTFS-RT tal cual, que **sí coincide** con el `trip_id` del GTFS estático
+  (comprobado contra el `trips.txt` real de AVE/LD). Se puede pasar directo a
+  `/trenes/:feed/:tripId` y a `/trenes/:feed/:tripId/posicion`.
+- `paradaActual` es el `stop_id` del feed, no el `id` unificado de `estaciones` (ver la nota de
+  `/trenes/:feed/:tripId/posicion`).
 
 ### Campos del viaje para el mapa — propuesto (Alex, 2026-10-27) · para Rubén
 

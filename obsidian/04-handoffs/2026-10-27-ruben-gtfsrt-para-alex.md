@@ -73,10 +73,11 @@ bloquea en el navegador y el error parece un fallo de la API. Añade tu puerto a
 **`retrasoSeg` puede ser negativo**: es un tren **adelantado**, no un dato roto. En la última prueba,
 26 de 460 trenes iban con retraso negativo. Píntalo en verde, no en rojo.
 
-**No puedes hacer clic en un tren y pedir su ficha.** El `tripId` de GTFS-RT (`0327212026-10-26`) no
-es el `trip_id` del GTFS estático, así que no cruza con `/trenes/:feed/:tripId`. Ese cruce está
-bloqueado y pendiente de decisión del equipo ([[endpoints]], apartado de `posiciones`). Si necesitas
-la ficha, hoy solo puedes llegar por búsqueda origen/destino, no desde el mapa.
+**Sí puedes hacer clic en un tren y pedir su ficha.** El `tripId` que devuelve `/posiciones` es el
+`trip_id` del GTFS estático: pásalo tal cual a `GET /trenes/:feed/:tripId/posicion` y tendrás la
+posición de ese viaje con `paradaActual`. Confirmado en `avld` contra el `trips.txt` real de Renfe.
+Ojo: `paradaActual` es el `stop_id` del feed, así que **hoy solo puedes mostrar el id**, no el nombre
+de la estación (eso necesita la BD).
 
 ## 5. Números reales de la última prueba (27/10, 10:06)
 
