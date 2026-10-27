@@ -10,13 +10,23 @@ export interface Estacion {
 
 export type TipoTren = "AVE" | "Avlo" | "Alvia" | "Intercity" | "Media Distancia";
 
+// En /trenes la API solo manda id y nombre de las estaciones; ciudad puede faltar o venir vacía.
+export type EstacionTren = Pick<Estacion, "id" | "nombre"> & Partial<Estacion>;
+
+// Nombre corto para la UI: la ciudad si se conoce; si no, el nombre de la estación.
+export const ciudadDe = (e: EstacionTren) => e.ciudad || e.nombre;
+
 export interface Tren {
-  id: string;
+  id: string; // "feed:tripId:fecha" (contrato); en simulado, cualquier id único
   tipo: TipoTren;
   numero: string;
-  origen: Estacion;
-  destino: Estacion;
-  salida: string; // ISO 8601, hora local
+  origen: EstacionTren;
+  destino: EstacionTren;
+  feed?: "cercanias" | "avld";
+  tripId?: string;
+  fecha?: string; // AAAA-MM-DD
+  retrasoSeg?: number | null;
+  salida: string; // ISO 8601 con offset
   llegada: string;
   precioDesde: number; // euros; simulado
   plazasLibres: number; // simulado

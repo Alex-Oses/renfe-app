@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { obtenerBillete } from "../api/cliente";
-import type { Billete as TBillete } from "../api/tipos";
+import { ciudadDe, type Billete as TBillete } from "../api/tipos";
 import { fecha, hora } from "./reserva/formato";
 import "./billetes.css";
 
@@ -46,7 +46,7 @@ export default function Billete() {
         </header>
         <div className="pase__ruta">
           <div>
-            <span className="pase__ciudad">{b.tren.origen.ciudad}</span>
+            <span className="pase__ciudad">{ciudadDe(b.tren.origen)}</span>
             <span className="pase__hora">{hora(b.tren.salida)}</span>
             <span className="pase__est">{b.tren.origen.nombre}</span>
           </div>
@@ -54,7 +54,7 @@ export default function Billete() {
             <path d="M2 12h34M28 5l8 7-8 7" />
           </svg>
           <div className="pase__destino">
-            <span className="pase__ciudad">{b.tren.destino.ciudad}</span>
+            <span className="pase__ciudad">{ciudadDe(b.tren.destino)}</span>
             <span className="pase__hora">{hora(b.tren.llegada)}</span>
             <span className="pase__est">{b.tren.destino.nombre}</span>
           </div>
