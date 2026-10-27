@@ -102,6 +102,7 @@
 /* Rejilla y resumen */
 .reserva__rejilla {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* sin esto, las pestañas de coches ensanchan la página en móvil */
   gap: 2rem;
   padding-bottom: 7rem;
 }

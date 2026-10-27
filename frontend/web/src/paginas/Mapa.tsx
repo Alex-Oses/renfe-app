@@ -76,6 +76,13 @@ function Retraso({ min }: { min: number }) {
   return <span className={`retraso retraso--${nivel}`}>{min === 0 ? "Puntual" : `+${min} min`}</span>;
 }
 
+// "Madrid-Puerta de Atocha" → "Madrid"; respeta ciudades de dos palabras como "A Coruña".
+function ciudadCorta(estacion: string): string {
+  const [base] = estacion.split("-");
+  const [primera, segunda] = base.split(" ");
+  return primera.length > 1 || !segunda ? primera : `${primera} ${segunda}`;
+}
+
 export default function Mapa() {
   const [params, setParams] = useSearchParams();
   const seleccion = params.get("tren");
@@ -250,7 +257,7 @@ export default function Mapa() {
                 </span>
                 <span className="mapa-tren__info">
                   <strong>
-                    {t.numero} · {t.origen.split(/[- ]/)[0]} → {t.destino.split(/[- ]/)[0]}
+                    {t.numero} · {ciudadCorta(t.origen)} → {ciudadCorta(t.destino)}
                   </strong>
                   <span>
                     Próxima: {t.proximaParada} · {t.velocidad} km/h

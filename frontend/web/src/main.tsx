@@ -8,6 +8,7 @@ import { ProveedorSesion } from "./estado/sesion";
 import { Inicio } from "./paginas/Inicio";
 import { Resultados } from "./paginas/Resultados";
 import "./estilos/base.css";
+import "./estilos/cristal-liquido.css";
 
 // Las páginas pesadas (mapa, cámara, QR) se cargan solo al entrar en ellas.
 const Reserva = lazy(() => import("./paginas/reserva/Reserva"));

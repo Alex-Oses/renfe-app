@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { enlaceWallet } from "../../api/cliente";
 import type { Billete, EnlaceWallet } from "../../api/tipos";
 import { fecha, hora } from "../reserva/formato";
+import { ciudadDe } from "../../api/tipos";
 
 type Plataforma = EnlaceWallet["plataforma"];
 
@@ -106,9 +107,9 @@ async function dibujar(b: Billete): Promise<HTMLCanvasElement> {
   };
   texto("Andén", 36, 100, "#fff", 800);
   texto(`${b.tren.tipo} ${b.tren.numero}`, 26, 100, "#fff", 600, "right", 650);
-  texto(b.tren.origen.ciudad, 48, 220, "#464646", 800);
+  texto(ciudadDe(b.tren.origen), 48, 220, "#464646", 800);
   texto(hora(b.tren.salida), 34, 265, "#D62D61");
-  texto(b.tren.destino.ciudad, 48, 350, "#464646", 800, "right", 650);
+  texto(ciudadDe(b.tren.destino), 48, 350, "#464646", 800, "right", 650);
   texto(hora(b.tren.llegada), 34, 395, "#D62D61", 700, "right", 650);
   texto(fecha(b.tren.salida), 26, 460, "#464646", 600);
   texto(`Coche ${b.asiento.coche} · Asiento ${b.asiento.fila}${b.asiento.letra} · ${b.asiento.clase}`, 26, 505, "#464646", 600);

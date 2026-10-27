@@ -9,6 +9,7 @@ import { PasoPago } from "./PasoPago";
 import { PasoListo } from "./PasoListo";
 import { euros, hora } from "./formato";
 import "./reserva.css";
+import { ciudadDe } from "../../api/tipos";
 
 const PASOS = [
   { id: "asientos", nombre: "Asientos" },
@@ -171,10 +172,10 @@ export default function Reserva() {
             {tren.tipo} {tren.numero}
           </p>
           <p className="resumen__ruta">
-            <strong>{tren.origen.ciudad}</strong> {hora(tren.salida)}
+            <strong>{ciudadDe(tren.origen)}</strong> {hora(tren.salida)}
             <span aria-hidden="true"> → </span>
             <span className="sr-solo"> a </span>
-            <strong>{tren.destino.ciudad}</strong> {hora(tren.llegada)}
+            <strong>{ciudadDe(tren.destino)}</strong> {hora(tren.llegada)}
           </p>
           <p className="resumen__tarifa">
             Tarifa {nombreTarifa}

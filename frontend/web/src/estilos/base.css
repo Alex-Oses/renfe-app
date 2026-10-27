@@ -847,11 +847,13 @@ a.mega__titulo:hover {
 
 .tren {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  /* En móvil horas y compra no caben juntas: la compra baja al lado del tipo de tren */
   grid-template-areas:
-    "horas compra"
+    "horas horas"
     "linea linea"
-    "info info";
+    "info compra";
+  align-items: center;
   gap: 0.5rem 1rem;
   padding: 1rem 1.25rem;
   font-variant-numeric: tabular-nums;
@@ -859,7 +861,7 @@ a.mega__titulo:hover {
 
 @media (min-width: 48rem) {
   .tren {
-    grid-template-columns: 12rem 1fr 8rem 11rem;
+    grid-template-columns: 12rem 1fr 10rem 11rem;
     grid-template-areas: "horas linea info compra";
     align-items: center;
   }
@@ -887,6 +889,7 @@ a.mega__titulo:hover {
 }
 
 .tren__duracion {
+  white-space: nowrap;
   font-size: 0.8rem;
   color: var(--gris);
 }

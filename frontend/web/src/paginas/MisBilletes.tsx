@@ -5,6 +5,7 @@ import type { Billete } from "../api/tipos";
 import { agrupar, type Viaje } from "./billetes/agrupar";
 import { fecha, hora } from "./reserva/formato";
 import "./billetes.css";
+import { ciudadDe } from "../api/tipos";
 
 export default function MisBilletes() {
   const [billetes, setBilletes] = useState<Billete[] | null>(null);
@@ -73,8 +74,8 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
     <article className={`viaje cristal${pasado ? " viaje--pasado" : ""}`} aria-labelledby={idT}>
       <header className="viaje__cabeza">
         <h3 id={idT} className="viaje__ruta">
-          {tren.origen.ciudad} <span aria-hidden="true">→</span>
-          <span className="sr-solo"> a </span> {tren.destino.ciudad}
+          {ciudadDe(tren.origen)} <span aria-hidden="true">→</span>
+          <span className="sr-solo"> a </span> {ciudadDe(tren.destino)}
         </h3>
         <span className="viaje__loc">
           <span className="sr-solo">Localizador </span>

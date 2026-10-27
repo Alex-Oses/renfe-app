@@ -57,7 +57,7 @@ body {
 :root .pago__panel,
 :root .coches__tab,
 :root .camara,
-:root .cristal,
+:root .cristal:not(.cristal--oscuro),
 :root .panel-cristal,
 :root .entrada__panel {
   background: var(--vidrio);
