@@ -52,8 +52,8 @@ Estado: propuesto | implementado | cambiado (fecha)
 
 | Método | Ruta | Para qué | Estado |
 |---|---|---|---|
-| GET | `/estaciones?q=&feed=` | Autocompletar estaciones | implementado (2026-10-27) |
-| GET | `/trenes?origen=&destino=&fecha=` | Buscar viajes directos | propuesto · **detallado** |
+| GET | `/estaciones?q=&feed=` | Autocompletar estaciones | **implementado** · **detallado** |
+| GET | `/trenes?origen=&destino=&fecha=` | Buscar viajes directos | **implementado** · **detallado** |
 | GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | propuesto · **detallado** |
 | GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | propuesto · **detallado** |
 | GET | `/incidencias?feed=&linea=` | Avisos GTFS-RT | propuesto · **detallado** |
@@ -167,10 +167,15 @@ Errores: `400` falta un parámetro o `fecha` inválida · `404` estación inexis
 
 Notas:
 
-- `retrasoSeg` es `null` si no hay dato en GTFS-RT.
-- `tipo` se infiere de la ruta (`route_long_name`/`route_short_name`); si no se puede, `"Desconocido"`.
+- `retrasoSeg` es `null` si no hay dato en GTFS-RT. Hoy **siempre** es `null`: `/trenes` no consulta
+  GTFS-RT; el retraso real llega con `/trenes/:feed/:tripId` y `/posiciones`.
+- `tipo` es `rutas.tipo_servicio` en mayúsculas (`AVE`, `ALVIA`…); si es `null`, `"DESCONOCIDO"`.
+- `numero` sale del número al final de `nombre_corto` (`AVE 02070` → `02070`); si no lo hay, `null`.
+  **Puede ser `null`**: quien pinte la UI debe tener un plan B.
 - `precioDesde` y `plazasLibres` son simulados y deterministas (misma búsqueda → mismo resultado).
 - Solo directos en fase 1. Los transbordos, si llegan, serán `numTransbordos` > 0 en una v2.
+- La fecha se resuelve con `calendarios` + `calendario_excepciones` en la misma consulta, y `recoge`/
+  `deja` excluyen las paradas técnicas.
 
 ## GET /trenes/:feed/:tripId
 

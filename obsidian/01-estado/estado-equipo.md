@@ -1,5 +1,5 @@
 ---
-actualizado: 2026-10-26
+actualizado: 2026-10-27
 tags: [estado]
 ---
 
@@ -11,7 +11,7 @@ tags: [estado]
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
 | Alex | PO + Frontend | 🟢 | Web completa en `main` (menú, idiomas, avisos, cristal líquido). Siguiente: conectar la web a la API real | Reactivar protección de ramas; Vercel no promociona `main` solo | 2026-10-27 |
-| Rubén | Backend + chatbot | 🟢 | `GET /estaciones` implementado contra el modelo de datos; sin BD local para probarlo. Siguiente: `/trenes` | Necesita migraciones de Marina para validar el SQL | 2026-10-27 |
+| Rubén | Backend + chatbot | 🟢 | `GET /estaciones` (#26) y `GET /trenes` implementados contra el modelo de datos; sin BD local para probar el SQL. Siguiente: `/posiciones` | Necesita migraciones de Marina para validar el SQL | 2026-10-27 |
 | Marina | SM + Base de datos | 🟢 | Supabase local validado en VM Linux; contrato de [[modelo-datos]] cerrado salvo la duda de Kevin sobre Stripe | — | 2026-10-26 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
 

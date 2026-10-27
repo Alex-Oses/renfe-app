@@ -27,4 +27,14 @@ describe('API (e2e)', () => {
   it('GET /estaciones sin q responde 400', async () => {
     await request(app.getHttpServer()).get('/estaciones').expect(400);
   });
+
+  it('GET /trenes sin parámetros responde 400', async () => {
+    await request(app.getHttpServer()).get('/trenes').expect(400);
+  });
+
+  it('GET /trenes con fecha mal formada responde 400', async () => {
+    await request(app.getHttpServer())
+      .get('/trenes?origen=60000&destino=71801&fecha=02-11-2026')
+      .expect(400);
+  });
 });

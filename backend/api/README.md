@@ -9,11 +9,12 @@ API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../
 Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger,
 `GET /health`, auth de Supabase con roles y acceso opcional a Postgres.
 
-**Primer endpoint de datos: `GET /estaciones`** (fase F1), contra las tablas `estaciones` y
-`estacion_feeds` del modelo de datos. Sin `DATABASE_URL` responde `503`.
+**Endpoints de datos (fase F1): `GET /estaciones` y `GET /trenes`**, con SQL directo contra el
+modelo de datos de [`obsidian/02-contratos-api/modelo-datos.md`](../../obsidian/02-contratos-api/modelo-datos.md)
+(sin ORM). Sin `DATABASE_URL` responden `503`.
 
-Lo demás sigue pendiente: `/trenes` y compañía necesitan las migraciones de Marina
-(`backend/database/`) y el worker GTFS.
+Lo demás sigue pendiente: detalle de viaje, `/posiciones` y compañía necesitan las migraciones de
+Marina (`backend/database/`) y el worker GTFS.
 
 ## Arrancar
 
@@ -39,9 +40,11 @@ src/
   config/entorno.ts   validación de variables de entorno
   common/auth/        SupabaseJwtGuard, RolesGuard y decorador @Roles
   common/bd/          BdService: pool de Postgres opcional
+  common/gtfs/        tiempo: horas GTFS → ISO 8601 con offset de Madrid
   modules/
     estaciones/       GET /estaciones (SQL sobre estaciones + estacion_feeds)
     health/           GET /health
+    trenes/           GET /trenes (viajes directos; precio y plazas simulados)
 ```
 
 ## Base de datos
