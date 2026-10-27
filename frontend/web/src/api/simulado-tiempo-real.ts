@@ -13,9 +13,31 @@
 //   proximaParada <- VehiclePosition.stop_id (con current_status IN_TRANSIT_TO / INCOMING_AT) contra stops.txt
 //   actualizado   <- VehiclePosition.timestamp (segundos Unix) o FeedHeader.timestamp
 import { ESTACIONES } from "./simulado";
-import type { Estacion, PosicionTren, TipoTren } from "./tipos";
+import type { Estacion, ParadaRuta, PosicionTren, TipoTren } from "./tipos";
 
-const est = (id: string): Estacion => ESTACIONES.find((e) => e.id === id)!;
+// Paradas intermedias de Cercanías/Rodalies SIMULADAS: nombres reales, coordenadas aproximadas, ids inventados ("c-").
+const CERCANIAS: Estacion[] = [
+  { id: "c-nmin", nombre: "Nuevos Ministerios", ciudad: "Madrid", lat: 40.446, lon: -3.692 },
+  { id: "c-sol", nombre: "Sol", ciudad: "Madrid", lat: 40.4169, lon: -3.7035 },
+  { id: "c-vvalto", nombre: "Villaverde Alto", ciudad: "Madrid", lat: 40.3417, lon: -3.711 },
+  { id: "c-getafe", nombre: "Getafe Centro", ciudad: "Getafe", lat: 40.308, lon: -3.731 },
+  { id: "c-parla", nombre: "Parla", ciudad: "Parla", lat: 40.237, lon: -3.772 },
+  { id: "c-vical", nombre: "Vicálvaro", ciudad: "Madrid", lat: 40.403, lon: -3.608 },
+  { id: "c-coslada", nombre: "Coslada", ciudad: "Coslada", lat: 40.425, lon: -3.559 },
+  { id: "c-torrejon", nombre: "Torrejón de Ardoz", ciudad: "Torrejón de Ardoz", lat: 40.457, lon: -3.479 },
+  { id: "c-alcala", nombre: "Alcalá de Henares", ciudad: "Alcalá de Henares", lat: 40.489, lon: -3.366 },
+  { id: "c-pgracia", nombre: "Passeig de Gràcia", ciudad: "Barcelona", lat: 41.392, lon: 2.165 },
+  { id: "c-clot", nombre: "El Clot-Aragó", ciudad: "Barcelona", lat: 41.409, lon: 2.187 },
+  { id: "c-badalona", nombre: "Badalona", ciudad: "Badalona", lat: 41.445, lon: 2.247 },
+  { id: "c-masnou", nombre: "El Masnou", ciudad: "El Masnou", lat: 41.479, lon: 2.318 },
+  { id: "c-mataro", nombre: "Mataró", ciudad: "Mataró", lat: 41.538, lon: 2.444 },
+  { id: "c-bellvitge", nombre: "Bellvitge", ciudad: "L'Hospitalet", lat: 41.351, lon: 2.11 },
+  { id: "c-prat", nombre: "El Prat de Llobregat", ciudad: "El Prat", lat: 41.327, lon: 2.095 },
+  { id: "c-gava", nombre: "Gavà", ciudad: "Gavà", lat: 41.303, lon: 2.001 },
+  { id: "c-castell", nombre: "Castelldefels", ciudad: "Castelldefels", lat: 41.28, lon: 1.98 },
+];
+
+const est = (id: string): Estacion => [...ESTACIONES, ...CERCANIAS].find((e) => e.id === id)!;
 
 // Rutas con paradas reales de la lista. Cada una se recorre en ambos sentidos.
 const RUTAS: { tipo: TipoTren; paradas: string[] }[] = [
@@ -32,6 +54,10 @@ const RUTAS: { tipo: TipoTren; paradas: string[] }[] = [
   { tipo: "Media Distancia", paradas: ["71801", "79300"] },
   { tipo: "Media Distancia", paradas: ["51003", "50500"] },
   { tipo: "Media Distancia", paradas: ["10600", "37606"] },
+  { tipo: "Cercanías", paradas: ["17000", "c-nmin", "c-sol", "60000", "c-vvalto", "c-getafe", "c-parla"] },
+  { tipo: "Cercanías", paradas: ["60000", "c-vical", "c-coslada", "c-torrejon", "c-alcala"] },
+  { tipo: "Cercanías", paradas: ["71801", "c-pgracia", "c-clot", "c-badalona", "c-masnou", "c-mataro"] },
+  { tipo: "Cercanías", paradas: ["71801", "c-bellvitge", "c-prat", "c-gava", "c-castell"] },
 ];
 
 // Velocidad media de crucero por tipo, en km/h.
@@ -41,9 +67,10 @@ const VELOCIDAD: Record<TipoTren, number> = {
   Alvia: 180,
   Intercity: 150,
   "Media Distancia": 120,
+  Cercanías: 70,
 };
 
-const NUM_TRENES = 26;
+const NUM_TRENES = 30;
 
 function semilla(texto: string): number {
   let h = 2166136261;
@@ -96,6 +123,7 @@ export function posicionesEn(ahora: number): PosicionTren[] {
     const total = tramos.reduce((s, d) => s + d, 0);
     const vMedia = VELOCIDAD[ruta.tipo] * (0.92 + (semilla(`v${i}`) % 9) / 100);
     const duracion = (total / vMedia) * 60 + 8; // minutos, con algo de margen por paradas
+    const inicioViaje = (m: number) => m - (((m % duracion) + duracion) % duracion);
     const fase = semilla(`f${i}`) % Math.round(duracion);
 
     // Cada vuelta del ciclo es un viaje nuevo, en sentido alterno.
@@ -115,6 +143,24 @@ export function posicionesEn(ahora: number): PosicionTren[] {
 
     const id = `rt-${i}-${vuelta}`;
     const r = semilla(id);
+    const retrasoMin = r % 10 < 6 ? 0 : 1 + (r % 25);
+
+    // Hora prevista en cada parada: reparto lineal del viaje por distancia, más el retraso.
+    const salidaMin = inicioViaje(minutos + fase) - fase;
+    let acum = 0;
+    const paradas: ParadaRuta[] = [];
+    camino.forEach((p, k) => {
+      if (k > 0) acum += longs[k - 1];
+      if (!p.parada) return;
+      paradas.push({
+        estacionId: p.parada.id,
+        nombre: p.parada.nombre,
+        lat: p.lat,
+        lon: p.lon,
+        llegada: new Date((salidaMin + (acum / total) * duracion + retrasoMin) * 60_000).toISOString(),
+        pasada: acum <= progreso * total,
+      });
+    });
     // Más lento al salir y al llegar.
     const arranque = Math.min(1, Math.min(progreso, 1 - progreso) * 12);
     res.push({
@@ -127,10 +173,12 @@ export function posicionesEn(ahora: number): PosicionTren[] {
       lon: a.lon + (b.lon - a.lon) * f,
       rumbo: Math.round(rumbo(a, b)),
       velocidad: Math.round(VELOCIDAD[ruta.tipo] * (0.3 + 0.7 * arranque)),
-      retrasoMin: r % 10 < 6 ? 0 : 1 + (r % 25),
+      retrasoMin,
       progreso,
       proximaParada: siguiente.nombre,
       actualizado: new Date(ahora).toISOString(),
+      ruta: camino.map((p): [number, number] => [p.lat, p.lon]),
+      paradas,
     });
   }
   return res;

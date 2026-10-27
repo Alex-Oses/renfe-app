@@ -242,3 +242,201 @@
     print-color-adjust: exact;
   }
 }
+
+/* Viajes agrupados por reserva */
+.viaje {
+  padding: 1.1rem 1.25rem;
+  border-left: 5px solid var(--frambuesa, #d62d61);
+}
+
+.viaje--pasado {
+  border-left-color: var(--linea, #d9dfe5);
+  opacity: 0.85;
+}
+
+.viaje__cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.viaje__ruta {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.viaje__loc {
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--morado, #81005e);
+}
+
+.viaje__dato {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--gris, #6b6b6b);
+}
+
+.viaje__viajeros {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.viaje__viajero {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  min-height: 44px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 14px;
+  background: rgb(239 243 246 / 0.8);
+  color: var(--grafito, #464646);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--dur-media, 200ms) var(--curva-salida, ease-out);
+}
+
+.viaje__viajero:hover {
+  background: rgb(214 45 97 / 0.1);
+}
+
+.viaje__asiento {
+  font-weight: 400;
+  font-size: 0.9rem;
+}
+
+/* Navegación entre viajeros de la reserva */
+.nav-grupo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+}
+
+.nav-grupo__paso {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--morado, #81005e);
+}
+
+a.nav-grupo__paso:hover {
+  background: rgb(129 0 94 / 0.08);
+}
+
+.nav-grupo__cuenta {
+  flex: 1;
+  font-weight: 700;
+  text-align: center;
+}
+
+.nav-grupo__todos {
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--morado, #81005e);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--morado, #81005e);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nav-grupo__todos[aria-pressed="true"] {
+  background: var(--morado, #81005e);
+  color: #fff;
+}
+
+.qr-grupo {
+  list-style: none;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+}
+
+.qr-grupo__item {
+  display: grid;
+  justify-items: center;
+  padding: 1rem;
+  text-align: center;
+}
+
+.qr-grupo__item p {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+}
+
+/* Cartera del móvil */
+.cartera {
+  margin-top: 1.5rem;
+}
+
+.cartera h2 {
+  font-size: 1.1rem;
+}
+
+.cartera__botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.boton-cartera {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 48px;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 12px;
+  background: #111;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-cartera:hover:not(:disabled) {
+  background: #2b2b2b;
+}
+
+.boton-cartera:disabled,
+.cartera .boton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.cartera__aviso:not(:empty) {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-left: 4px solid var(--morado, #81005e);
+  border-radius: 14px;
+  background: var(--niebla, #eff3f6);
+  color: var(--grafito, #464646);
+}
+
+.nav-grupo__paso:focus-visible,
+.nav-grupo__todos:focus-visible,
+.boton-cartera:focus-visible,
+.viaje__viajero:focus-visible {
+  outline: 3px solid var(--frambuesa, #d62d61);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viaje__viajero {
+    transition: none;
+  }
+}

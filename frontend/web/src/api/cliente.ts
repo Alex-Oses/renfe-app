@@ -5,6 +5,7 @@ import type {
   Billete,
   BusquedaTrenes,
   EmbeddingFacial,
+  EnlaceWallet,
   Estacion,
   IntentoPago,
   NuevaReserva,
@@ -77,6 +78,8 @@ const aPosicion = (p: PosicionApi): PosicionTren => ({
   retrasoMin: Math.round((p.retrasoSeg ?? 0) / 60),
   progreso: 0,
   proximaParada: "",
+  ruta: [], // /posiciones no trae recorrido: el mapa solo pinta el tren
+  paradas: [],
   actualizado: p.actualizado,
 });
 
@@ -141,3 +144,9 @@ export const verificarCara = (datos: { email: string; embedding: EmbeddingFacial
 // GET /posiciones (alternativa a Supabase Realtime, ver contrato)
 export const posicionesTrenes = (): Promise<PosicionTren[]> =>
   BASE ? datos<PosicionApi>("/posiciones").then((l) => l.map(aPosicion)) : simular(() => tiempoReal.posiciones(), 150);
+
+// GET /billetes/:id/wallet?plataforma=apple|google  (nuevo: lo firma la API; hay que añadirlo al contrato)
+export const enlaceWallet = (billeteId: string, plataforma: EnlaceWallet["plataforma"]): Promise<EnlaceWallet> =>
+  BASE
+    ? pedir(`/billetes/${encodeURIComponent(billeteId)}/wallet?plataforma=${plataforma}`)
+    : simular(() => reservas.enlaceWallet(billeteId, plataforma));

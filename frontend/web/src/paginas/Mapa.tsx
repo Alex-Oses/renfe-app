@@ -1,12 +1,71 @@
 import "leaflet/dist/leaflet.css";
 import "./mapa/mapa.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CircleMarker, MapContainer, TileLayer, Tooltip } from "react-leaflet";
+import { MapContainer, TileLayer } from "react-leaflet";
 import { useSearchParams } from "react-router-dom";
 import { posicionesTrenes } from "../api/cliente";
-import { ESTACIONES } from "../api/simulado";
-import type { PosicionTren } from "../api/tipos";
-import { CapaTrenes, COLOR_TIPO } from "./mapa/CapaTrenes";
+import type { PosicionTren, TipoTren } from "../api/tipos";
+import { useAvisos } from "../estado/avisos";
+import { CapaTrenes, COLOR_TIPO, SIGLA_TIPO, svgTren } from "./mapa/CapaTrenes";
+import { Estaciones, RutaElegida, RutasTodas } from "./mapa/CapasRuta";
+
+const TIPOS = Object.keys(COLOR_TIPO) as TipoTren[];
+
+function Leyenda() {
+  return (
+    <details className="mapa-leyenda cristal">
+      <summary>Leyenda</summary>
+      <ul>
+        {TIPOS.map((t) => (
+          <li key={t}>
+            <span className="mapa-leyenda__icono" dangerouslySetInnerHTML={{ __html: svgTren(t) }} />
+            <span className="mapa-leyenda__linea" style={{ background: COLOR_TIPO[t] }} aria-hidden="true" />
+            {t}
+          </li>
+        ))}
+        <li>
+          <span className="mapa-leyenda__icono mapa-leyenda__estacion" aria-hidden="true" />
+          Estación principal
+        </li>
+      </ul>
+    </details>
+  );
+}
+
+function Paradas({ tren, ahora }: { tren: PosicionTren; ahora: number }) {
+  const { seguimientos, seguir, dejarDeSeguir } = useAvisos();
+  const activo = seguimientos.find((s) => s.trenId === tren.trenId);
+  return (
+    <ol className="mapa-paradas" aria-label="Paradas del recorrido">
+      {tren.paradas.map((p) => {
+        const llegada = Date.parse(p.llegada);
+        const min = Math.max(0, Math.round((llegada - ahora) / 60_000));
+        const avisa = activo?.estacionId === p.estacionId;
+        return (
+          <li key={p.estacionId} className={p.pasada ? "mapa-parada mapa-parada--pasada" : "mapa-parada"}>
+            <span className="mapa-parada__punto" style={{ borderColor: COLOR_TIPO[tren.tipo] }} aria-hidden="true" />
+            <span className="mapa-parada__info">
+              <strong>{p.nombre}</strong>
+              <span>
+                {new Date(llegada).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })} ·{" "}
+                {p.pasada ? "pasada" : min === 0 ? "llegando" : `en ${min} min`}
+              </span>
+            </span>
+            {!p.pasada && (
+              <button
+                className={`boton boton--secundario mapa-parada__aviso${avisa ? " mapa-parada__aviso--activo" : ""}`}
+                aria-pressed={avisa}
+                onClick={() => (avisa ? dejarDeSeguir(tren.trenId) : seguir({ trenId: tren.trenId, estacionId: p.estacionId, minutosAntes: 5 }))}
+              >
+                {avisa ? "Quitar aviso" : "Avísame al llegar"}
+              </button>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
@@ -101,14 +160,12 @@ export default function Mapa() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           />
-          {ESTACIONES.map((e) => (
-            <CircleMarker key={e.id} center={[e.lat, e.lon]} radius={4} pathOptions={{ color: "#464646", weight: 1.5, fillColor: "#fff", fillOpacity: 1 }}>
-              <Tooltip>{e.nombre}</Tooltip>
-            </CircleMarker>
-          ))}
+          {elegido ? <RutaElegida tren={elegido} /> : <RutasTodas trenes={trenes} />}
+          <Estaciones etiquetas={!elegido} />
           <CapaTrenes trenes={trenes} seleccion={seleccion} siguiendo={siguiendo} reducido={reducido} alElegir={elegir} />
         </MapContainer>
         {cargando && <p className="mapa-aviso cristal">Cargando posiciones…</p>}
+        <Leyenda />
       </div>
 
       <aside className="mapa-panel cristal" aria-label="Trenes en circulación">
@@ -170,6 +227,7 @@ export default function Mapa() {
                     <dd>{elegido.proximaParada}</dd>
                   </div>
                 </dl>
+                <Paradas tren={elegido} ahora={ahora} />
               </>
             ) : (
               <h2 id="detalle-titulo">{cargando ? "Buscando el tren…" : "Este tren ya no está circulando."}</h2>
@@ -195,7 +253,7 @@ export default function Mapa() {
             <li key={t.trenId}>
               <button className="mapa-tren" aria-current={t.trenId === seleccion} onClick={() => elegir(t.trenId)}>
                 <span className="mapa-tren__tipo" style={{ background: COLOR_TIPO[t.tipo] }}>
-                  {t.tipo === "Media Distancia" ? "MD" : t.tipo}
+                  {SIGLA_TIPO[t.tipo]}
                 </span>
                 <span className="mapa-tren__info">
                   <strong>

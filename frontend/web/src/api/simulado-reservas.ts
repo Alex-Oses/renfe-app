@@ -1,7 +1,8 @@
 // Reservas, pagos y billetes simulados. Dueño: agente de reservas.
 import { obtenerTren } from "./simulado";
 import { CLAVE_SESION } from "./simulado-cuenta";
-import type { Asiento, Billete, ClaseAsiento, IntentoPago, NuevaReserva, Reserva } from "./tipos";
+import { calcularTotal } from "./simulado-precios";
+import type { EnlaceWallet, Asiento, Billete, ClaseAsiento, IntentoPago, NuevaReserva, Reserva } from "./tipos";
 
 const COCHES = 6;
 const FILAS = 10;
@@ -107,7 +108,11 @@ export function crearReserva(r: NuevaReserva): Reserva {
     asientos: elegidos.map((a) => ({ ...a, libre: false })),
     // El documento se guarda enmascarado: en este navegador puede entrar más de una persona.
     pasajeros: r.pasajeros.map((p) => ({ ...p, documento: enmascarar(p.documento) })),
-    total: redondear(elegidos.reduce((s, a) => s + a.precio, 0)),
+    total: calcularTotal({ precios: elegidos.map((a) => a.precio), tipos: r.pasajeros.map((p) => p.tipo), tarifa: r.tarifa, descuento: r.descuento, extras: r.extras }).total,
+    tarifa: r.tarifa,
+    descuento: r.descuento,
+    extras: r.extras,
+    bebes: r.bebes,
     estado: "pendiente_pago",
     creada: new Date().toISOString(),
   };
@@ -171,4 +176,9 @@ export function obtenerBillete(id: string): Billete {
   const b = leer().billetes.find((x) => x.id === id && esMio(x));
   if (!b) throw new Error("No encontramos ese billete.");
   return b;
+}
+
+// Sin API no hay quien firme el pase de Apple ni el JWT de Google: se avisa con un error claro.
+export function enlaceWallet(_billeteId: string, _plataforma: EnlaceWallet["plataforma"]): EnlaceWallet {
+  throw new Error("Añadir a la cartera estará disponible cuando la API firme los pases.");
 }

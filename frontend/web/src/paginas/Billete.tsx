@@ -1,26 +1,46 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import QRCode from "qrcode";
-import { obtenerBillete } from "../api/cliente";
-import { ciudadDe, type Billete as TBillete } from "../api/tipos";
+import { misBilletes, obtenerBillete } from "../api/cliente";
+import type { Billete as TBillete } from "../api/tipos";
 import { fecha, hora } from "./reserva/formato";
+import Cartera from "./billetes/Cartera";
 import "./billetes.css";
+import { ciudadDe } from "../api/tipos";
+
+const aSvg = (texto: string) => QRCode.toString(texto, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
 
 export default function Billete() {
   const { id = "" } = useParams();
   const [b, setB] = useState<TBillete | null>(null);
   const [qr, setQr] = useState("");
   const [error, setError] = useState("");
+  const [grupo, setGrupo] = useState<TBillete[]>([]);
+  const [qrsGrupo, setQrsGrupo] = useState<string[] | null>(null);
 
   useEffect(() => {
     obtenerBillete(id)
       .then((x) => {
         setB(x);
-        return QRCode.toString(x.qr, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
+        setQrsGrupo(null);
+        // Los demás billetes de la misma reserva, para moverse entre viajeros.
+        misBilletes().then(
+          (todos) =>
+            setGrupo(
+              todos.filter((t) => t.reservaId === x.reservaId).sort((p, q) => p.id.localeCompare(q.id, "es", { numeric: true })),
+            ),
+          () => setGrupo([]),
+        );
+        return aSvg(x.qr);
       })
       .then(setQr)
       .catch((e: Error) => setError(e.message));
   }, [id]);
+
+  const verTodos = () => {
+    if (qrsGrupo) return setQrsGrupo(null);
+    Promise.all(grupo.map((g) => aSvg(g.qr))).then(setQrsGrupo, () => setQrsGrupo(null));
+  };
 
   if (error)
     return (
@@ -37,9 +57,27 @@ export default function Billete() {
         Mis billetes
       </Link>
       <h1 className="sr-solo">Billete {b.localizador}</h1>
+      {grupo.length > 1 && <NavGrupo grupo={grupo} actual={b.id} todos={qrsGrupo !== null} onTodos={verTodos} />}
+      {qrsGrupo && (
+        <ul className="qr-grupo" aria-label="Todos los QR de la reserva">
+          {grupo.map((g, i) => (
+            <li key={g.id} className="qr-grupo__item cristal">
+              <div className="pase__qr" role="img" aria-label={`QR de ${g.pasajero.nombre}`} dangerouslySetInnerHTML={{ __html: qrsGrupo[i] }} />
+              <p>
+                <strong>
+                  {g.pasajero.nombre} {g.pasajero.apellidos}
+                </strong>
+                <br />
+                Coche {g.asiento.coche}, asiento {g.asiento.fila}
+                {g.asiento.letra}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
       <article className="pase" aria-label={`Billete de ${b.tren.origen.nombre} a ${b.tren.destino.nombre}`}>
         <header className="pase__cabeza">
-          <span className="pase__marca">Andén</span>
+          <span className="pase__marca">Renfe</span>
           <span>
             {b.tren.tipo} {b.tren.numero}
           </span>
@@ -101,6 +139,44 @@ export default function Billete() {
           Imprimir billete
         </button>
       </div>
+      <Cartera billete={b} />
     </div>
+  );
+}
+
+function Flecha({ d }: { d: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
+
+function NavGrupo({ grupo, actual, todos, onTodos }: { grupo: TBillete[]; actual: string; todos: boolean; onTodos: () => void }) {
+  const i = grupo.findIndex((g) => g.id === actual);
+  const ir = (k: number) => `/billetes/${encodeURIComponent(grupo[k].id)}`;
+  return (
+    <nav className="nav-grupo cristal no-imprimir" aria-label="Viajeros de esta reserva">
+      {i > 0 ? (
+        <Link className="nav-grupo__paso" to={ir(i - 1)} aria-label="Viajero anterior">
+          <Flecha d="M15 5l-7 7 7 7" />
+        </Link>
+      ) : (
+        <span className="nav-grupo__paso" aria-hidden="true" />
+      )}
+      <span className="nav-grupo__cuenta" aria-live="polite">
+        Viajero {i + 1} de {grupo.length}
+      </span>
+      {i < grupo.length - 1 ? (
+        <Link className="nav-grupo__paso" to={ir(i + 1)} aria-label="Viajero siguiente">
+          <Flecha d="M9 5l7 7-7 7" />
+        </Link>
+      ) : (
+        <span className="nav-grupo__paso" aria-hidden="true" />
+      )}
+      <button type="button" className="nav-grupo__todos" aria-pressed={todos} onClick={onTodos}>
+        {todos ? "Ocultar los QR del grupo" : "Ver todos los QR del grupo"}
+      </button>
+    </nav>
   );
 }
