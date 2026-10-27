@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { misBilletes } from "../api/cliente";
-import type { Billete } from "../api/tipos";
+import { ciudadDe, type Billete } from "../api/tipos";
 import { fecha, hora } from "./reserva/formato";
 import "./billetes.css";
 
@@ -56,8 +56,8 @@ function Lista({ titulo, billetes, vacio, pasado }: { titulo: string; billetes: 
             <li key={b.id}>
               <Link to={`/billetes/${encodeURIComponent(b.id)}`} className={`billete-fila${pasado ? " billete-fila--pasado" : ""}`}>
                 <span className="billete-fila__ruta">
-                  {b.tren.origen.ciudad} <span aria-hidden="true">→</span>
-                  <span className="sr-solo"> a </span> {b.tren.destino.ciudad}
+                  {ciudadDe(b.tren.origen)} <span aria-hidden="true">→</span>
+                  <span className="sr-solo"> a </span> {ciudadDe(b.tren.destino)}
                 </span>
                 <span className="billete-fila__dato">
                   {fecha(b.tren.salida)}, {hora(b.tren.salida)}

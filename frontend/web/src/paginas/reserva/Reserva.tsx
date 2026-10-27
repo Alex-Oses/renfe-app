@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { obtenerAsientos, obtenerTren } from "../../api/cliente";
-import type { Asiento, Pasajero, Reserva as TReserva, Tren } from "../../api/tipos";
+import { ciudadDe, type Asiento, type Pasajero, type Reserva as TReserva, type Tren } from "../../api/tipos";
 import { PasoAsientos } from "./PasoAsientos";
 import { PasoViajeros } from "./PasoViajeros";
 import { PasoPago } from "./PasoPago";
@@ -140,10 +140,10 @@ export default function Reserva() {
             {tren.tipo} {tren.numero}
           </p>
           <p className="resumen__ruta">
-            <strong>{tren.origen.ciudad}</strong> {hora(tren.salida)}
+            <strong>{ciudadDe(tren.origen)}</strong> {hora(tren.salida)}
             <span aria-hidden="true"> → </span>
             <span className="sr-solo"> a </span>
-            <strong>{tren.destino.ciudad}</strong> {hora(tren.llegada)}
+            <strong>{ciudadDe(tren.destino)}</strong> {hora(tren.llegada)}
           </p>
           <p className="resumen__asientos">
             {seleccion.length ? `Asientos: ${seleccion.map((a) => `coche ${a.coche}, ${a.fila}${a.letra}`).join("; ")}` : `${n} ${n === 1 ? "viajero" : "viajeros"}`}

@@ -506,7 +506,7 @@ a {
 
 @media (min-width: 48rem) {
   .tren {
-    grid-template-columns: 12rem 1fr 8rem 11rem;
+    grid-template-columns: 12rem 1fr 10rem 11rem;
     grid-template-areas: "horas linea info compra";
     align-items: center;
   }
@@ -530,6 +530,7 @@ a {
 }
 
 .tren__duracion {
+  white-space: nowrap;
   font-size: 0.8rem;
   color: var(--gris);
 }
