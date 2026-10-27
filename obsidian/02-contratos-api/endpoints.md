@@ -114,9 +114,12 @@ Errores: `400` `q` vacío o `limit` fuera de rango · `503` si la BD no responde
 Notas: `ciudad` sale de una tabla de apoyo; si no se conoce, cadena vacía (nunca inventada).
 
 Estado: **implementado** (2026-10-27). El filtro de tildes se hace con `translate()` en SQL, no con
-la extensión `unaccent`, para no añadir dependencias al modelo. El SQL está **ejecutado y probado
-contra Postgres real** (PGlite en los tests, sin Docker); falta verlo contra el Supabase de verdad
-cuando existan las migraciones.
+la extensión `unaccent`, para no añadir dependencias al modelo.
+
+El SQL **se ejecutó contra Postgres real** (PGlite, en local y sin Docker) y funciona: tildes,
+filtro por feed, `feeds[]` vacío, `ciudad` nula y `total` con límite. Ese test **no se queda en el
+repo** porque la dependencia tumba el preview de Vercel, y Vercel no es nuestra área. Queda
+pendiente verlo contra el Supabase de verdad cuando existan las migraciones.
 
 ## GET /trenes
 
