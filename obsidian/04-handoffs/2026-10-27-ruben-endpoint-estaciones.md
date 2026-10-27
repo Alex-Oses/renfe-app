@@ -23,21 +23,21 @@ tags: [handoff]
   - `limit` 1–50 (20 por defecto) validado con DTO, `q` obligatorio de 1 a 60 caracteres.
 - Sin `DATABASE_URL` el endpoint responde `503`; parámetros inválidos, `400`. Verificado en vivo.
 - 6 tests con dobles de `BdService` (mapeo, parámetros, `ciudad` vacía, `total` 0, 503) y
-  un e2e para el `400` sin `q`.
-- **7 tests más contra Postgres real con PGlite** (`@electric-sql/pglite`, devDependency): crean
-  `estaciones` + `estacion_feeds` con las columnas de [[modelo-datos]] y ejecutan la query de
-  verdad. Sin Docker y sin tocar `backend/database/`. Validan tildes, filtro por feed, `feeds[]`
-  vacío, `ciudad` nula, `total` con límite y el `group by` que evita duplicar estaciones con dos
-  feeds. Total: 23 unitarios + 2 e2e en verde.
+  un e2e para el `400` sin `q`. Total: 16 unitarios + 2 e2e en verde.
 - `ValidationPipe` añadido al e2e para que valide igual que `main.ts`.
+- **El SQL se validó contra Postgres real** (PGlite, 7 tests: tildes, filtro por feed, `feeds[]`
+  vacío, `ciudad` nula, `total` con límite y el `group by` que no duplica estaciones). Funciona.
+  **Ese test no se queda en el repo**: al añadir `@electric-sql/pglite` como devDependency el
+  preview de **Vercel** pasa a fallar (el resto de PRs lo tienen en verde), y Vercel no es nuestra
+  área. Queda pendiente decidir si se puede reactivar; mientras, la cobertura es la de los dobles.
 
 ## Qué queda
 
-- **Verlo contra el Supabase de verdad** cuando existan las migraciones. PGlite es Postgres 16 en
-  WASM: la sintaxis y la semántica son las mismas, pero no es el mismo servidor ni tiene las
-  extensiones (`pg_trgm`) ni el RLS de Supabase. Es el último paso, no el primero.
+- **Verlo contra el Supabase de verdad** cuando existan las migraciones. Es el último paso.
+- **PGlite:** averiguar por qué tumba el preview de Vercel (Alex/Kevin) y, si se arregla, volver a
+  meter los 7 tests. Mientras tanto el SQL está validado a mano, no en CI.
 - **Rubén:** `/trenes` (búsqueda directa) con el mismo patrón: contrato, SQL contra el modelo y
-  test con PGlite.
+  validación con PGlite en local antes de subirlo.
 - **Marina:** migraciones de §4 del modelo. Para probar esto de verdad solo hacen falta
   `estaciones` y `estacion_feeds`.
 
