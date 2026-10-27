@@ -92,8 +92,8 @@
   left: 0;
   right: 0;
   text-align: center;
+  z-index: 2; /* por delante de la catenaria y el paisaje */
   color: var(--morado-oscuro, #5c0043);
-  opacity: calc(1 - var(--avance) * 2.5);
 }
 
 .entrada__lema span {

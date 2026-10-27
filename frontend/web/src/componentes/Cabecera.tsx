@@ -210,7 +210,7 @@ export function Cabecera() {
       >
         <div className="contenedor cabecera__fila">
           <Link to="/" className="marca">
-            Andén
+            Renfe
           </Link>
           <nav aria-label="Secciones" className="mega">
             <ul className="mega__lista">
