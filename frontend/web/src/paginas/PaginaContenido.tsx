@@ -184,7 +184,7 @@ function Contenido({ b }: { b: Bloque }) {
 
 function NoEncontrada() {
   useEffect(() => {
-    document.title = "Página no encontrada | Andén";
+    document.title = "Página no encontrada | Renfe";
   }, []);
   return (
     <section className="contenedor seccion no-encontrada">
@@ -212,7 +212,7 @@ export default function PaginaContenido() {
   const pagina = buscarPagina(pathname);
 
   useEffect(() => {
-    if (pagina) document.title = `${pagina.titulo} | Andén`;
+    if (pagina) document.title = `${pagina.titulo} | Renfe`;
   }, [pagina]);
 
   if (!pagina) return <NoEncontrada />;
