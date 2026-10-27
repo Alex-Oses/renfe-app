@@ -18,7 +18,7 @@
      --gris sobre nivel 1 = 4.7:1, sobre nivel 2 = 4.9:1; --grafito y --morado > 8:1. */
   --cristal-1: rgb(255 255 255 / 0.74);
   --cristal-2: rgb(255 255 255 / 0.84);
-  --cristal-3: rgb(255 255 255 / 0.93);
+  --cristal-3: rgb(255 255 255 / 0.97); /* menús flotantes: casi opacos para leerse sobre el mapa */
   --cristal-fondo: var(--cristal-1);
   --cristal-fondo-fuerte: var(--cristal-2);
   --cristal-borde: rgb(255 255 255 / 0.75);
