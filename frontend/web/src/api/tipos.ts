@@ -8,7 +8,8 @@ export interface Estacion {
   lon: number;
 }
 
-export type TipoTren = "AVE" | "Avlo" | "Alvia" | "Intercity" | "Media Distancia" | "Cercanías";
+// "Larga Distancia": tren del feed AVE/LD en tiempo real, del que Renfe no dice si es AVE, Alvia, etc.
+export type TipoTren = "AVE" | "Avlo" | "Alvia" | "Intercity" | "Media Distancia" | "Cercanías" | "Larga Distancia";
 
 // En /trenes la API solo manda id y nombre de las estaciones; ciudad puede faltar o venir vacía.
 export type EstacionTren = Pick<Estacion, "id" | "nombre"> & Partial<Estacion>;

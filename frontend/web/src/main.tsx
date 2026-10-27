@@ -1,6 +1,7 @@
 import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { AlNavegar } from "./componentes/AlNavegar";
 import { Cabecera } from "./componentes/Cabecera";
 import { Pie } from "./componentes/Pie";
 import { ProveedorAvisos } from "./estado/avisos";
@@ -23,6 +24,7 @@ const PaginaContenido = lazy(() => import("./paginas/PaginaContenido"));
 function App() {
   return (
     <>
+      <AlNavegar />
       <a className="saltar" href="#contenido">
         Saltar al contenido
       </a>

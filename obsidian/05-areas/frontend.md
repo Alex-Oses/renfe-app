@@ -23,6 +23,10 @@ tags: [area]
 
 ## Notas técnicas
 
+- **Tiempo real:** `frontend/web/api/posiciones.ts` es una función de Vercel que lee el GTFS-RT de Renfe (sin CORS en el navegador) y devuelve la forma de `GET /posiciones` del contrato. Orden en `cliente.ts`: API de Render si hay `VITE_API_URL` → función de Vercel → simulado. `VITE_TIEMPO_REAL=simulado` fuerza el plan B. En `pnpm dev` no existe `/api`, así que en local siempre es simulado.
+- **Scroll al navegar:** `componentes/AlNavegar.tsx` sube arriba en cada página nueva y centra el `#ancla`; con atrás/adelante no toca nada.
+- **Catálogos locales:** estaciones fijas (`ESTACIONES`), tarifas, descuentos y extras siguen en `api/simulado*`: Renfe no publica precios y `/estaciones` exige `q`. Todo lo que viene de la API pasa por `api/cliente.ts`.
+
 - El cristal está en `src/estilos/base.css` (niveles `--cristal-1/2/3`). La capa `cristal-liquido.css` se quitó el 27/10: era demasiado transparente y pisaba ese sistema.
 - El mapa vive en su propia capa (`.mapa-pagina { isolation: isolate }`) para que Leaflet no tape los menús.
 

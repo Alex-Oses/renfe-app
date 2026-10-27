@@ -3,7 +3,7 @@ import "./mapa/mapa.css";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 import { useSearchParams } from "react-router-dom";
-import { posicionesTrenes } from "../api/cliente";
+import { posicionesReales, posicionesTrenes } from "../api/cliente";
 import type { PosicionTren, TipoTren } from "../api/tipos";
 import { useAvisos } from "../estado/avisos";
 import { CapaTrenes, COLOR_TIPO, SIGLA_TIPO, svgTren } from "./mapa/CapaTrenes";
@@ -198,9 +198,12 @@ export default function Mapa() {
                 <h2 id="detalle-titulo">
                   {elegido.tipo} {elegido.numero}
                 </h2>
-                <p className="mapa-detalle__ruta">
-                  {elegido.origen} → {elegido.destino}
-                </p>
+                {elegido.origen && (
+                  <p className="mapa-detalle__ruta">
+                    {elegido.origen} → {elegido.destino}
+                  </p>
+                )}
+                {elegido.progreso > 0 && (
                 <div
                   className="progreso"
                   role="progressbar"
@@ -211,6 +214,7 @@ export default function Mapa() {
                 >
                   <span style={{ width: `${elegido.progreso * 100}%`, background: COLOR_TIPO[elegido.tipo] }} />
                 </div>
+                )}
                 <dl className="mapa-detalle__datos">
                   <div>
                     <dt>Retraso</dt>
@@ -222,10 +226,12 @@ export default function Mapa() {
                     <dt>Velocidad</dt>
                     <dd>{elegido.velocidad} km/h</dd>
                   </div>
-                  <div>
-                    <dt>Próxima parada</dt>
-                    <dd>{elegido.proximaParada}</dd>
-                  </div>
+                  {elegido.proximaParada && (
+                    <div>
+                      <dt>Próxima parada</dt>
+                      <dd>{elegido.proximaParada}</dd>
+                    </div>
+                  )}
                 </dl>
                 <Paradas tren={elegido} ahora={ahora} />
               </>
@@ -246,7 +252,8 @@ export default function Mapa() {
         )}
 
         <p className="mapa-cuenta">
-          {visibles.length} de {trenes.length} trenes
+          {visibles.length} de {trenes.length} trenes ·{" "}
+          {posicionesReales ? "en tiempo real (datos abiertos de Renfe)" : "simulados"}
         </p>
         <ul className="mapa-lista">
           {visibles.map((t) => (
@@ -257,10 +264,11 @@ export default function Mapa() {
                 </span>
                 <span className="mapa-tren__info">
                   <strong>
-                    {t.numero} · {ciudadCorta(t.origen)} → {ciudadCorta(t.destino)}
+                    {t.origen ? `${t.numero} · ${ciudadCorta(t.origen)} → ${ciudadCorta(t.destino)}` : `${t.tipo} ${t.numero}`}
                   </strong>
                   <span>
-                    Próxima: {t.proximaParada} · {t.velocidad} km/h
+                    {t.proximaParada ? `Próxima: ${t.proximaParada} · ` : ""}
+                    {t.velocidad} km/h
                   </span>
                 </span>
                 <Retraso min={t.retrasoMin} />

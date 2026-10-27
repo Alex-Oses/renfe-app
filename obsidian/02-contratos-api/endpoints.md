@@ -52,12 +52,12 @@ Estado: propuesto | implementado | cambiado (fecha)
 
 | Método | Ruta | Para qué | Estado |
 |---|---|---|---|
-| GET | `/estaciones?q=&feed=` | Autocompletar estaciones | propuesto · **detallado** |
-| GET | `/trenes?origen=&destino=&fecha=` | Buscar viajes directos | propuesto · **detallado** |
-| GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | propuesto · **detallado** |
+| GET | `/estaciones?q=&feed=` | Autocompletar estaciones | **implementado** · **detallado** |
+| GET | `/trenes?origen=&destino=&fecha=` | Buscar viajes directos | **implementado** · **detallado** |
+| GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | **implementado** · **detallado** |
 | GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | propuesto · **detallado** |
 | GET | `/incidencias?feed=&linea=` | Avisos GTFS-RT | propuesto · **detallado** |
-| GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa (alternativa al Realtime) | propuesto · **detallado** |
+| GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa (alternativa al Realtime) | **implementado** · **detallado** |
 | GET | `/health` | Estado del servicio (infra) | implementado |
 | POST | `/auth/registro` | Alta de usuario | propuesto |
 | POST | `/auth/login` | Login email/contraseña | propuesto |
@@ -113,6 +113,14 @@ Errores: `400` `q` vacío o `limit` fuera de rango · `503` si la BD no responde
 
 Notas: `ciudad` sale de una tabla de apoyo; si no se conoce, cadena vacía (nunca inventada).
 
+Estado: **implementado** (2026-10-27). El filtro de tildes se hace con `translate()` en SQL, no con
+la extensión `unaccent`, para no añadir dependencias al modelo.
+
+El SQL **se ejecutó contra Postgres real** (PGlite, en local y sin Docker) y funciona: tildes,
+filtro por feed, `feeds[]` vacío, `ciudad` nula y `total` con límite. Ese test **no se queda en el
+repo** porque la dependencia tumba el preview de Vercel, y Vercel no es nuestra área. Queda
+pendiente verlo contra el Supabase de verdad cuando existan las migraciones.
+
 ## GET /trenes
 
 Descripción: viajes **directos** entre dos estaciones para una fecha de servicio.
@@ -159,10 +167,15 @@ Errores: `400` falta un parámetro o `fecha` inválida · `404` estación inexis
 
 Notas:
 
-- `retrasoSeg` es `null` si no hay dato en GTFS-RT.
-- `tipo` se infiere de la ruta (`route_long_name`/`route_short_name`); si no se puede, `"Desconocido"`.
+- `retrasoSeg` es `null` si no hay dato en GTFS-RT. Hoy **siempre** es `null`: `/trenes` no consulta
+  GTFS-RT; el retraso real llega con `/trenes/:feed/:tripId` y `/posiciones`.
+- `tipo` es `rutas.tipo_servicio` en mayúsculas (`AVE`, `ALVIA`…); si es `null`, `"DESCONOCIDO"`.
+- `numero` sale del número al final de `nombre_corto` (`AVE 02070` → `02070`); si no lo hay, `null`.
+  **Puede ser `null`**: quien pinte la UI debe tener un plan B.
 - `precioDesde` y `plazasLibres` son simulados y deterministas (misma búsqueda → mismo resultado).
 - Solo directos en fase 1. Los transbordos, si llegan, serán `numTransbordos` > 0 en una v2.
+- La fecha se resuelve con `calendarios` + `calendario_excepciones` en la misma consulta, y `recoge`/
+  `deja` excluyen las paradas técnicas.
 
 ## GET /trenes/:feed/:tripId
 
@@ -211,14 +224,28 @@ Response 200:
 }
 ```
 
-Errores: `400` falta `fecha` · `404` viaje o fecha inexistente · `503` BD caída.
+Errores: `400` falta `fecha`, `feed` no válido o `fecha` mal formada · `404` el viaje no circula esa
+fecha · `503` BD caída.
 
-Notas: `llega` es `null` en la primera parada y `sale` en la última.
+Notas:
+
+- `llega` es `null` en la primera parada y `sale` en la última. Si a la primera le falta `sale` se
+  usa su `llega` (y al revés en la última), porque GTFS exige una de las dos.
+- `retrasoSeg` es `null` **siempre** hoy, en el viaje y en cada parada: el retraso vive en
+  `trip_updates` de GTFS-RT y este endpoint solo lee el GTFS estático.
+- `404` también cubre «el viaje existe pero ese día no circula»: la fecha se resuelve con
+  `calendarios` + `calendario_excepciones`.
+- `tipo` y `numero` siguen la misma regla que en `/trenes` (`numero` puede ser `null`).
 
 ## GET /trenes/:feed/:tripId/posicion
 
 Descripción: última posición conocida del tren que hace ese viaje **hoy**.
 Auth: **no**
+
+> ⚠️ **Bloqueado (2026-10-27).** El `tripId` de GTFS-RT no coincide con el `trip_id` del GTFS
+> estático (`0029112026-10-27` vs `3097L23537C1`), así que hoy no se puede cruzar la posición con
+> el viaje. Opciones: cruzar por número de tren + fecha, o retirar este endpoint y usar solo
+> `/posiciones`. Sin decisión tomada.
 
 Response 200:
 
@@ -307,9 +334,26 @@ Response 200:
 }
 ```
 
-Errores: `400` `bbox` mal formada · `503` BD caída.
+Errores: `400` `bbox` mal formada o con los mínimos al revés · `503` Renfe no responde **y** no hay
+datos previos.
 
-Notas: `bbox` es obligatoria si hay más de 500 posiciones; sin ella se devuelven todas (hoy ~540).
+Notas:
+
+- `bbox` es siempre opcional. Hoy el feed completo son ~500 posiciones (210 AVE/LD + 298
+  Cercanías), así que la regla de «obligatoria si hay más de 500» no se aplica.
+- La API **sondea Renfe cada `GTFS_RT_POLL_SECONDS` (30 s por defecto) en memoria**, sin worker y
+  sin BD: `/posiciones` funciona aunque Supabase esté caído. Las dos peticiones del intervalo se
+  agrupan en una sola descarga.
+- Si Renfe falla, se sigue sirviendo el último snapshot bueno y `actualizado` deja de avanzar. Solo
+  hay `503` si nunca se ha podido leer.
+- `actualizado` es el del feed **más antiguo** de los dos: es el que se queda corto.
+- `rumbo` y `velocidadKmh` son `null` **siempre** hoy: el feed JSON de Renfe no publica ni `bearing`
+  ni `speed`. `retrasoSeg` es `null` porque el retraso vive en `trip_updates`, que no se lee.
+- Un mismo `vehicleId` aparece varias veces con `tripId` distintos (un tren encadenando viajes): no
+  se deduplica, cada fila es un viaje.
+- `tripId` es el de GTFS-RT tal cual (`0029112026-10-27`), que **no coincide** con el `trip_id` del
+  GTFS estático (`3097L23537C1`): no se puede cruzar con `viajes` por id. Para el mapa da igual;
+  para `/trenes/:feed/:tripId/posicion` es un bloqueo.
 
 ## Pendientes de detallar
 

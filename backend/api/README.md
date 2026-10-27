@@ -6,9 +6,17 @@ API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../
 
 ## Estado
 
-Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger y
-`GET /health`. **Todavía sin datos**: `backend/database/` no tiene migraciones (Marina) y el
-worker GTFS no existe. Cuando lleguen, se añade `pg` y los módulos `estaciones` y `trenes`.
+Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger,
+`GET /health`, auth de Supabase con roles y acceso opcional a Postgres.
+
+**Endpoints de datos (fase F1): `GET /estaciones`, `GET /trenes`, `GET /trenes/:feed/:tripId` y
+`GET /posiciones`**, con SQL directo contra el modelo de datos de
+[`obsidian/02-contratos-api/modelo-datos.md`](../../obsidian/02-contratos-api/modelo-datos.md)
+(sin ORM). Sin `DATABASE_URL` responden `503`. `/posiciones` es la excepción: lee GTFS-RT de Renfe
+en memoria cada 30 s, no toca la BD y funciona sin Supabase.
+
+Lo demás sigue pendiente: `/incidencias` y compañía necesitan las migraciones de Marina
+(`backend/database/`) y el worker GTFS.
 
 ## Arrancar
 
@@ -34,8 +42,12 @@ src/
   config/entorno.ts   validación de variables de entorno
   common/auth/        SupabaseJwtGuard, RolesGuard y decorador @Roles
   common/bd/          BdService: pool de Postgres opcional
+  common/gtfs/        tiempo: horas GTFS → ISO 8601 con offset de Madrid
   modules/
+    estaciones/       GET /estaciones (SQL sobre estaciones + estacion_feeds)
     health/           GET /health
+    posiciones/       GET /posiciones (GTFS-RT en memoria, sin BD)
+    trenes/           GET /trenes y /trenes/:feed/:tripId (precio y plazas simulados)
 ```
 
 ## Base de datos
