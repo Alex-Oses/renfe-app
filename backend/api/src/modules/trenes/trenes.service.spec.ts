@@ -119,3 +119,94 @@ describe('TrenesService', () => {
     await expect(servicio.buscar(dto())).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });
+
+const parada = (extra: Record<string, unknown> = {}) => ({
+  feed: 'avld',
+  viaje_id: '3097L23537C1',
+  nombre_corto: 'AVE 02070',
+  nombre: 'Madrid - Barcelona',
+  tipo_servicio: 'ave',
+  secuencia: 1,
+  estacion_id: '60000',
+  estacion_nombre: 'Madrid-Puerta de Atocha',
+  llega: null,
+  sale: '07:15:00',
+  ...extra,
+});
+
+const detalleCon = (filas: unknown[]) =>
+  new TrenesService({ consultar: async () => ({ rows: filas }) } as unknown as BdService);
+
+describe('TrenesService.detalle', () => {
+  it('devuelve las paradas y toma origen y destino de la primera y la última', async () => {
+    const servicio = detalleCon([
+      parada(),
+      parada({
+        secuencia: 2,
+        estacion_id: '04040',
+        estacion_nombre: 'Zaragoza-Delicias',
+        llega: '08:32:00',
+        sale: '08:34:00',
+      }),
+      parada({
+        secuencia: 3,
+        estacion_id: '71801',
+        estacion_nombre: 'Barcelona-Sants',
+        llega: '09:40:00',
+        sale: null,
+      }),
+    ]);
+
+    const viaje = await servicio.detalle('avld', '3097L23537C1', '2026-11-02');
+
+    expect(viaje).toMatchObject({
+      feed: 'avld',
+      tripId: '3097L23537C1',
+      fecha: '2026-11-02',
+      linea: 'AVE 02070',
+      tipo: 'AVE',
+      numero: '02070',
+      origen: { id: '60000', nombre: 'Madrid-Puerta de Atocha' },
+      destino: { id: '71801', nombre: 'Barcelona-Sants' },
+      salida: '2026-11-02T07:15:00+01:00',
+      llegada: '2026-11-02T09:40:00+01:00',
+      retrasoSeg: null,
+    });
+    expect(viaje.paradas.map((p) => p.seq)).toEqual([1, 2, 3]);
+    expect(viaje.paradas[0]).toEqual({
+      seq: 1,
+      estacion: { id: '60000', nombre: 'Madrid-Puerta de Atocha' },
+      llega: null,
+      sale: '2026-11-02T07:15:00+01:00',
+      retrasoSeg: null,
+    });
+    expect(viaje.paradas[2]!.sale).toBeNull();
+  });
+
+  it('usa la hora de llegada si la primera parada no tiene salida', async () => {
+    const servicio = detalleCon([parada({ llega: '07:14:00', sale: null })]);
+
+    const viaje = await servicio.detalle('avld', '3097L23537C1', '2026-11-02');
+
+    expect(viaje.salida).toBe('2026-11-02T07:14:00+01:00');
+    expect(viaje.llegada).toBe('2026-11-02T07:14:00+01:00');
+  });
+
+  it('responde 404 si el viaje no circula esa fecha', async () => {
+    await expect(
+      detalleCon([]).detalle('avld', '3097L23537C1', '2026-11-02'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('responde 503 si la BD falla', async () => {
+    const servicio = new TrenesService({
+      consultar: async () => {
+        throw new Error('DATABASE_URL no configurada');
+      },
+    } as unknown as BdService);
+
+    await expect(
+      servicio.detalle('avld', '3097L23537C1', '2026-11-02'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+});

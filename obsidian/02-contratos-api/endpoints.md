@@ -54,7 +54,7 @@ Estado: propuesto | implementado | cambiado (fecha)
 |---|---|---|---|
 | GET | `/estaciones?q=&feed=` | Autocompletar estaciones | propuesto · **detallado** |
 | GET | `/trenes?origen=&destino=&fecha=` | Buscar viajes directos | **implementado** · **detallado** |
-| GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | propuesto · **detallado** |
+| GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | **implementado** · **detallado** |
 | GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | propuesto · **detallado** |
 | GET | `/incidencias?feed=&linea=` | Avisos GTFS-RT | propuesto · **detallado** |
 | GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa (alternativa al Realtime) | **implementado** · **detallado** |
@@ -216,14 +216,28 @@ Response 200:
 }
 ```
 
-Errores: `400` falta `fecha` · `404` viaje o fecha inexistente · `503` BD caída.
+Errores: `400` falta `fecha`, `feed` no válido o `fecha` mal formada · `404` el viaje no circula esa
+fecha · `503` BD caída.
 
-Notas: `llega` es `null` en la primera parada y `sale` en la última.
+Notas:
+
+- `llega` es `null` en la primera parada y `sale` en la última. Si a la primera le falta `sale` se
+  usa su `llega` (y al revés en la última), porque GTFS exige una de las dos.
+- `retrasoSeg` es `null` **siempre** hoy, en el viaje y en cada parada: el retraso vive en
+  `trip_updates` de GTFS-RT y este endpoint solo lee el GTFS estático.
+- `404` también cubre «el viaje existe pero ese día no circula»: la fecha se resuelve con
+  `calendarios` + `calendario_excepciones`.
+- `tipo` y `numero` siguen la misma regla que en `/trenes` (`numero` puede ser `null`).
 
 ## GET /trenes/:feed/:tripId/posicion
 
 Descripción: última posición conocida del tren que hace ese viaje **hoy**.
 Auth: **no**
+
+> ⚠️ **Bloqueado (2026-10-27).** El `tripId` de GTFS-RT no coincide con el `trip_id` del GTFS
+> estático (`0029112026-10-27` vs `3097L23537C1`), así que hoy no se puede cruzar la posición con
+> el viaje. Opciones: cruzar por número de tren + fecha, o retirar este endpoint y usar solo
+> `/posiciones`. Sin decisión tomada.
 
 Response 200:
 

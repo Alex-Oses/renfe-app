@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { BdService } from '../../common/bd/bd.service.js';
+import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import { duracionMin, intervaloAIso } from '../../common/gtfs/tiempo.js';
 import type { BuscarTrenesDto } from './dto/buscar-trenes.dto.js';
 import { plazasSimuladas, precioSimulado } from './simulado.js';
@@ -21,6 +22,42 @@ export interface Tren {
   retrasoSeg: number | null;
   precioDesde: number;
   plazasLibres: number;
+}
+
+export interface Parada {
+  seq: number;
+  estacion: { id: string; nombre: string };
+  llega: string | null;
+  sale: string | null;
+  retrasoSeg: number | null;
+}
+
+export interface TrenDetalle {
+  feed: string;
+  tripId: string;
+  fecha: string;
+  linea: string;
+  tipo: string;
+  numero: string | null;
+  origen: { id: string; nombre: string };
+  destino: { id: string; nombre: string };
+  salida: string;
+  llegada: string;
+  retrasoSeg: number | null;
+  paradas: Parada[];
+}
+
+interface FilaParada {
+  feed: string;
+  viaje_id: string;
+  nombre_corto: string | null;
+  nombre: string;
+  tipo_servicio: string | null;
+  secuencia: number;
+  estacion_id: string;
+  estacion_nombre: string;
+  llega: string | null;
+  sale: string | null;
 }
 
 interface FilaTren {
@@ -75,35 +112,36 @@ const SQL_BUSCAR = `
      and d.llega is not null
      and o.recoge
      and d.deja
-     and (
-       exists (select 1 from calendario_excepciones x
-                where x.feed = v.feed
-                  and x.servicio_id = v.servicio_id
-                  and x.fecha = $3::date
-                  and x.tipo = 'añadido')
-       or (
-         not exists (select 1 from calendario_excepciones x
-                      where x.feed = v.feed
-                        and x.servicio_id = v.servicio_id
-                        and x.fecha = $3::date
-                        and x.tipo = 'eliminado')
-         and exists (select 1 from calendarios c
-                      where c.feed = v.feed
-                        and c.id = v.servicio_id
-                        and $3::date between c.inicio and c.fin
-                        and case extract(isodow from $3::date)
-                              when 1 then c.lunes
-                              when 2 then c.martes
-                              when 3 then c.miercoles
-                              when 4 then c.jueves
-                              when 5 then c.viernes
-                              when 6 then c.sabado
-                              else c.domingo
-                            end)
-       )
-     )
+     and ${SERVICIO_ACTIVO}
    order by o.sale
    limit $4
+`;
+
+const lineaDe = (fila: { nombre_corto: string | null; nombre: string }) =>
+  fila.nombre_corto ?? fila.nombre;
+const tipoDe = (tipoServicio: string | null) => tipoServicio?.toUpperCase() ?? 'DESCONOCIDO';
+const numeroDe = (nombreCorto: string | null) => nombreCorto?.match(/(\d+)\s*$/)?.[1] ?? null;
+
+// Todas las paradas del viaje, en orden. El viaje tiene que circular ese día.
+const SQL_DETALLE = `
+  select v.feed,
+         v.id as viaje_id,
+         r.nombre_corto,
+         r.nombre,
+         r.tipo_servicio,
+         h.secuencia,
+         h.estacion_id,
+         e.nombre as estacion_nombre,
+         h.llega::text as llega,
+         h.sale::text as sale
+    from viajes v
+    join rutas r on r.feed = v.feed and r.id = v.ruta_id
+    join horarios h on h.feed = v.feed and h.viaje_id = v.id
+    join estaciones e on e.id = h.estacion_id
+   where v.feed = $1
+     and v.id = $2
+     and ${SERVICIO_ACTIVO}
+   order by h.secuencia
 `;
 
 const SQL_ESTACIONES = 'select id from estaciones where id = any($1::text[])';
@@ -146,9 +184,9 @@ export class TrenesService {
           feed: fila.feed,
           tripId: fila.viaje_id,
           fecha,
-          linea: fila.nombre_corto ?? fila.nombre,
-          tipo: fila.tipo_servicio?.toUpperCase() ?? 'DESCONOCIDO',
-          numero: fila.nombre_corto?.match(/(\d+)\s*$/)?.[1] ?? null,
+          linea: lineaDe(fila),
+          tipo: tipoDe(fila.tipo_servicio),
+          numero: numeroDe(fila.nombre_corto),
           origen: { id: fila.origen_id, nombre: fila.origen_nombre },
           destino: { id: fila.destino_id, nombre: fila.destino_nombre },
           salida: intervaloAIso(fecha, fila.sale),
@@ -161,6 +199,44 @@ export class TrenesService {
         };
       }),
       total: filas.length > 0 ? Number(filas[0].total) : 0,
+    };
+  }
+
+  async detalle(feed: string, tripId: string, fecha: string): Promise<TrenDetalle> {
+    let filas: FilaParada[];
+    try {
+      ({ rows: filas } = await this.bd.consultar<FilaParada>(SQL_DETALLE, [feed, tripId, fecha]));
+    } catch {
+      throw new ServiceUnavailableException('La base de datos no está disponible');
+    }
+
+    if (filas.length === 0) {
+      throw new NotFoundException('Ese viaje no circula en esa fecha');
+    }
+
+    const primera = filas[0]!;
+    const ultima = filas.at(-1)!;
+
+    return {
+      feed: primera.feed,
+      tripId: primera.viaje_id,
+      fecha,
+      linea: lineaDe(primera),
+      tipo: tipoDe(primera.tipo_servicio),
+      numero: numeroDe(primera.nombre_corto),
+      origen: { id: primera.estacion_id, nombre: primera.estacion_nombre },
+      destino: { id: ultima.estacion_id, nombre: ultima.estacion_nombre },
+      // GTFS exige hora de llegada o de salida en cada parada: la que falte se toma de la otra.
+      salida: intervaloAIso(fecha, (primera.sale ?? primera.llega)!),
+      llegada: intervaloAIso(fecha, (ultima.llega ?? ultima.sale)!),
+      retrasoSeg: null,
+      paradas: filas.map((fila) => ({
+        seq: fila.secuencia,
+        estacion: { id: fila.estacion_id, nombre: fila.estacion_nombre },
+        llega: fila.llega === null ? null : intervaloAIso(fecha, fila.llega),
+        sale: fila.sale === null ? null : intervaloAIso(fecha, fila.sale),
+        retrasoSeg: null,
+      })),
     };
   }
 }
