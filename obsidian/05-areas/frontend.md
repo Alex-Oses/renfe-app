@@ -23,5 +23,7 @@ tags: [area]
 
 ## Notas técnicas
 
+- Estilo visual "cristal líquido" (tipo iOS 26) en `src/estilos/cristal-liquido.css`, capa encima de `base.css`: solo materiales, no maquetación. Para volver al estilo plano basta con quitar su import de `main.tsx`.
+
 - Único punto de acceso a la API: `src/api/cliente.ts`. El id de tren es `feed:tripId:fecha`.
 - `/posiciones` no trae origen/destino/progreso: el mapa los deja vacíos con la API real.
