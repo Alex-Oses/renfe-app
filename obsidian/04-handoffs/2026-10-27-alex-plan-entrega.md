@@ -1,6 +1,6 @@
 ---
 fecha: 2026-10-27
-autor: Alex (con Claude Code)
+autor: Alex
 area: vault
 para: todos
 rama: docs/vault-plan-entrega

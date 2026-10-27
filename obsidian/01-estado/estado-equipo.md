@@ -17,7 +17,8 @@ tags: [estado]
 
 ## Bloqueos globales
 - **Historial reescrito el 27/10: todos tenéis que borrar vuestra copia y clonar de nuevo** (ver [[2026-10-27-alex-reescritura-historial-y-vercel]]).
-- Kevin: la CI no ejecuta lint ni tests y la API no está desplegada; es el camino crítico de la demo con datos reales.
+- Migraciones de Marina solo en su PC: sin ellas no hay Supabase en la nube (ver riesgo en [[sprint-actual]]).
+- API sin desplegar: CI y `render.yaml` ya hechos por Alex; falta crear el servicio en Render.
 
 ## Próximos hitos
 - **Entrega final: 06/11/2026.** Congelación de código el 04/11. Plan en [[sprint-actual]].

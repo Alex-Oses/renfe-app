@@ -1,0 +1,25 @@
+# Blueprint de Render para la API (ADR-004: API en Render, web en Vercel).
+# En Render: New → Blueprint → este repo. Las variables con sync:false se rellenan a mano en el panel.
+services:
+  - type: web
+    name: renfe-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @renfe/api build
+    startCommand: pnpm --filter @renfe/api start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: "10000"
+      - key: CORS_ORIGINS
+        value: https://renfe-app-beta.vercel.app
+      - key: DATABASE_URL # cadena de conexión de Supabase en la nube (pooler)
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false

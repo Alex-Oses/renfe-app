@@ -1,5 +1,5 @@
-# CI placeholder (responsable: Kevin). Se completará en el Sprint 1.
-# Ahora solo instala dependencias para comprobar que el monorepo es válido.
+# CI del monorepo. El job se llama "ok" porque la protección de ramas exige el check "CI / ok".
+# Escrita por Alex para descargar a Kevin (sprint final); Kevin la revisa.
 name: CI
 
 on:
@@ -8,9 +8,14 @@ on:
   push:
     branches: [develop, main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ok:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -18,5 +23,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile=false
-      # TODO(Kevin): pnpm lint, pnpm test, build de imágenes Docker, tests de face-service
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm --filter @renfe/api test:e2e
+      - run: pnpm build
+      # Pendiente (fuera de la entrega): imágenes Docker y tests de face-service.
