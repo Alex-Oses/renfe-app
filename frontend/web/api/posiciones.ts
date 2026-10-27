@@ -26,6 +26,13 @@ export interface PosicionApi {
   estado: string | null;
   retrasoSeg: number | null;
   actualizado: string;
+  // Propuestos para Rubén (endpoints.md, "Campos del viaje para el mapa"): opcionales.
+  nombre?: string | null;
+  linea?: string | null;
+  origen?: { id: string; nombre: string } | null;
+  destino?: { id: string; nombre: string } | null;
+  proximaParada?: { id: string; nombre: string; llegada: string | null } | null;
+  llegadaDestino?: string | null;
 }
 
 interface FeedRtJson {

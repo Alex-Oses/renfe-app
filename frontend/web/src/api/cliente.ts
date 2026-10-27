@@ -55,20 +55,24 @@ export function rutaViaje(trenId: string, sufijo = ""): string {
 }
 
 // GET /posiciones devuelve PosicionApi (contrato); el mapa pinta PosicionTren.
-// Renfe no da origen, destino ni paradas en tiempo real: esos campos van vacíos y el mapa no los muestra.
+// Origen, destino, próxima parada y horas solo llegan si la API los cruza con el GTFS estático (Rubén);
+// si no, van vacíos y el mapa no los muestra.
 const aPosicion = (p: PosicionApi): PosicionTren => ({
   trenId: `${p.feed}:${p.tripId}`,
   tipo: p.feed === "cercanias" ? "Cercanías" : "Larga Distancia",
-  numero: p.vehicleId ?? p.tripId,
-  origen: "",
-  destino: "",
+  // Con "nombre" (p. ej. "AVE 02070") se enseña ese; si no, el id del vehículo.
+  numero: p.nombre ?? p.vehicleId ?? p.tripId,
+  linea: p.linea ?? undefined,
+  origen: p.origen?.nombre ?? "",
+  destino: p.destino?.nombre ?? "",
   lat: p.lat,
   lon: p.lon,
   rumbo: p.rumbo ?? 0,
-  velocidad: p.velocidadKmh ?? 0,
   retrasoMin: Math.round((p.retrasoSeg ?? 0) / 60),
   progreso: 0,
-  proximaParada: "",
+  proximaParada: p.proximaParada?.nombre ?? "",
+  llegadaProxima: p.proximaParada?.llegada ?? undefined,
+  llegadaDestino: p.llegadaDestino ?? undefined,
   ruta: [],
   paradas: [],
   actualizado: p.actualizado,

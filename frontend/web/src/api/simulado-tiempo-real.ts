@@ -7,7 +7,6 @@
 //   destino       <- stops.txt del último stop_time (o trips.trip_headsign)
 //   lat, lon      <- VehiclePosition.position.latitude / longitude
 //   rumbo         <- VehiclePosition.position.bearing (si falta, se calcula entre dos lecturas)
-//   velocidad     <- VehiclePosition.position.speed (m/s, se pasa a km/h)
 //   retrasoMin    <- TripUpdate.stop_time_update[].arrival.delay (o departure.delay) / 60 de la próxima parada
 //   progreso      <- VehiclePosition.current_stop_sequence frente al total de paradas (o distancia en shapes.txt)
 //   proximaParada <- VehiclePosition.stop_id (con current_status IN_TRANSIT_TO / INCOMING_AT) contra stops.txt
@@ -162,8 +161,6 @@ export function posicionesEn(ahora: number): PosicionTren[] {
         pasada: acum <= progreso * total,
       });
     });
-    // Más lento al salir y al llegar.
-    const arranque = Math.min(1, Math.min(progreso, 1 - progreso) * 12);
     res.push({
       trenId: id,
       tipo: ruta.tipo,
@@ -173,10 +170,11 @@ export function posicionesEn(ahora: number): PosicionTren[] {
       lat: a.lat + (b.lat - a.lat) * f,
       lon: a.lon + (b.lon - a.lon) * f,
       rumbo: Math.round(rumbo(a, b)),
-      velocidad: Math.round(VELOCIDAD[ruta.tipo] * (0.3 + 0.7 * arranque)),
       retrasoMin,
       progreso,
       proximaParada: siguiente.nombre,
+      llegadaProxima: paradas.find((x) => !x.pasada)?.llegada,
+      llegadaDestino: paradas[paradas.length - 1]?.llegada,
       actualizado: new Date(ahora).toISOString(),
       ruta: camino.map((p): [number, number] => [p.lat, p.lon]),
       paradas,

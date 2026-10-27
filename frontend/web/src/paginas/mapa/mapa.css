@@ -438,3 +438,27 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Detalle del viaje: una fila por dato (origen, destino, próxima parada, retraso) */
+.mapa-detalle__viaje {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.mapa-detalle__viaje > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mapa-detalle__linea {
+  font-weight: 500;
+  color: var(--gris, #6b6b6b);
+}
+
+.mapa-detalle__nota {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--gris, #6b6b6b);
+}
