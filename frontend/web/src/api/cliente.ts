@@ -145,10 +145,18 @@ export const verificarCara = (datos: { email: string; embedding: EmbeddingFacial
   BASE ? pedir("/auth/cara/verificar", "POST", datos) : simular(() => cuenta.verificarCara(datos), 900);
 
 // GET /posiciones (alternativa a Supabase Realtime, ver contrato)
-// Orden: API de Render si hay VITE_API_URL; si no, la función de Vercel con datos reales de Renfe;
+// Orden: API (VITE_POSICIONES_URL o VITE_API_URL); si no, la función de Vercel con datos reales de Renfe;
 // si falla (o en local con `pnpm dev`), trenes simulados para que el mapa nunca se quede vacío.
+// VITE_POSICIONES_URL: API desplegada solo para el mapa (p. ej. Render sin base de datos todavía).
+const BASE_POSICIONES = (import.meta.env.VITE_POSICIONES_URL as string | undefined) || BASE;
+
 export async function posicionesTrenes(): Promise<PosicionTren[]> {
-  if (BASE) return datos<PosicionApi>("/posiciones").then((l) => l.map(aPosicion));
+  if (BASE_POSICIONES) {
+    const r = await fetch(`${BASE_POSICIONES}/posiciones`);
+    if (!r.ok) throw new Error(`La API respondió ${r.status} en /posiciones`);
+    posicionesReales = true;
+    return ((await r.json()) as Lista<PosicionApi>).datos.map(aPosicion);
+  }
   if (TIEMPO_REAL_VERCEL) {
     try {
       const reales = await posicionesVercel();

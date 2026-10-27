@@ -82,17 +82,37 @@ async function leer(feed: Feed) {
   return convertirFeed(await r.json(), feed);
 }
 
-export async function GET(): Promise<Response> {
+// Respuesta mínima de Node que Vercel pasa al handler (sin depender de @vercel/node).
+interface RespuestaNode {
+  statusCode: number;
+  setHeader(nombre: string, valor: string): void;
+  end(cuerpo: string): void;
+}
+
+// Lógica separada del transporte: devuelve estado y cuerpo; la usan el handler y los tests.
+export async function obtenerPosiciones(): Promise<{ estado: number; cuerpo: unknown }> {
   const feeds = await Promise.allSettled([leer("avld"), leer("cercanias")]);
   const datos = feeds.flatMap((f) => (f.status === "fulfilled" ? f.value : []));
   const fallos = feeds.flatMap((f) => (f.status === "rejected" ? [String(f.reason?.message ?? f.reason)] : []));
   if (fallos.length === feeds.length) {
     // El motivo va en la respuesta para poder diagnosticarlo abriendo /api/posiciones en el navegador.
-    return Response.json({ error: "No se pudo leer el tiempo real de Renfe", motivos: fallos }, { status: 503 });
+    return { estado: 503, cuerpo: { error: "No se pudo leer el tiempo real de Renfe", motivos: fallos } };
   }
-  return Response.json(
-    { datos, actualizado: new Date().toISOString(), ...(fallos.length && { avisos: fallos }) },
-    // Renfe refresca cada 30 s: la CDN de Vercel sirve la misma respuesta a todos durante ese tiempo.
-    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=30" } },
-  );
+  return { estado: 200, cuerpo: { datos, actualizado: new Date().toISOString(), ...(fallos.length && { avisos: fallos }) } };
+}
+
+// Handler clásico (req, res): es la forma que Vercel admite en cualquier proyecto, no solo en Next.
+export default async function handler(_req: unknown, res: RespuestaNode): Promise<void> {
+  let estado = 500;
+  let cuerpo: unknown;
+  try {
+    ({ estado, cuerpo } = await obtenerPosiciones());
+  } catch (e) {
+    cuerpo = { error: "Fallo inesperado en /api/posiciones", motivos: [String(e)] };
+  }
+  res.statusCode = estado;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  // Renfe refresca cada 30 s: la CDN de Vercel sirve la misma respuesta a todos durante ese tiempo.
+  if (estado === 200) res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=30");
+  res.end(JSON.stringify(cuerpo));
 }
