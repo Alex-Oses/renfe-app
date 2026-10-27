@@ -5,7 +5,7 @@ autor: Alex
 tags: [adr]
 ---
 
-# ADR-002 — Web primero (React en Vercel), API en Render y facial en el navegador
+# ADR-004 — Web primero (React en Vercel), API en Render y facial en el navegador
 
 Sustituye partes de [[ADR-001-stack-tecnologico]]: frontend, despliegue y servicio facial. El resto sigue igual.
 
