@@ -87,8 +87,17 @@ export function Cabecera() {
     const mirar = () => {
       const y = window.scrollY;
       if (y < 80) setOculta(false);
-      else if (Math.abs(y - ultimo) > 8) setOculta(y > ultimo);
-      else return;
+      else if (Math.abs(y - ultimo) > 8) {
+        const baja = y > ultimo;
+        setOculta(baja);
+        // Al bajar se cierra lo que esté abierto; si no, el menú (o el foco en él) la mantendría visible.
+        if (baja) {
+          setMega(null);
+          setMenu(false);
+          const activo = document.activeElement;
+          if (activo instanceof HTMLElement && cabecera.current?.contains(activo)) activo.blur();
+        }
+      } else return;
       ultimo = y;
     };
     window.addEventListener("scroll", mirar, { passive: true });
