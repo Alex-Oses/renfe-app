@@ -1,6 +1,6 @@
 // Cuenta y login facial simulados. Dueño: agente de cuenta.
 // Simula lo que haría la API: contraseña con hash y sal, y solo el embedding facial, nunca imágenes.
-import type { EmbeddingFacial, Sesion, Usuario } from "./tipos";
+import type { EmbeddingFacial, Rol, Sesion, Usuario } from "./tipos";
 
 interface UsuarioGuardado {
   usuario: Usuario;
@@ -81,7 +81,24 @@ export async function registrarse(d: { nombre: string; email: string; contrasena
   return crearSesion(usuario);
 }
 
+// Cuentas de demostración con rol (sin API no hay quien dé roles). Se crean al entrar por primera vez.
+export const CUENTAS_DEMO: Record<string, { nombre: string; contrasena: string; rol: Rol }> = {
+  "revisor@renfe-app.demo": { nombre: "Revisor de demostración", contrasena: "revisor123", rol: "revisor" },
+  "admin@renfe-app.demo": { nombre: "Administración (demo)", contrasena: "admin1234", rol: "admin" },
+};
+
+async function crearCuentaDemo(email: string) {
+  const demo = CUENTAS_DEMO[email];
+  const usuarios = leer();
+  if (!demo || usuarios[email]) return;
+  const sal = hex(crypto.getRandomValues(new Uint8Array(16)));
+  const usuario: Usuario = { id: `demo-${demo.rol}`, nombre: demo.nombre, email, caraRegistrada: false, rol: demo.rol };
+  usuarios[email] = { usuario, sal, hash: await hashContrasena(demo.contrasena, sal) };
+  guardar(usuarios);
+}
+
 export async function iniciarSesion(d: { email: string; contrasena: string }): Promise<Sesion> {
+  await crearCuentaDemo(normalizar(d.email));
   const u = leer()[normalizar(d.email)];
   if (!u) throw new Error("No hay ninguna cuenta con ese email.");
   if ((await hashContrasena(d.contrasena, u.sal)) !== u.hash) throw new Error("La contraseña no es correcta.");

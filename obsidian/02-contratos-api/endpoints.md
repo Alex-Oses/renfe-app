@@ -32,7 +32,7 @@ insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
 
 - El token lo emite **Supabase Auth**; la API solo lo verifica (HS256 con `SUPABASE_JWT_SECRET`).
 - Identidad: `sub` (uuid de usuario) y `email`.
-- Rol: claim `app_metadata.rol` → `"viajero"` (por defecto) o `"revisor"`.
+- Rol: claim `app_metadata.rol` → `"viajero"` (por defecto), `"revisor"` o `"admin"` (propuesto, Alex 2026-10-27; `admin` también puede validar).
 - Los endpoints públicos no llevan token. Los privados exigen `Authorization: Bearer <jwt>`.
 
 
@@ -69,7 +69,8 @@ Estado: propuesto | implementado | cambiado (fecha)
 | POST | `/pagos/webhook` | Webhook de Stripe | propuesto |
 | GET | `/billetes` | Mis billetes | propuesto |
 | GET | `/billetes/:id/qr` | QR firmado | propuesto |
-| POST | `/billetes/validar` | Revisor valida un QR | propuesto |
+| POST | `/billetes/validar` | Revisor valida un QR | propuesto · **detallado** (Alex) |
+| GET | `/admin/resumen` | Cifras para el panel de administración | propuesto · **detallado** (Alex) |
 | POST | `/chatbot/mensaje` | Mensaje al chatbot | propuesto |
 
 Los marcados **detallado** tienen contrato completo abajo. Los demás se detallan en el sprint que
@@ -377,6 +378,78 @@ y las horas**. Propuesta: añadir a cada elemento de `datos` estos campos, **tod
 - `linea`: solo en Cercanías (`C-1`, `R2`…); `null` en AVE/LD.
 - Las horas son las **previstas con el retraso aplicado** si se conoce; con offset, como el resto.
 - `velocidadKmh` y `rumbo` se pueden quitar: Renfe no los publica y la web ya no los usa.
+
+## Formato del QR del billete — propuesto (Alex, 2026-10-27)
+
+`RNF1.<datos>.<firma>`, con `datos` y `firma` en base64url. `firma` firma el texto `RNF1.<datos>`.
+
+- **API real:** Ed25519 con `QR_SIGNING_PRIVATE_KEY` (ver `.env.example`). La web nunca tiene la clave privada.
+- **Sin API (simulado):** HMAC-SHA256 con una clave de demostración en la web
+  (`frontend/web/src/api/qr-billete.ts`). Detecta QR manipulados en la demo, pero no es seguridad real.
+- `datos` es JSON con claves cortas para que el QR sea pequeño:
+
+| Clave | Contenido |
+|---|---|
+| `v` | versión, `1` |
+| `id`, `rid`, `loc` | id del billete, id de la reserva, localizador |
+| `tipo`, `num` | tipo y número del tren |
+| `sal`, `lle` | salida y llegada (ISO con offset) |
+| `o`, `d` | nombres de origen y destino |
+| `co`, `as`, `cl` | coche, asiento (`12A`) y clase |
+| `p`, `doc` | nombre del viajero y documento **enmascarado** (`••••678Z`) |
+
+## POST /billetes/validar — propuesto (Alex, 2026-10-27) · para Rubén
+
+Descripción: el revisor escanea el QR; la API comprueba firma, existencia, estado de la reserva y
+fechas, y **apunta la validación** (la primera vez).
+Auth: **sí**, rol `revisor` o `admin` (`403` si no).
+
+Request:
+
+```json
+{ "qr": "RNF1.eyJ2IjoxLCJpZCI6…" }
+```
+
+Response 200 (siempre 200 si el QR se ha podido procesar; el veredicto va en `estado`):
+
+```json
+{
+  "estado": "valido",
+  "billete": {
+    "id": "HDBW9K-1", "localizador": "HDBW9K",
+    "pasajero": "Lucía Pérez Gómez", "documento": "••••678Z",
+    "tipo": "AVE", "numero": "03142",
+    "salida": "2026-11-02T07:15:00+01:00", "llegada": "2026-11-02T09:40:00+01:00",
+    "origen": "Madrid-Puerta de Atocha", "destino": "Barcelona-Sants",
+    "coche": 3, "asiento": "12A", "clase": "Confort"
+  },
+  "validadoEn": "2026-11-02T07:20:11+01:00",
+  "primeraValidacion": null,
+  "comprobadoEnServidor": true
+}
+```
+
+| `estado` | Cuándo | `billete` |
+|---|---|---|
+| `valido` | firma OK, existe, pagado, es hoy y no se había validado | sí |
+| `ya_validado` | igual, pero ya tenía validación (`primeraValidacion` = la primera) | sí |
+| `otro_dia` | el viaje es otro día | sí |
+| `caducado` | más de 2 h después de la llegada | sí |
+| `anulado` | la reserva está cancelada o reembolsada | sí |
+| `falso` | no es `RNF1` o la firma no cuadra | no |
+| `no_existe` | firma OK pero el billete no está en la BD | sí (lo que dice el QR) |
+
+Errores: `400` sin `qr` · `401` sin token · `403` sin rol de revisor.
+
+Notas: necesita una tabla de validaciones (`billete_id`, `revisor_id`, `validado_en`) en
+[[modelo-datos]] (Marina). La web ya lo consume en `cliente.ts` (`validarBillete`).
+
+## GET /admin/resumen — propuesto (Alex, 2026-10-27)
+
+Auth: **sí**, rol `admin`. Response 200: `billetesVendidos`, `reservas`, `reservasCanceladas`,
+`ingresos` (euros), `validaciones`, `usuarios` y `ultimasReservas[]` (`localizador`, `trayecto`,
+`total`, `estado`, `creada`). Tipo `ResumenAdmin` en `frontend/web/src/api/tipos.ts`. El resto del
+panel (usuarios y roles, anular reservas, avisos) se detalla en el próximo sprint.
 
 ## Pendientes de detallar
 

@@ -18,6 +18,8 @@ const Acceder = lazy(() => import("./paginas/Acceder"));
 const Cuenta = lazy(() => import("./paginas/Cuenta"));
 const Mapa = lazy(() => import("./paginas/Mapa"));
 const MisLineas = lazy(() => import("./paginas/MisLineas"));
+const Revisor = lazy(() => import("./paginas/Revisor"));
+const Admin = lazy(() => import("./paginas/Admin"));
 // Cualquier otra ruta: página de contenido (o 404 si no existe).
 const PaginaContenido = lazy(() => import("./paginas/PaginaContenido"));
 
@@ -41,6 +43,8 @@ function App() {
             <Route path="/cuenta" element={<Cuenta />} />
             <Route path="/mapa" element={<Mapa />} />
             <Route path="/lineas" element={<MisLineas />} />
+            <Route path="/revisor" element={<Revisor />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<PaginaContenido />} />
           </Routes>
         </Suspense>

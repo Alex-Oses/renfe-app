@@ -163,7 +163,14 @@ export function Cabecera() {
     </NavLink>
   );
 
-  const accesos = ENLACES.map((l) => (
+  // El personal ve además su zona: revisor (y admin, que también puede validar).
+  const rol = sesion?.usuario.rol;
+  const enlaces = [
+    ...ENLACES,
+    ...(rol === "revisor" || rol === "admin" ? [{ a: "/revisor", texto: "Revisor" }] : []),
+    ...(rol === "admin" ? [{ a: "/admin", texto: "Admin" }] : []),
+  ];
+  const accesos = enlaces.map((l) => (
     <NavLink key={l.a} to={l.a} end className="nav__enlace">
       {l.texto}
     </NavLink>

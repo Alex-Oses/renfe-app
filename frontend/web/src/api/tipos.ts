@@ -104,11 +104,15 @@ export interface Billete {
 
 // --- Cuenta ---
 
+// Rol del JWT (app_metadata.rol, ver endpoints.md). Sin rol = viajero.
+export type Rol = "viajero" | "revisor" | "admin";
+
 export interface Usuario {
   id: string;
   nombre: string;
   email: string;
   caraRegistrada: boolean;
+  rol?: Rol;
 }
 
 export interface Sesion {
@@ -188,3 +192,51 @@ export type TipoViajero = "adulto" | "nino" | "bebe"; // niño: 4-13 años; beb�
 export type IdTarifa = "basico" | "elige" | "elige-confort" | "premium";
 export type IdDescuento = "ninguno" | "joven" | "dorada" | "fn-general" | "fn-especial";
 export type IdExtra = "equipaje" | "mascota" | "bici" | "comida" | "seguro";
+
+// --- Revisor: validación de billetes (POST /billetes/validar) ---
+
+export type EstadoValidacion =
+  | "valido" // todo correcto: primera vez que se valida
+  | "ya_validado" // auténtico, pero ya se validó antes (¿lo usan dos personas?)
+  | "otro_dia" // auténtico, pero el viaje es otro día
+  | "caducado" // auténtico, pero el tren ya llegó a su destino
+  | "anulado" // auténtico, pero la reserva está cancelada
+  | "falso" // la firma no cuadra: QR inventado o manipulado
+  | "no_existe"; // firma correcta pero el billete no está en el sistema (solo lo sabe la API)
+
+// Lo que ve el revisor del billete escaneado.
+export interface BilleteValidado {
+  id: string;
+  localizador: string;
+  pasajero: string;
+  documento: string; // enmascarado: ••••678Z
+  tipo: string;
+  numero: string;
+  salida: string; // ISO
+  llegada: string; // ISO
+  origen: string;
+  destino: string;
+  coche: number;
+  asiento: string;
+  clase: string;
+}
+
+export interface ResultadoValidacion {
+  estado: EstadoValidacion;
+  billete?: BilleteValidado; // no hay si es falso
+  validadoEn: string; // ISO, esta lectura
+  primeraValidacion?: string; // ISO, si ya se había validado
+  comprobadoEnServidor: boolean; // false = solo firma, sin API (modo simulado)
+}
+
+// --- Administración (GET /admin/resumen, propuesto) ---
+
+export interface ResumenAdmin {
+  billetesVendidos: number;
+  reservas: number;
+  reservasCanceladas: number;
+  ingresos: number; // euros, simulado
+  validaciones: number;
+  usuarios: number;
+  ultimasReservas: { localizador: string; trayecto: string; total: number; estado: Reserva["estado"]; creada: string }[];
+}
