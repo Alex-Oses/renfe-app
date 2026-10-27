@@ -6,9 +6,14 @@ API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../
 
 ## Estado
 
-Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger y
-`GET /health`. **Todavía sin datos**: `backend/database/` no tiene migraciones (Marina) y el
-worker GTFS no existe. Cuando lleguen, se añade `pg` y los módulos `estaciones` y `trenes`.
+Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger,
+`GET /health`, auth de Supabase con roles y acceso opcional a Postgres.
+
+**Primer endpoint de datos: `GET /estaciones`** (fase F1), contra las tablas `estaciones` y
+`estacion_feeds` del modelo de datos. Sin `DATABASE_URL` responde `503`.
+
+Lo demás sigue pendiente: `/trenes` y compañía necesitan las migraciones de Marina
+(`backend/database/`) y el worker GTFS.
 
 ## Arrancar
 
@@ -35,6 +40,7 @@ src/
   common/auth/        SupabaseJwtGuard, RolesGuard y decorador @Roles
   common/bd/          BdService: pool de Postgres opcional
   modules/
+    estaciones/       GET /estaciones (SQL sobre estaciones + estacion_feeds)
     health/           GET /health
 ```
 
