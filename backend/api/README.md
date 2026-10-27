@@ -9,14 +9,14 @@ API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../
 Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger,
 `GET /health`, auth de Supabase con roles y acceso opcional a Postgres.
 
-**Endpoints de datos (fase F1): `GET /estaciones`, `GET /trenes` y `GET /posiciones`**, con SQL
-directo contra el modelo de datos de
+**Endpoints de datos (fase F1): `GET /estaciones`, `GET /trenes`, `GET /trenes/:feed/:tripId` y
+`GET /posiciones`**, con SQL directo contra el modelo de datos de
 [`obsidian/02-contratos-api/modelo-datos.md`](../../obsidian/02-contratos-api/modelo-datos.md)
 (sin ORM). Sin `DATABASE_URL` responden `503`. `/posiciones` es la excepción: lee GTFS-RT de Renfe
 en memoria cada 30 s, no toca la BD y funciona sin Supabase.
 
-Lo demás sigue pendiente: detalle de viaje, `/incidencias` y compañía necesitan las migraciones de
-Marina (`backend/database/`) y el worker GTFS.
+Lo demás sigue pendiente: `/incidencias` y compañía necesitan las migraciones de Marina
+(`backend/database/`) y el worker GTFS.
 
 ## Arrancar
 
@@ -47,7 +47,7 @@ src/
     estaciones/       GET /estaciones (SQL sobre estaciones + estacion_feeds)
     health/           GET /health
     posiciones/       GET /posiciones (GTFS-RT en memoria, sin BD)
-    trenes/           GET /trenes (viajes directos; precio y plazas simulados)
+    trenes/           GET /trenes y /trenes/:feed/:tripId (precio y plazas simulados)
 ```
 
 ## Base de datos
