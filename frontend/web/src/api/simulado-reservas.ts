@@ -1,6 +1,7 @@
 // Reservas, pagos y billetes simulados. Dueño: agente de reservas.
 import { obtenerTren } from "./simulado";
 import { CLAVE_SESION } from "./simulado-cuenta";
+import { PREFIJO_QR, crearQr } from "./qr-billete";
 import { calcularTotal } from "./simulado-precios";
 import type { EnlaceWallet, Asiento, Billete, ClaseAsiento, IntentoPago, NuevaReserva, Reserva } from "./tipos";
 
@@ -131,12 +132,12 @@ export function crearIntentoPago(reservaId: string): IntentoPago {
   return { clientSecret: `simulado_${r.id}`, importe: r.total };
 }
 
-export function confirmarPago(reservaId: string): Reserva {
+export async function confirmarPago(reservaId: string): Promise<Reserva> {
   const r = buscarReserva(reservaId);
   if (r.estado === "pagada") return r;
   if (r.estado === "cancelada") throw new Error("La reserva está cancelada.");
   const pagada: Reserva = { ...r, estado: "pagada" };
-  const nuevos: Billete[] = r.asientos.map((asiento, i) => ({
+  const sinQr: Billete[] = r.asientos.map((asiento, i) => ({
     id: `${r.localizador}-${i + 1}`,
     reservaId: r.id,
     usuarioId: usuarioActual(),
@@ -144,17 +145,23 @@ export function confirmarPago(reservaId: string): Reserva {
     tren: r.tren,
     asiento,
     pasajero: r.pasajeros[i],
-    qr: JSON.stringify({
-      loc: r.localizador,
-      tren: r.tren.numero,
-      asiento: asiento.id,
-      pasajero: `${r.pasajeros[i].nombre} ${r.pasajeros[i].apellidos}`,
-      firma: "simulada",
-    }),
+    qr: "",
   }));
+  // El QR va firmado (ver qr-billete.ts): el revisor detecta si alguien lo cambia o lo inventa.
+  const nuevos = await Promise.all(sinQr.map(async (b) => ({ ...b, qr: await crearQr(b) })));
   const a = leer();
   guardar({ reservas: a.reservas.map((x) => (x.id === r.id ? pagada : x)), billetes: [...a.billetes, ...nuevos] });
   return pagada;
+}
+
+// Billetes comprados antes de firmar los QR: se firman la primera vez que se leen.
+async function conQrFirmado(lista: Billete[]): Promise<Billete[]> {
+  const viejos = lista.filter((b) => !b.qr.startsWith(`${PREFIJO_QR}.`));
+  if (!viejos.length) return lista;
+  const firmados = new Map(await Promise.all(viejos.map(async (b) => [b.id, await crearQr(b)] as const)));
+  const a = leer();
+  guardar({ ...a, billetes: a.billetes.map((b) => (firmados.has(b.id) ? { ...b, qr: firmados.get(b.id)! } : b)) });
+  return lista.map((b) => (firmados.has(b.id) ? { ...b, qr: firmados.get(b.id)! } : b));
 }
 
 function usuarioActual(): string | undefined {
@@ -170,13 +177,20 @@ export const enmascarar = (doc: string) => (doc.length > 4 ? `${"•".repeat(doc
 // Cada cuenta ve solo sus billetes; sin sesión, solo los comprados sin sesión.
 const esMio = (b: Billete) => b.usuarioId === usuarioActual();
 
-export const misBilletes = (): Billete[] => leer().billetes.filter(esMio);
+export const misBilletes = (): Promise<Billete[]> => conQrFirmado(leer().billetes.filter(esMio));
 
-export function obtenerBillete(id: string): Billete {
+export async function obtenerBillete(id: string): Promise<Billete> {
   const b = leer().billetes.find((x) => x.id === id && esMio(x));
   if (!b) throw new Error("No encontramos ese billete.");
-  return b;
+  return (await conQrFirmado([b]))[0];
 }
+
+// Para administración sin API: todo lo guardado en este navegador.
+export const _todo = () => leer();
+
+// Para el revisor sin API: el billete tal y como está guardado en este dispositivo (de cualquier cuenta).
+export const billeteGuardado = (id: string) => leer().billetes.find((x) => x.id === id);
+export const reservaGuardada = (id: string) => leer().reservas.find((x) => x.id === id);
 
 // Sin API no hay quien firme el pase de Apple ni el JWT de Google: se avisa con un error claro.
 export function enlaceWallet(_billeteId: string, _plataforma: EnlaceWallet["plataforma"]): EnlaceWallet {

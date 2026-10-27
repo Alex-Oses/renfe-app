@@ -11,6 +11,8 @@ import type {
   NuevaReserva,
   PosicionTren,
   Reserva,
+  ResultadoValidacion,
+  ResumenAdmin,
   Sesion,
   Tren,
 } from "./tipos";
@@ -18,6 +20,8 @@ import * as trenes from "./simulado";
 import * as reservas from "./simulado-reservas";
 import * as cuenta from "./simulado-cuenta";
 import * as tiempoReal from "./simulado-tiempo-real";
+import * as revisor from "./simulado-revisor";
+import * as admin from "./simulado-admin";
 import type { PosicionApi } from "./gtfs-rt";
 
 const BASE = import.meta.env.VITE_API_URL as string | undefined;
@@ -178,3 +182,11 @@ export const enlaceWallet = (billeteId: string, plataforma: EnlaceWallet["plataf
   BASE
     ? pedir(`/billetes/${encodeURIComponent(billeteId)}/wallet?plataforma=${plataforma}`)
     : simular(() => reservas.enlaceWallet(billeteId, plataforma));
+
+// POST /billetes/validar  (rol revisor). Sin API se comprueba la firma del QR en el navegador.
+export const validarBillete = (qr: string): Promise<ResultadoValidacion> =>
+  BASE ? pedir("/billetes/validar", "POST", { qr }) : simular(() => revisor.validarBillete(qr), 300);
+
+// GET /admin/resumen  (rol admin; propuesto en endpoints.md, pendiente de la API).
+export const resumenAdmin = (): Promise<ResumenAdmin> =>
+  BASE ? pedir("/admin/resumen") : simular(() => admin.resumen());

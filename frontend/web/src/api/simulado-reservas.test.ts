@@ -26,18 +26,18 @@ describe("reservas simuladas", () => {
     expect(() => crearReserva({ trenId: tren.id, asientos: [libre.id], pasajeros: [viajero] })).toThrow(/ocupado/);
   });
 
-  it("el total es la suma de los asientos y el pago genera un billete por viajero", () => {
+  it("el total es la suma de los asientos y el pago genera un billete por viajero", async () => {
     const libres = obtenerAsientos(tren.id).filter((x) => x.libre);
     const elegidos = [libres[0], libres[libres.length - 1]];
     const r = crearReserva({ trenId: tren.id, asientos: elegidos.map((a) => a.id), pasajeros: [viajero, viajero] });
     expect(r.total).toBeCloseTo(elegidos[0].precio + elegidos[1].precio, 2);
     expect(r.localizador).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
 
-    const pagada = confirmarPago(r.id);
+    const pagada = await confirmarPago(r.id);
     expect(pagada.estado).toBe("pagada");
-    const billetes = misBilletes();
+    const billetes = await misBilletes();
     expect(billetes).toHaveLength(2);
-    expect(JSON.parse(obtenerBillete(billetes[0].id).qr)).toMatchObject({ loc: r.localizador, firma: "simulada" });
+    expect((await obtenerBillete(billetes[0].id)).qr.startsWith("RNF1.")).toBe(true);
   });
 
   it("cobra según tarifa, tipo de viajero y extras", () => {

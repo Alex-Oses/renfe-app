@@ -440,3 +440,107 @@ a.nav-grupo__paso:hover {
     transition: none;
   }
 }
+
+/* ---------- Tarjeta de embarque ---------- */
+.billete-pagina .pase {
+  position: relative;
+  border-radius: 22px;
+  border: 0;
+  box-shadow: 0 24px 48px -24px rgb(92 0 67 / 0.45), 0 2px 6px rgb(0 0 0 / 0.06);
+}
+
+.billete-pagina .pase__cabeza {
+  position: relative;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  padding: 1.1rem 1.25rem 1.4rem;
+  background: linear-gradient(120deg, var(--morado-oscuro, #5c0043), var(--morado, #81005e) 55%, var(--frambuesa, #d62d61));
+}
+
+/* Franja de la librea bajo la cabecera */
+.billete-pagina .pase__cabeza::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--frambuesa, #d62d61) 0 60%, #fff 60% 63%, var(--frambuesa, #d62d61) 63%);
+  opacity: 0.9;
+}
+
+.pase__tren {
+  margin-right: auto;
+  opacity: 0.95;
+}
+
+.pase__estado {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.2);
+  border: 1px solid rgb(255 255 255 / 0.45);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.pase__trayecto {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+}
+
+.pase__duracion {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--gris, #6b6b6b);
+  white-space: nowrap;
+}
+
+/* Corte con muescas a los lados, como un billete troquelado */
+.billete-pagina .pase__corte {
+  position: relative;
+  margin: 0 1.2rem;
+}
+
+.billete-pagina .pase__corte::before,
+.billete-pagina .pase__corte::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--niebla, #eff3f6);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.03);
+}
+
+.billete-pagina .pase__corte::before {
+  left: calc(-1.2rem - 12px);
+}
+
+.billete-pagina .pase__corte::after {
+  right: calc(-1.2rem - 12px);
+}
+
+/* QR grande y centrado: es lo que lee el revisor */
+.billete-pagina .pase__pie {
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: center;
+  padding: 1.5rem 1.25rem 1.75rem;
+}
+
+.pase__qr--grande {
+  width: min(16rem, 72vw);
+  padding: 0.6rem;
+  margin-bottom: 0.75rem;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--linea, #d9dfe5), 0 8px 20px -12px rgb(0 0 0 / 0.3);
+}
+
+.billete-pagina .pase__nota {
+  max-width: 22rem;
+  margin: 0.5rem auto 0;
+}
