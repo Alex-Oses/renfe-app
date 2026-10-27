@@ -88,7 +88,7 @@ export function EntradaTren() {
           <div className="entrada__catenaria" />
         </div>
         <div className="entrada__lema" aria-hidden="true">
-          <span>Andén</span>
+          <span>Renfe</span>
         </div>
         <div className="entrada__tren">
           <div className="entrada__estela" aria-hidden="true" />
