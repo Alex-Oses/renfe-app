@@ -52,7 +52,7 @@ Estado: propuesto | implementado | cambiado (fecha)
 
 | Método | Ruta | Para qué | Estado |
 |---|---|---|---|
-| GET | `/estaciones?q=&feed=` | Autocompletar estaciones | propuesto · **detallado** |
+| GET | `/estaciones?q=&feed=` | Autocompletar estaciones | implementado (2026-10-27) |
 | GET | `/trenes?origen=&destino=&fecha=` | Buscar viajes directos | propuesto · **detallado** |
 | GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | propuesto · **detallado** |
 | GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | propuesto · **detallado** |
@@ -112,6 +112,10 @@ Response 200:
 Errores: `400` `q` vacío o `limit` fuera de rango · `503` si la BD no responde.
 
 Notas: `ciudad` sale de una tabla de apoyo; si no se conoce, cadena vacía (nunca inventada).
+
+Estado: **implementado** (2026-10-27). El filtro de tildes se hace con `translate()` en SQL, no con
+la extensión `unaccent`, para no añadir dependencias al modelo. Pendiente de probar contra la BD
+real: hasta que existan las migraciones solo hay tests con dobles.
 
 ## GET /trenes
 

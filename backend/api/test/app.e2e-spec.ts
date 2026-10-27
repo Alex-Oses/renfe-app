@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
@@ -10,6 +10,8 @@ describe('API (e2e)', () => {
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = modulo.createNestApplication();
+    // Lo mismo que hace main.ts, para que la validación se comporte igual.
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
   });
 
@@ -20,5 +22,9 @@ describe('API (e2e)', () => {
   it('GET /health responde 200 con estado ok', async () => {
     const respuesta = await request(app.getHttpServer()).get('/health').expect(200);
     expect(respuesta.body).toMatchObject({ estado: 'ok' });
+  });
+
+  it('GET /estaciones sin q responde 400', async () => {
+    await request(app.getHttpServer()).get('/estaciones').expect(400);
   });
 });
