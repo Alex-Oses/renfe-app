@@ -321,3 +321,7 @@ no dependen de GTFS. Se detallan en el sprint que los implemente, siempre aquí 
 - 2026-10-26 — Añadidas y detalladas las 6 rutas de datos (estaciones, viajes, posiciones, incidencias).
   Renombradas a `/trenes/:feed/:tripId` para evitar ids compuestos en la URL.
 - 2026-10-26 — Creado el catálogo inicial con 17 rutas propuestas.
+
+## Formas de respuesta usadas por la web (pendiente de alinear)
+
+La web (`frontend/web/src/api/tipos.ts`) consume con datos simulados `Estacion`, `Tren`, `Asiento`, `Reserva`, `IntentoPago`, `Billete`, `Sesion` y `PosicionTren`. Al integrar con la API, **manda este contrato**: el detalle de tren es `GET /trenes/:feed/:tripId` (no `/trenes/:id`) y las posiciones del mapa son `GET /posiciones` (no `/tiempo-real/trenes`). Alex adapta `tipos.ts`; si a la web le falta algún campo, lo propone aquí antes de tocar código.

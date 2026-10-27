@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buscarEstaciones, buscarTrenes } from "./simulado";
+import { buscarEstaciones, buscarTrenes, obtenerTren } from "./simulado";
 
 describe("datos simulados", () => {
   it("busca estaciones sin tildes ni mayúsculas", () => {
@@ -20,5 +20,12 @@ describe("datos simulados", () => {
 
   it("no hay trenes de una estación a sí misma", () => {
     expect(buscarTrenes({ origen: "60000", destino: "60000", fecha: "2026-11-02" })).toEqual([]);
+  });
+});
+
+describe("obtenerTren", () => {
+  it("recupera un tren por su id simulado", () => {
+    const [t] = buscarTrenes({ origen: "60000", destino: "51003", fecha: "2026-11-02" });
+    expect(obtenerTren(t.id)).toEqual(t);
   });
 });
