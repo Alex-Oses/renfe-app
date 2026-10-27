@@ -346,13 +346,17 @@ Notas:
 - `bbox` es siempre opcional. Hoy el feed completo son ~500 posiciones (210 AVE/LD + 298
   Cercanías), así que la regla de «obligatoria si hay más de 500» no se aplica.
 - La API **sondea Renfe cada `GTFS_RT_POLL_SECONDS` (30 s por defecto) en memoria**, sin worker y
-  sin BD: `/posiciones` funciona aunque Supabase esté caído. Las dos peticiones del intervalo se
-  agrupan en una sola descarga.
+  sin BD: `/posiciones` funciona aunque Supabase esté caído. Cada intervalo son **4 descargas**
+  (posiciones + retrasos de los dos feeds) y se comparten entre todas las peticiones simultáneas.
+- Si falla el feed de **retrasos** pero no el de posiciones, se sirve el mapa igual con `retrasoSeg`
+  a `null`: el retraso es un extra, la posición no.
 - Si Renfe falla, se sigue sirviendo el último snapshot bueno y `actualizado` deja de avanzar. Solo
   hay `503` si nunca se ha podido leer.
 - `actualizado` es el del feed **más antiguo** de los dos: es el que se queda corto.
 - `rumbo` y `velocidadKmh` son `null` **siempre** hoy: el feed JSON de Renfe no publica ni `bearing`
-  ni `speed`. `retrasoSeg` es `null` porque el retraso vive en `trip_updates`, que no se lee.
+  ni `speed`. `retrasoSeg` **sí es real**: sale de `trip_updates` (`GTFS_RT_URL_RETRASOS_*`), cruzado
+  por `tripId`, y es `null` solo si ese viaje no lo publica. **Puede ser negativo** (tren adelantado),
+  así que la web no debe tratarlo como «0 o tarde».
 - Un mismo `vehicleId` aparece varias veces con `tripId` distintos (un tren encadenando viajes): no
   se deduplica, cada fila es un viaje.
 - `tripId` es el de GTFS-RT tal cual (`0029112026-10-27`), que **no coincide** con el `trip_id` del
