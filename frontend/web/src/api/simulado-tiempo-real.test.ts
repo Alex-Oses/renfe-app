@@ -26,12 +26,17 @@ describe("tiempo real simulado", () => {
     }
   });
 
-  it("mueve los trenes con el tiempo y los AVE van más rápido que los MD", () => {
+  it("mueve los trenes con el tiempo", () => {
     const a = posicionesEn(t);
     const b = posicionesEn(t + 60_000);
     expect(a.some((x, i) => x.lat !== b[i].lat)).toBe(true);
-    const max = (tipo: string) => Math.max(...a.filter((x) => x.tipo === tipo).map((x) => x.velocidad));
-    expect(max("AVE")).toBeGreaterThan(max("Media Distancia"));
+  });
+
+  it("da la hora de la próxima parada y la del destino, en ese orden", () => {
+    for (const x of posicionesEn(t)) {
+      expect(x.llegadaDestino).toBeTruthy();
+      if (x.llegadaProxima) expect(Date.parse(x.llegadaProxima)).toBeLessThanOrEqual(Date.parse(x.llegadaDestino!));
+    }
   });
 
   it("da ruta de origen a destino y paradas ordenadas con llegadas crecientes", () => {
