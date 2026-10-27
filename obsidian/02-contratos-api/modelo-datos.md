@@ -266,6 +266,13 @@ una tarjeta de viaje o el mapa resuelve un tren. `origen` = primera parada con `
 Se **elimina** la columna `destino` (de `trip_headsign`): viene vacía en AV/LD/MD y con espacios en
 Cercanías. El destino real es el `nombre` de `estaciones` para `destino_id`.
 
+> ⚠️ **Matiz medido en el fichero real de Renfe (Rubén, 27/10).** En `avld` la plantilla **ya viene
+> materializada**: `trips.txt` tiene 8.663 filas, 84 fechas y el `trip_id` lleva la fecha pegada
+> (`0019012026-10-27`), igual que `service_id`. Es decir, `viajes` de `avld` serán ~8.700 filas y cada
+> `id` sirve un solo día. El diseño de arriba **sigue valiendo** (el filtro por calendarios no molesta),
+> pero el import **no debe deduplicar por plantilla** ni quitar la fecha del `id`: es lo que usa GTFS-RT
+> para cruzar la posición. Ver [[2026-10-27-ruben-gtfs-estatico-para-marina]].
+
 **RLS:** lectura pública. Escritura solo `service_role`.
 **Índices:** PK; `(feed, ruta_id)`; `(feed, servicio_id)`; `(fecha_fin)` para la purga;
 `(feed, fecha_inicio, fecha_fin)` para `GET /trenes?fecha=`.

@@ -54,10 +54,10 @@ Estado: propuesto | implementado | cambiado (fecha)
 |---|---|---|---|
 | GET | `/estaciones?q=&feed=` | Autocompletar estaciones | **implementado** · **detallado** |
 | GET | `/trenes?origen=&destino=&fecha=` | Buscar viajes directos | **implementado** · **detallado** |
-| GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | **implementado** · **detallado** |
-| GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | propuesto · **detallado** |
+| GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y horas | **implementado** · **detallado** |
+| GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | **implementado** · **detallado** |
 | GET | `/incidencias?feed=&linea=` | Avisos GTFS-RT | propuesto · **detallado** |
-| GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa (alternativa al Realtime) | **implementado** · **detallado** |
+| GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa en vivo (sustituye a Realtime) | **implementado** · **detallado** |
 | GET | `/health` | Estado del servicio (infra) | implementado |
 | POST | `/auth/registro` | Alta de usuario | propuesto |
 | POST | `/auth/login` | Login email/contraseña | propuesto |

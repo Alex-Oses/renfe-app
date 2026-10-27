@@ -3,8 +3,8 @@ fecha: 2026-10-27
 autor: Rubén
 area: api
 para: Alex
-rama: feat/api-detalle-tren
-pr: "#39 (apilada sobre #36 y #33)"
+rama: feat/api-retrasos
+pr: "#47"
 tags: [handoff, api, posiciones, gtfs-rt, retrasos, frontend]
 ---
 
@@ -20,7 +20,11 @@ tags: [handoff, api, posiciones, gtfs-rt, retrasos, frontend]
 máquina sin migraciones, sin `DATABASE_URL` y sin esperar a Marina. Es el único endpoint de datos que
 está desbloqueado del todo.
 
-## 2. Cómo levantarlo en tu máquina
+## 2. Cómo probarlo
+
+En producción no hay que hacer nada: `https://renfe-api.onrender.com/posiciones`.
+
+En tu máquina:
 
 ```bash
 pnpm dev:api          # API en http://localhost:3000 (si el 3000 está pillado, API_PORT=3100)
@@ -47,6 +51,7 @@ bloquea en el navegador y el error parece un fallo de la API. Añade tu puerto a
       "rumbo": null,
       "velocidadKmh": null,
       "estado": "STOPPED_AT",
+      "paradaActual": "60000",
       "retrasoSeg": 2640,
       "actualizado": "2026-10-27T10:06:03+01:00"
     }
@@ -88,8 +93,9 @@ de la estación (eso necesita la BD).
 
 ## 6. Lo que sigue bloqueado para todos
 
-- **La API no está desplegada.** Render es de Kevin y sigue pendiente, así que **no hay URL pública**
-  a la que apuntar la web de Vercel. Mientras tanto, en local.
+- **La API ya está desplegada**: `https://renfe-api.onrender.com` (Render, deploya `develop`). Pero
+  hoy sirve código **sin** `retrasoSeg` ni `paradaActual`: comprobado el 27/10, devuelve `retrasoSeg:
+  null`. En cuanto se mergee #47, Render redespliega y aparecen solos. No es un fallo de tu handler.
 - `/estaciones`, `/trenes` y el detalle necesitan las migraciones de Marina y **hoy devuelven `503`**
   sin `DATABASE_URL`. Eso no es un fallo: es a propósito.
 

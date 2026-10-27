@@ -13,7 +13,8 @@ tags: [handoff, db, gtfs, import, avld, trips]
 > Lo he descubierto descargando el GTFS estático de AVE/LD de Renfe
 > (`https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip`, 867 KB, accesible sin token).
 > Los dos afectan al import de `backend/gtfs-worker` y uno toca [[modelo-datos]]. Ninguno es un
-> fallo del modelo: es información que solo se ve mirando el fichero.
+> fallo del modelo: es información que solo se ve mirando el fichero. Ya dejé el aviso en la propia
+> nota ([[modelo-datos]] §4.6).
 
 ## 1. `trips.txt` de AVE/LD **no son plantillas**: viene un viaje por fecha
 
