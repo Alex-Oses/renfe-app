@@ -12,7 +12,7 @@ tags: [estado]
 |---|---|---|---|---|---|
 | Alex | PO + Frontend | 🟢 | Web completa en `frontend/web` con datos simulados (PR #17); siguiente: adaptar `tipos.ts` al contrato de [[endpoints]] de Rubén | — | 2026-10-27 |
 | Rubén | Backend + chatbot | 🟡 | API lista hasta donde se puede sin BD: esqueleto, auth, salud con ping a Postgres | Esperando esquema de Marina para `/estaciones` y `/trenes` | 2026-10-26 |
-| Marina | SM + Base de datos | ⚪ | Pendiente: `supabase init` y borrador de [[modelo-datos]] | Esperando repo en GitHub | 2026-10-26 |
+| Marina | SM + Base de datos | 🟢 | Supabase local validado en VM Linux; contrato de [[modelo-datos]] cerrado salvo la duda de Kevin sobre Stripe | — | 2026-10-26 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
 
 ## Bloqueos globales

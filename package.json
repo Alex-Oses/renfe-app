@@ -16,6 +16,10 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "db:start": "supabase start --workdir backend/database",
+    "db:stop": "supabase stop --workdir backend/database",
+    "db:reset": "supabase db reset --workdir backend/database",
+    "db:status": "supabase status --workdir backend/database",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "contexto": "node scripts/agent-context.mjs",
@@ -26,6 +30,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
-    "husky": "^9.1.6"
+    "husky": "^9.1.6",
+    "supabase": "^2.122.0"
   }
 }
