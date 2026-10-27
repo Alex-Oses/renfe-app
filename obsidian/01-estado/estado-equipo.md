@@ -19,6 +19,7 @@ tags: [estado]
 - **Historial reescrito el 27/10: todos tenéis que borrar vuestra copia y clonar de nuevo** (ver [[2026-10-27-alex-reescritura-historial-y-vercel]]).
 - Migraciones de Marina solo en su PC: sin ellas no hay Supabase en la nube (ver riesgo en [[sprint-actual]]).
 - API desplegada en Render (https://renfe-api.onrender.com) **sin base de datos**: `/estaciones` y `/trenes` dan 503 hasta que Marina suba las migraciones y se rellene `DATABASE_URL` en Render.
+- 🔴 **No existe plan para la app móvil**, que es la pieza principal de la entrega, y [[sprint-actual]] y [[ADR-004-web-primero-vercel-render]] dicen lo contrario (la excluyen / apuntan a Capacitor). Incidencia abierta con las 12 decisiones pendientes: [[2026-10-27-ruben-plan-app-movil]]. **Nadie debería empezar la app hasta que Alex conteste D1–D3.**
 
 ## Próximos hitos
 - **Entrega final: 06/11/2026.** Congelación de código el 04/11. Plan en [[sprint-actual]].
