@@ -1,4 +1,4 @@
-import { duracionMin, intervaloAIso } from './tiempo.js';
+import { duracionMin, instanteAIso, intervaloAIso } from './tiempo.js';
 
 describe('intervaloAIso', () => {
   it('convierte una hora normal al offset de invierno', () => {
@@ -31,12 +31,22 @@ describe('intervaloAIso', () => {
   });
 });
 
-describe('duracionMin', () => {
-  it('calcula la diferencia entre dos horas del mismo día de servicio', () => {
+describe('duracionMin', () => {  it('calcula la diferencia entre dos horas del mismo día de servicio', () => {
     expect(duracionMin('07:15:00', '09:40:00')).toBe(145);
   });
 
   it('funciona cruzando la medianoche', () => {
     expect(duracionMin('23:30:00', '25:10:00')).toBe(100);
+  });
+});
+
+describe('instanteAIso', () => {
+  it('pasa un instante UTC al reloj de Madrid con su offset', () => {
+    // 1793087614 = 2026-10-27T07:53:34Z, ya en horario de invierno (+01:00).
+    expect(instanteAIso(new Date(1793087614 * 1000))).toBe('2026-10-27T08:53:34+01:00');
+  });
+
+  it('usa +02:00 en verano', () => {
+    expect(instanteAIso(new Date('2026-07-15T10:00:00Z'))).toBe('2026-07-15T12:00:00+02:00');
   });
 });

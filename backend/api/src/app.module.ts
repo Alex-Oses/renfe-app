@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { BdModule } from './common/bd/bd.module.js';
 import { validarEntorno } from './config/entorno.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { PosicionesModule } from './modules/posiciones/posiciones.module.js';
 import { TrenesModule } from './modules/trenes/trenes.module.js';
 
 @Module({
@@ -11,6 +12,7 @@ import { TrenesModule } from './modules/trenes/trenes.module.js';
     BdModule,
     HealthModule,
     TrenesModule,
+    PosicionesModule,
   ],
 })
 export class AppModule {}
