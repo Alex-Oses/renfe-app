@@ -42,3 +42,4 @@ Thumbs.db
 !.vscode/extensions.json
 *.log
 obsidian/.obsidian/graph.json
+*.tsbuildinfo
