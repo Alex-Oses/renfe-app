@@ -174,9 +174,6 @@
     grid-template-columns: 1fr;
     gap: 0.6rem;
     padding: 1.25rem;
-    border: 1px solid var(--linea, #d9dfe5);
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgb(0 0 0 / 0.06);
   }
   .resumen__tren,
   .resumen__asientos {
@@ -381,8 +378,9 @@
 
 /* Viajeros */
 .viajero {
-  border: 1px solid var(--linea, #d9dfe5);
-  border-radius: 12px;
+  border: 1px solid var(--cristal-borde, #d9dfe5);
+  border-radius: var(--radio-grande, 20px);
+  background: rgb(255 255 255 / 0.6);
   padding: 1rem;
   margin: 0 0 1rem;
   min-width: 0;
@@ -435,9 +433,6 @@
   display: flex;
   gap: 1rem;
   padding: 1.25rem;
-  border-radius: 12px;
-  background: var(--niebla, #eff3f6);
-  border: 1px solid var(--linea, #d9dfe5);
   color: var(--morado, #81005e);
 }
 
@@ -551,4 +546,60 @@
     animation: none;
     stroke-dashoffset: 0;
   }
+}
+
+/* Extras, tarifa y vuelta */
+.extras {
+  display: grid;
+  gap: var(--esp-2);
+  margin: 0 0 var(--esp-6);
+  padding: 0;
+  border: 0;
+}
+
+.extras legend {
+  font-weight: 700;
+  color: var(--color-titulo);
+  margin-bottom: var(--esp-2);
+}
+
+.extra {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  min-height: 44px;
+  padding: var(--esp-2) var(--esp-4);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--cristal-fondo);
+  cursor: pointer;
+}
+
+.extra input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--morado);
+}
+
+.extra__nombre {
+  flex: 1;
+}
+
+.extra__precio {
+  font-weight: 600;
+  color: var(--color-marca);
+}
+
+.resumen__tarifa,
+.resumen__viajeros,
+.resumen__desglose {
+  font-size: 0.9rem;
+  color: var(--color-texto-suave);
+}
+
+.reserva__vuelta {
+  margin-top: var(--esp-6);
+  padding: var(--esp-4);
+  border-radius: var(--radio);
+  text-align: center;
 }

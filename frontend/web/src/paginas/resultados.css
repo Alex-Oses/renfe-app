@@ -1,0 +1,103 @@
+/* Calendario de precios y tarifas del listado de trenes. */
+.resultados__tramo {
+  display: inline-block;
+  margin-right: var(--esp-2);
+  padding: 0 var(--esp-2);
+  border-radius: var(--radio-pildora);
+  background: var(--color-resalte);
+  color: var(--color-marca);
+  font-size: 0.8rem;
+  vertical-align: middle;
+}
+
+.calendario-precios ul {
+  display: flex;
+  gap: var(--esp-2);
+  list-style: none;
+  margin: 0 0 var(--esp-4);
+  padding: 0 0 var(--esp-1);
+  overflow-x: auto;
+}
+
+.calendario-precios a {
+  display: grid;
+  gap: var(--esp-1);
+  min-width: 6.5rem;
+  min-height: 44px;
+  padding: var(--esp-2) var(--esp-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  background: var(--cristal-fondo);
+  color: var(--color-texto);
+  text-decoration: none;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.calendario-precios a strong {
+  color: var(--color-marca);
+  font-size: 0.9rem;
+}
+
+.calendario-precios a[aria-current] {
+  background: var(--morado);
+  border-color: var(--morado);
+  color: var(--blanco);
+}
+
+.calendario-precios a[aria-current] strong {
+  color: var(--blanco);
+}
+
+.tarifas {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--esp-3);
+  list-style: none;
+  margin: var(--esp-2) 0 0;
+  padding: 0;
+}
+
+.tarifa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  padding: var(--esp-4);
+  border-radius: var(--radio);
+  border: 1px solid var(--color-borde);
+}
+
+.tarifa h3 {
+  margin: 0;
+  color: var(--color-titulo);
+  font-size: 1rem;
+}
+
+.tarifa--premium {
+  border-color: var(--morado);
+}
+
+.tarifa__precio {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-marca);
+}
+
+.tarifa__precio span {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-texto-suave);
+}
+
+.tarifa__incluye {
+  flex: 1;
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+}
+
+.tarifa .boton {
+  justify-content: center;
+}
