@@ -25,7 +25,7 @@ tags: [sprint]
 
 | Días | Alex | Rubén | Marina | Kevin |
 |---|---|---|---|---|
-| 28–29/10 | Plan en el vault ✅; web alineada con el contrato ✅ | Preparar `/estaciones` y `/trenes` | Migración solo de `gtfs_*` + import AVE/LD | ~~CI con lint y test~~ hecha por Alex ✅; `render.yaml` listo ✅ → solo crear el servicio en Render |
+| 28–29/10 | Plan en el vault ✅; web alineada con el contrato ✅ | Preparar `/estaciones` y `/trenes` | Contrato v2 y [[plan-ingesta-gtfs]] ✅; migración del catálogo + import AVE/LD | ~~CI con lint y test~~ hecha por Alex ✅; `render.yaml` listo ✅ → solo crear el servicio en Render |
 | 30/10–1/11 | Conectar la web a la API real | `/estaciones` y `/trenes` contra Supabase | Supabase en la nube con datos cargados | API desplegada en Render ✅ (Alex, 27/10: https://renfe-api.onrender.com) |
 | 2–3/11 | Estados vacíos/error con datos reales; mapa con `/posiciones` | `/posiciones` (GTFS-RT en memoria) | Índices y consultas lentas | Si sobra: Stripe test en el pago |
 | 4/11 | **Congelación de código**: solo arreglos | ídem | ídem | ídem |
@@ -37,6 +37,13 @@ Marina no está y sus migraciones no están en el repo (solo `backend/database/s
 
 - **Marina:** en cuanto vuelva, subir las migraciones `gtfs_*` en una rama y abrir PR. Es lo primero, antes que el import.
 - **Si el 29/10 no están:** Rubén escribe la migración mínima de `gtfs_*` a partir de [[modelo-datos]] y Alex crea el proyecto de Supabase en la nube. Marina lo revisa al volver.
+
+> **Actualización 28/10 (Marina):** el contrato está revisado contra los ficheros reales
+> ([[modelo-datos]] v2) y el plan de carga está en [[plan-ingesta-gtfs]]. La migración del catálogo
+> es el siguiente paso y la tengo como prioridad. Ojo al alcance: el sprint solo necesita el feed
+> `avld` (**69 670 horarios**), no los 2 M de las dos redes, así que la carga es de minutos.
+> Las tablas se llaman como en el modelo (`estaciones`, `viajes`, `horarios`…): `gtfs_*` era una
+> abreviatura.
 
 ## Plan B
 
