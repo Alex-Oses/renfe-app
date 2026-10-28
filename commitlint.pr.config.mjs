@@ -3,7 +3,7 @@
 // - El ámbito es libre y opcional (no tiene que estar en la lista de commitlint).
 // - El título puede llegar a 120 caracteres y terminar en punto.
 // Los commits siguen validándose con commitlint.config.mjs (hook commit-msg).
-const TIPOS = ["feat", "fix", "docs", "chore", "refactor", "test", "ci", "perf", "style", "build", "revert", "deps"];
+const TIPOS = ["feat", "fix", "docs", "chore", "refactor", "test", "ci", "perf", "style", "build", "revert"];
 
 const tipoValido = ({ type }) => {
   const tipo = (type ?? "").toLowerCase();
