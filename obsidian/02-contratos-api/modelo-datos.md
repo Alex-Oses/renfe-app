@@ -127,6 +127,22 @@ Solo `service_role` (la API). La comparación la hace Postgres en `verificar_car
 - `config_cara` (una fila): `modelo` y `umbral`. El umbral es **dato, no código**, y se mide con ~10
   intentos propios y ~10 ajenos.
 
+**Medir el umbral** (una vez, con caras reales). Por cada intento, con el vector que devuelve el
+dispositivo:
+
+```sql
+select 1 - (e.embedding <=> l2_normalize(:intento)) as similitud
+from embeddings_faciales e
+where e.usuario_id = :usuario;
+```
+
+Se apunta la similitud de los ~10 intentos del dueño y de los ~10 de otra persona. El umbral va **por
+encima del máximo ajeno y por debajo del mínimo propio**, con margen en medio, y se guarda con:
+
+```sql
+update config_cara set umbral = 0.62, actualizado_en = now();
+```
+
 ## 4. Catálogo GTFS (datos reales de Renfe)
 
 Importado por `backend/gtfs-worker`, que recorre **los dos feeds** (`cercanias` y `avld`). Todas

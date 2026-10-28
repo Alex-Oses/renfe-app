@@ -85,7 +85,14 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
 - **Kevin**: borrar `backend/face-service/` y su `Dockerfile`, y su línea en `CODEOWNERS`.
 - **Marina**: aplicar la migración en el proyecto de Supabase cuando lo cree (el facial no funciona sin
   ella) y confirmar si el proyecto firma los JWT con HS256 o con claves asimétricas.
-- **Rubén**: medir el umbral con una ejecución real y ajustar `config_cara`. Añadir `admin` al tipo
+- **Rubén**: medir el umbral con una ejecución real y ajustar `config_cara`.
+- **Rubén / Alex**: **elegir el fichero ONNX concreto** de ArcFace 512. `config_cara.modelo` vale hoy
+  `arcface/buffalo_l`, que es un identificador provisional: el modelo de reconocimiento de referencia
+  (ResNet50 entrenado con ArcFace) pesa demasiado para cargarlo en el navegador, así que hay que
+  encontrar una variante móvil o cuantizada de 512 dimensiones y medirla. **Si cambia el modelo, cambia
+  el valor de `config_cara.modelo` y todo el mundo se vuelve a registrar** (la verificación devuelve
+  `modelo_distinto` en vez de un falso negativo).
+- **Rubén**: añadir `admin` al tipo
   `Rol` y a `leerRol` de `SupabaseJwtGuard` (hoy solo conoce `viajero` y `revisor`): sin eso,
   `resetear_cara` rechaza a todo el mundo con `RF006`, porque nadie lleva ese rol en `app_metadata`.
 

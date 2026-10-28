@@ -19,7 +19,7 @@ Contrato de cada ruta: [[endpoints]]. Esquema: [[modelo-datos]].
 | trenes (`GET /trenes`, detalle, `/posicion`) | Rubén | ✅ implementado; el detalle, sin probar contra Postgres |
 | posiciones (`GET /posiciones`) | Rubén | ✅ implementado y probado contra Renfe; no usa BD |
 | health (`GET /health`) | Rubén | ✅ |
-| auth (Supabase + login facial) | Rubén | 🟡 guards y roles listos, sin rutas |
+| auth (Supabase + login facial) | Rubén | 🟡 guards y roles listos; contrato y migración del facial hechos, sin código ni BD |
 | reservas | Rubén | ⚪ |
 | pagos (Stripe test) | Kevin | ⚪ |
 | billetes (QR Ed25519) | Rubén | ⚪ |
