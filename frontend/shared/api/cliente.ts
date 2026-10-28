@@ -1,6 +1,7 @@
 // Único punto de acceso a la API. Sin VITE_API_URL se usan datos simulados.
 // Cada función corresponde a un endpoint de obsidian/02-contratos-api/endpoints.md.
 import type {
+  Abono,
   Asiento,
   Billete,
   BusquedaTrenes,
@@ -9,6 +10,7 @@ import type {
   Estacion,
   IntentoPago,
   NuevaReserva,
+  NuevoAbono,
   PosicionTren,
   Reserva,
   ResultadoValidacion,
@@ -22,6 +24,7 @@ import * as cuenta from "./simulado-cuenta";
 import * as tiempoReal from "./simulado-tiempo-real";
 import * as revisor from "./simulado-revisor";
 import * as admin from "./simulado-admin";
+import * as abonos from "./simulado-abonos";
 // Solo el tipo: la función de Vercel no puede importar nada, así que la forma vive allí.
 import type { PosicionApi } from "../../web/api/posiciones";
 
@@ -205,3 +208,14 @@ export const validarBillete = (qr: string): Promise<ResultadoValidacion> =>
 // GET /admin/resumen  (rol admin; propuesto en endpoints.md, pendiente de la API).
 export const resumenAdmin = (): Promise<ResumenAdmin> =>
   BASE ? pedir("/admin/resumen") : simular(() => admin.resumen());
+
+// GET /abonos  (propuesto por la web en endpoints.md)
+export const misAbonos = (): Promise<Abono[]> => (BASE ? datos<Abono>("/abonos") : simular(() => abonos.misAbonos()));
+
+// POST /abonos. Sin API se da por pagado al momento (con API se paga como una reserva).
+export const comprarAbono = (n: NuevoAbono): Promise<Abono> =>
+  BASE ? pedir("/abonos", "POST", n) : simular(() => abonos.comprarAbono(n), 1200);
+
+// GET /abonos/:id  (con el QR firmado)
+export const obtenerAbono = (id: string): Promise<Abono> =>
+  BASE ? pedir(`/abonos/${encodeURIComponent(id)}`) : simular(() => abonos.obtenerAbono(id));
