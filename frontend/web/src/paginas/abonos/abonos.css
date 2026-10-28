@@ -1,0 +1,173 @@
+/* Compra de abonos, Mis abonos y la sección de tornos faciales. */
+.abonos h1 {
+  color: var(--morado, #81005e);
+}
+.abonos > .tarjeta,
+.mis-abonos {
+  margin-top: 1.25rem;
+}
+.abonos__form {
+  display: grid;
+  gap: 1.5rem;
+}
+.abonos__form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.abonos__form legend {
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--morado-oscuro, #5c0043);
+}
+.abonos__tipos {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+.abonos__tipos legend {
+  grid-column: 1 / -1;
+}
+.abonos__tipo {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.6rem;
+  padding: 0.9rem;
+  min-height: 44px;
+  border: 2px solid #d9d2d7;
+  border-radius: 12px;
+  background: var(--blanco, #fff);
+  cursor: pointer;
+}
+.abonos__tipo:has(input:checked) {
+  border-color: var(--morado, #81005e);
+  box-shadow: 0 0 0 1px var(--morado, #81005e);
+}
+.abonos__tipo:has(input:focus-visible) {
+  outline: 3px solid var(--frambuesa, #d62d61);
+  outline-offset: 2px;
+}
+.abonos__tipo input {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0.1rem 0 0;
+  accent-color: var(--morado, #81005e);
+}
+.abonos__tipo-nombre {
+  font-weight: 600;
+}
+.abonos__tipo-desc,
+.abonos__tipo-precio {
+  grid-column: 2;
+  font-size: 0.9rem;
+}
+.abonos__tipo-precio {
+  font-weight: 700;
+  color: var(--morado, #81005e);
+}
+.abonos__campos {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+.abonos__campos .campo {
+  flex: none;
+}
+.abonos__campos select,
+.abonos__campos input {
+  min-height: 44px;
+  width: 100%;
+}
+.abonos__validez {
+  margin: 0.75rem 0 0;
+}
+.abonos__error {
+  color: var(--frambuesa, #d62d61);
+  font-weight: 600;
+}
+.abonos__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Mis abonos (en la cuenta) */
+.mis-abonos__lista {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.mis-abonos__item {
+  padding: 0.9rem;
+  border: 1px solid #d9d2d7;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+.mis-abonos__item h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+.mis-abonos__item p {
+  margin: 0.25rem 0;
+}
+.mis-abonos__estado {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--niebla, #eff3f6);
+}
+.mis-abonos__estado--vigente {
+  background: #dff3e6;
+  color: #14532d;
+}
+.mis-abonos__qr {
+  width: min(100%, 14rem);
+  margin-top: 0.75rem;
+  background: #fff;
+}
+.mis-abonos__qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mis-abonos__cara {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  min-height: 44px;
+  cursor: pointer;
+}
+.mis-abonos__cara input {
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.15rem;
+  accent-color: var(--morado, #81005e);
+}
+.mis-abonos__cara:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Tornos faciales: idea de futuro */
+.tornos__marca {
+  display: inline-block;
+  margin: 0 0 0.5rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px dashed currentColor;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.tornos__diagrama {
+  display: block;
+  width: 100%;
+  max-width: 40rem;
+  height: auto;
+  margin-top: 1rem;
+  color: var(--morado-oscuro, #5c0043);
+}

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { buscarPagina } from "../../contenido";
+import { buscarPagina } from "@renfe/shared/contenido";
 import { Campo, Herramienta } from "./comun";
 
 const norm = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();

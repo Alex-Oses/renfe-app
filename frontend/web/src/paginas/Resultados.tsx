@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { buscarTrenes } from "../api/cliente";
-import type { TipoTren, Tren } from "../api/tipos";
+import { buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import type { TipoTren, Tren } from "@renfe/shared/api/tipos";
 import { Buscador } from "../componentes/Buscador";
-import { TARIFAS, precioViajero } from "../api/simulado-precios";
+import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
 import "./resultados.css";
-import { ciudadDe } from "../api/tipos";
+import { ciudadDe } from "@renfe/shared/api/tipos";
+import { ESTACIONES } from "@renfe/shared/api/simulado";
 
 const minutos = (iso: string) => {
   const [h, m] = iso.slice(11, 16).split(":").map(Number);
@@ -53,6 +54,8 @@ export function Resultados() {
   // Viajeros y descuento pasan tal cual a la reserva y a los enlaces de otros días.
   const extra = new URLSearchParams();
   for (const k of ["ninos", "bebes", "descuento", "vuelta", "tramo"]) if (params.get(k)) extra.set(k, params.get(k)!);
+  // shortcut: compara con las estaciones simuladas; con la API real habría que usar GET /estaciones.
+  const desconocidas = (usaDatosSimulados ? [origen, destino] : []).filter((id) => !ESTACIONES.some((e) => e.id === id)).map((id) => id || "(vacío)");
   const [abierto, setAbierto] = useState<string | null>(null);
   // Al abrir las tarifas de un tren, se colocan en pantalla para no tener que buscarlas.
   useEffect(() => {
@@ -141,13 +144,24 @@ export function Resultados() {
             {fechaLarga} · {pasajeros} {pasajeros === 1 ? "pasajero" : "pasajeros"}
           </span>
         </h1>
-        <nav className="dias" aria-label="Cambiar de día">
-          <Link to={enlaceDia(-1)}>Día anterior</Link>
-          <Link to={enlaceDia(1)}>Día siguiente</Link>
-        </nav>
+        {!desconocidas.length && (
+          <nav className="dias" aria-label="Cambiar de día">
+            <Link to={enlaceDia(-1)}>Día anterior</Link>
+            <Link to={enlaceDia(1)}>Día siguiente</Link>
+          </nav>
+        )}
       </div>
 
-      {fecha && (
+      {desconocidas.length > 0 && (
+        <div className="aviso vacio" role="status">
+          <p>
+            No reconocemos {desconocidas.map((x) => `«${x}»`).join(" ni ")} como estación. Escribe arriba el nombre de la estación o la ciudad
+            (por ejemplo, Madrid-Puerta de Atocha) y elígela de la lista.
+          </p>
+        </div>
+      )}
+
+      {fecha && !desconocidas.length && (
         <nav className="calendario-precios" aria-label="Precios por día">
           <ul>
             {[-3, -2, -1, 0, 1, 2, 3].map((d) => {
@@ -195,7 +209,14 @@ export function Resultados() {
         </div>
       )}
 
-      {error && <p className="aviso" role="alert">No se han podido cargar los trenes: {error}. Vuelve a intentarlo.</p>}
+      {error && (
+        <div className="aviso vacio" role="alert">
+          <p>No se han podido cargar los trenes: {error}. Vuelve a intentarlo.</p>
+          <button type="button" className="boton boton--secundario" onClick={() => location.reload()}>
+            Reintentar
+          </button>
+        </div>
+      )}
       {!error && trenes === null && (
         <ol className="trenes" aria-busy="true" aria-label="Buscando trenes">
           {[0, 1, 2, 3].map((i) => (
@@ -208,7 +229,7 @@ export function Resultados() {
           ))}
         </ol>
       )}
-      {trenes?.length === 0 && (
+      {trenes?.length === 0 && !desconocidas.length && (
         <div className="aviso vacio">
           <p>No hay trenes para este trayecto ese día. Prueba con otra estación o con otro día.</p>
           <Link className="boton boton--secundario" to={enlaceDia(1)}>

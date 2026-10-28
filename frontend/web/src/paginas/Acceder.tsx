@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { iniciarSesion, registrarse, verificarCara } from "../api/cliente";
+import { iniciarSesion, registrarse, verificarCara } from "@renfe/shared/api/cliente";
 import { useSesion } from "../estado/sesion";
 import { CamaraFacial } from "./cuenta/CamaraFacial";
 import { CampoContrasena } from "./cuenta/CampoContrasena";

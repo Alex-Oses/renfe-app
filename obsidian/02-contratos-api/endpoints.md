@@ -72,6 +72,9 @@ Estado: propuesto | implementado | cambiado (fecha)
 | POST | `/billetes/validar` | Revisor valida un QR | propuesto · **detallado** (Alex) |
 | GET | `/admin/resumen` | Cifras para el panel de administración | propuesto · **detallado** (Alex) |
 | POST | `/chatbot/mensaje` | Mensaje al chatbot | propuesto |
+| GET | `/abonos` | Mis abonos y bonos | propuesto por la web · **detallado** (Alex) |
+| POST | `/abonos` | Comprar un abono o bono | propuesto por la web · **detallado** (Alex) |
+| GET | `/abonos/:id` | Un abono con su QR firmado | propuesto por la web · **detallado** (Alex) |
 
 Los marcados **detallado** tienen contrato completo abajo. Los demás se detallan en el sprint que
 los implementa: no dependen de GTFS, así que no bloquean la fase de datos.
@@ -451,6 +454,63 @@ Auth: **sí**, rol `admin`. Response 200: `billetesVendidos`, `reservas`, `reser
 `total`, `estado`, `creada`). Tipo `ResumenAdmin` en `frontend/web/src/api/tipos.ts`. El resto del
 panel (usuarios y roles, anular reservas, avisos) se detalla en el próximo sprint.
 
+## Abonos y bonos — propuesto por la web (Alex, 2026-10-28) · para Rubén
+
+Abonos y bonos como los de Renfe, **simulados** como los billetes. Auth: **sí** en las tres rutas;
+cada usuario solo ve los suyos (`404` si el id es de otro).
+
+| `tipo` | Nombre | Trayecto | Validez | Viajes |
+|---|---|---|---|---|
+| `ave-ld-mensual` | Abono mensual AVE/Larga Distancia | sí | 30 días | ilimitados |
+| `avant-mensual` | Abono mensual Avant | sí | 30 días | ilimitados |
+| `cercanias-recurrente` | Abono recurrente Cercanías | no | 30 días | ilimitados |
+| `bono-10` | Bono 10 viajes | sí | 60 días | 10 |
+
+Objeto `Abono` (tipo en `frontend/shared/api/tipos.ts`):
+
+```json
+{
+  "id": "AB-7K2M9Q", "tipo": "bono-10", "nombre": "Bono 10 viajes",
+  "origen": { "id": "60000", "nombre": "Madrid-Puerta de Atocha" },
+  "destino": { "id": "04040", "nombre": "Zaragoza-Delicias" },
+  "inicio": "2026-11-01", "fin": "2026-12-30",
+  "viajesTotales": 10, "viajesRestantes": 10,
+  "precio": 220, "creado": "2026-10-28T10:00:00+01:00",
+  "qr": "RNA1.eyJ2IjoxLCJpZCI6…"
+}
+```
+
+`origen` y `destino` van a `null` en `cercanias-recurrente`; `viajesTotales` y `viajesRestantes`,
+a `null` en los abonos sin límite. `fin` es el último día válido (inclusive).
+
+### GET /abonos
+
+Response 200: `{ "datos": Abono[], "total": n }`, del más nuevo al más viejo.
+
+### POST /abonos
+
+Request: `{ "tipo": "bono-10", "origenId": "60000", "destinoId": "04040", "inicio": "2026-11-01" }`.
+La API calcula `fin`, `precio` y los viajes, y crea el abono **pendiente de pago**; se paga como
+una reserva (`POST /pagos/intent` con `{ "abonoId" }` y el webhook de Stripe). Sin API, la web lo
+da por pagado al momento. Response 201: el `Abono`.
+Errores: `400` tipo desconocido, falta trayecto, origen = destino o `inicio` pasado o a más de 60
+días · `401` sin token.
+
+### GET /abonos/:id
+
+Response 200: el `Abono` con `qr` firmado. Errores: `401` · `404`.
+
+### QR del abono
+
+Mismo esquema que el del billete, con prefijo `RNA1`: `RNA1.<datos>.<firma>`. `datos` lleva
+`v`, `id`, `t` (tipo), `o`/`d` (nombres o `null`), `ini`/`fin`, `vr` (viajes restantes o `null`)
+y `p` (nombre del titular). El revisor y los tornos tendrán que aceptar `RNA1` (pendiente).
+
+### Preferencia «Usar mi cara para validar»
+
+Sin endpoint de momento: la web solo la guarda en el navegador y solo se puede activar si el
+usuario tiene la cara registrada. Cuando haya tornos faciales hará falta guardarla en la API.
+
 ## Pendientes de detallar
 
 `/auth/*`, `/trenes/:feed/:tripId/asientos`, `/reservas`, `/pagos/*`, `/billetes*` y `/chatbot/mensaje`
@@ -458,6 +518,7 @@ no dependen de GTFS. Se detallan en el sprint que los implemente, siempre aquí 
 
 ## Historial
 
+- 2026-10-28 — Propuestas por la web `GET/POST /abonos` y `GET /abonos/:id` (Alex).
 - 2026-10-26 — Añadidas y detalladas las 6 rutas de datos (estaciones, viajes, posiciones, incidencias).
   Renombradas a `/trenes/:feed/:tripId` para evitar ids compuestos en la URL.
 - 2026-10-26 — Creado el catálogo inicial con 17 rutas propuestas.

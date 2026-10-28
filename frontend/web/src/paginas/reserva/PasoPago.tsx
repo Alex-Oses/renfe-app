@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { confirmarPagoSimulado, crearIntentoPago, crearReserva } from "../../api/cliente";
-import type { IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva } from "../../api/tipos";
-import { EXTRAS, precioExtra } from "../../api/simulado-precios";
+import { confirmarPagoSimulado, crearIntentoPago, crearReserva } from "@renfe/shared/api/cliente";
+import type { IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva } from "@renfe/shared/api/tipos";
+import { EXTRAS, precioExtra } from "@renfe/shared/api/simulado-precios";
 import { euros } from "./formato";
 
 interface Props {

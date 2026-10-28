@@ -9,17 +9,24 @@ tags: [sprint]
 
 **La entrega es el 06/11/2026** (no marzo: el calendario de 7 sprints queda obsoleto). Quedan 8 días de trabajo.
 
-**Objetivo:** demo con **horarios y posiciones reales de Renfe** en la web publicada. Todo lo demás, simulado.
+**Objetivo (actualizado el 28/10, [[ADR-005-app-movil-expo]]):** la **app móvil** (Expo, iOS y Android) es la pieza principal, con login facial y datos reales de Renfe. La web en Vercel se queda como demo y plan B.
+
+## Reparto desde el 28/10
+
+| Persona | Qué hace |
+|---|---|
+| Alex | Frontend: mejora la web, lógica común en `@renfe/shared` y app Expo en `frontend/mobile` en cuanto haya BD y facial |
+| Rubén | Servidor Python de reconocimiento facial (`backend/face-service`) y su contrato en [[endpoints]] |
+| Marina | Base de datos: migraciones `gtfs_*`, import y Supabase en la nube |
+| Kevin | Despliegue y Docker (D10 pendiente) |
 
 ## Alcance
 
-**Entra:**
-- GTFS estático AVE/LD importado en Supabase (`gtfs_*`).
-- API: `/estaciones`, `/trenes` contra Supabase y `/posiciones` leyendo GTFS-RT en memoria cada 30 s (sin worker).
-- Web en Vercel apuntando a la API en Render con `VITE_API_URL`.
-- Login facial en el navegador (ya hecho).
+**Entra:** app Expo (iOS y Android), login facial con el servidor Python, GTFS AVE/LD en Supabase, API en Render y web en Vercel.
 
-**Fuera (simulado o recortado):** Stripe real, reservas en BD, QR firmado, revisor, chatbot, Cercanías, worker separado, Docker, app Expo.
+**Fuera (simulado o recortado):** Stripe real, reservas en BD, chatbot, Cercanías y worker separado.
+
+> El plan de abajo es el del 27/10 y sigue sirviendo para la API y los datos. Donde diga «Fuera: app Expo», manda lo de arriba.
 
 ## Plan
 

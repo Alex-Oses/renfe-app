@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { Reserva } from "../../api/tipos";
+import type { Reserva } from "@renfe/shared/api/tipos";
 
 export function PasoListo({ reserva }: { reserva: Reserva }) {
   return (

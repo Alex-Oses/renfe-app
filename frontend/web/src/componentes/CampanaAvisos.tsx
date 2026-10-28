@@ -47,7 +47,7 @@ export function CampanaAvisos() {
       <span className="solo-lectores" aria-live="polite">{sinLeer > 0 ? frase(sinLeer) : ""}</span>
 
       {abierto && (
-        <div id={id} className="campana__panel cristal" role="region" aria-label="Historial de avisos">
+        <div id={id} className="campana__panel cristal cristal--flotante" role="region" aria-label="Historial de avisos">
           <div className="campana__cabecera">
             <h2>Avisos</h2>
             {sinLeer > 0 && (

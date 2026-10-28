@@ -1,8 +1,8 @@
 // Widgets que parten de un localizador: consulta, cambio, anulación y pago pendiente.
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { confirmarPagoSimulado } from "../../api/cliente";
-import type { Reserva } from "../../api/tipos";
+import { confirmarPagoSimulado } from "@renfe/shared/api/cliente";
+import type { Reserva } from "@renfe/shared/api/tipos";
 import { costeCambio, devolucionAnulacion, euros, PENALIZACION, tarifaDe } from "./logica";
 import { BuscaReserva, Exito, Herramienta, ResumenReserva, useEnvio } from "./comun";
 

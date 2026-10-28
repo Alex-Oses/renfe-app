@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { validarBillete } from "../api/cliente";
-import type { EstadoValidacion, ResultadoValidacion } from "../api/tipos";
+import { validarBillete } from "@renfe/shared/api/cliente";
+import type { EstadoValidacion, ResultadoValidacion } from "@renfe/shared/api/tipos";
 import { useSesion } from "../estado/sesion";
 import { leerDeArchivo } from "./revisor/decodificar";
 import { Escaner } from "./revisor/Escaner";

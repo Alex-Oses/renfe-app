@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { buscarTrenes, posicionesTrenes } from "../../api/cliente";
-import { ESTACIONES } from "../../api/simulado";
-import type { LineaFavorita, PosicionTren, Tren } from "../../api/tipos";
+import { buscarTrenes, posicionesTrenes } from "@renfe/shared/api/cliente";
+import { ESTACIONES } from "@renfe/shared/api/simulado";
+import type { LineaFavorita, PosicionTren, Tren } from "@renfe/shared/api/tipos";
 import { useAvisos } from "../../estado/avisos";
 import { hoyISO } from "../../estado/vigilante";
-import { retrasoDe } from "../../estado/vigilante-reglas";
+import { retrasoDe } from "@renfe/shared/estado/vigilante-reglas";
 
 const nombre = (id: string) => ESTACIONES.find((e) => e.id === id)?.nombre ?? id;
 const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });

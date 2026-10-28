@@ -1,9 +1,9 @@
 // Sesión del usuario. Dueño: agente de cuenta.
 // Se guarda en sessionStorage: dura lo que la pestaña y no se comparte entre pestañas.
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { usarToken } from "../api/cliente";
-import { CLAVE_SESION } from "../api/simulado-cuenta";
-import type { Sesion, Usuario } from "../api/tipos";
+import { usarToken } from "@renfe/shared/api/cliente";
+import { CLAVE_SESION } from "@renfe/shared/api/simulado-cuenta";
+import type { Sesion, Usuario } from "@renfe/shared/api/tipos";
 
 interface ValorSesion {
   sesion: Sesion | null;

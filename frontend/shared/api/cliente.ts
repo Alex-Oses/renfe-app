@@ -1,6 +1,8 @@
 // Único punto de acceso a la API. Sin VITE_API_URL se usan datos simulados.
 // Cada función corresponde a un endpoint de obsidian/02-contratos-api/endpoints.md.
 import type {
+  TipoTren,
+  Abono,
   Asiento,
   Billete,
   BusquedaTrenes,
@@ -9,6 +11,7 @@ import type {
   Estacion,
   IntentoPago,
   NuevaReserva,
+  NuevoAbono,
   PosicionTren,
   Reserva,
   ResultadoValidacion,
@@ -22,10 +25,28 @@ import * as cuenta from "./simulado-cuenta";
 import * as tiempoReal from "./simulado-tiempo-real";
 import * as revisor from "./simulado-revisor";
 import * as admin from "./simulado-admin";
-import type { PosicionApi } from "./gtfs-rt";
+import * as abonos from "./simulado-abonos";
+// Solo el tipo: la función de Vercel no puede importar nada, así que la forma vive allí.
+import type { PosicionApi } from "../../web/api/posiciones";
 
-const BASE = import.meta.env.VITE_API_URL as string | undefined;
-export const usaDatosSimulados = !BASE;
+// Cada app fija las URLs al arrancar (la web desde VITE_*, la app Expo desde EXPO_PUBLIC_*).
+// api: API de Render; posiciones: API solo para el mapa; tiempoReal: función /api/posiciones de Vercel.
+// Sin api se usan datos simulados; sin ninguna de las tres, el mapa usa trenes simulados.
+export interface ConfigApi {
+  api?: string;
+  posiciones?: string;
+  tiempoReal?: string;
+}
+let BASE: string | undefined;
+let BASE_POSICIONES: string | undefined;
+let URL_TIEMPO_REAL: string | undefined;
+export let usaDatosSimulados = true;
+export function configurarApi(c: ConfigApi) {
+  BASE = c.api || undefined;
+  BASE_POSICIONES = c.posiciones || BASE;
+  URL_TIEMPO_REAL = c.tiempoReal || undefined;
+  usaDatosSimulados = !BASE;
+}
 
 let token: string | null = null;
 export function usarToken(t: string | null) {
@@ -61,9 +82,32 @@ export function rutaViaje(trenId: string, sufijo = ""): string {
 // GET /posiciones devuelve PosicionApi (contrato); el mapa pinta PosicionTren.
 // Origen, destino, próxima parada y horas solo llegan si la API los cruza con el GTFS estático (Rubén);
 // si no, van vacíos y el mapa no los muestra.
+// El feed AVE/LD no dice el producto; si llega "nombre" (p. ej. "AVE 02070") se saca de ahí.
+const PRODUCTOS: [RegExp, TipoTren][] = [
+  [/^avlo/i, "Avlo"],
+  [/^ave/i, "AVE"],
+  [/^alvia/i, "Alvia"],
+  [/^(intercity|ic)/i, "Intercity"],
+  [/^(md|media distancia|regional)/i, "Media Distancia"],
+];
+export const tipoDeFeed = (feed: string, nombre?: string | null): TipoTren =>
+  feed === "cercanias" ? "Cercanías" : (PRODUCTOS.find(([r]) => r.test(nombre ?? ""))?.[1] ?? "Larga Distancia");
+
+// Renfe publica un mismo vehículo con varios viajes encadenados (tripId distinto, misma posición):
+// se deja uno por vehículo para que la lista y el mapa no lo repitan.
+export const unoPorVehiculo = (lista: PosicionApi[]): PosicionApi[] => {
+  const vistos = new Set<string>();
+  return lista.filter((p) => {
+    const clave = `${p.feed}:${p.vehicleId ?? p.tripId}`;
+    if (vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
+  });
+};
+
 const aPosicion = (p: PosicionApi): PosicionTren => ({
   trenId: `${p.feed}:${p.tripId}`,
-  tipo: p.feed === "cercanias" ? "Cercanías" : "Larga Distancia",
+  tipo: tipoDeFeed(p.feed, p.nombre),
   // Con "nombre" (p. ej. "AVE 02070") se enseña ese; si no, el id del vehículo.
   numero: p.nombre ?? p.vehicleId ?? p.tripId,
   linea: p.linea ?? undefined,
@@ -71,7 +115,7 @@ const aPosicion = (p: PosicionApi): PosicionTren => ({
   destino: p.destino?.nombre ?? "",
   lat: p.lat,
   lon: p.lon,
-  rumbo: p.rumbo ?? 0,
+  rumbo: p.rumbo ?? NaN,
   retrasoMin: Math.round((p.retrasoSeg ?? 0) / 60),
   progreso: 0,
   proximaParada: p.proximaParada?.nombre ?? "",
@@ -84,14 +128,13 @@ const aPosicion = (p: PosicionApi): PosicionTren => ({
 
 // Tiempo real sin API desplegada: en producción (Vercel) lo sirve api/posiciones.ts.
 // Con VITE_TIEMPO_REAL=simulado se fuerzan los trenes simulados (plan B de la demo).
-const TIEMPO_REAL_VERCEL = import.meta.env.PROD && import.meta.env.VITE_TIEMPO_REAL !== "simulado";
 export let posicionesReales = false;
 
 async function posicionesVercel(): Promise<PosicionTren[]> {
-  const r = await fetch("/api/posiciones");
+  const r = await fetch(URL_TIEMPO_REAL!);
   if (!r.ok) throw new Error(`Tiempo real no disponible (${r.status})`);
   const { datos: lista } = (await r.json()) as Lista<PosicionApi>;
-  return lista.map(aPosicion);
+  return unoPorVehiculo(lista).map(aPosicion);
 }
 
 // Simula la latencia de red para que los estados de carga se vean igual que con la API real.
@@ -156,16 +199,15 @@ export const verificarCara = (datos: { email: string; embedding: EmbeddingFacial
 // Orden: API (VITE_POSICIONES_URL o VITE_API_URL); si no, la función de Vercel con datos reales de Renfe;
 // si falla (o en local con `pnpm dev`), trenes simulados para que el mapa nunca se quede vacío.
 // VITE_POSICIONES_URL: API desplegada solo para el mapa (p. ej. Render sin base de datos todavía).
-const BASE_POSICIONES = (import.meta.env.VITE_POSICIONES_URL as string | undefined) || BASE;
 
 export async function posicionesTrenes(): Promise<PosicionTren[]> {
   if (BASE_POSICIONES) {
     const r = await fetch(`${BASE_POSICIONES}/posiciones`);
     if (!r.ok) throw new Error(`La API respondió ${r.status} en /posiciones`);
     posicionesReales = true;
-    return ((await r.json()) as Lista<PosicionApi>).datos.map(aPosicion);
+    return unoPorVehiculo(((await r.json()) as Lista<PosicionApi>).datos).map(aPosicion);
   }
-  if (TIEMPO_REAL_VERCEL) {
+  if (URL_TIEMPO_REAL) {
     try {
       const reales = await posicionesVercel();
       posicionesReales = true;
@@ -190,3 +232,14 @@ export const validarBillete = (qr: string): Promise<ResultadoValidacion> =>
 // GET /admin/resumen  (rol admin; propuesto en endpoints.md, pendiente de la API).
 export const resumenAdmin = (): Promise<ResumenAdmin> =>
   BASE ? pedir("/admin/resumen") : simular(() => admin.resumen());
+
+// GET /abonos  (propuesto por la web en endpoints.md)
+export const misAbonos = (): Promise<Abono[]> => (BASE ? datos<Abono>("/abonos") : simular(() => abonos.misAbonos()));
+
+// POST /abonos. Sin API se da por pagado al momento (con API se paga como una reserva).
+export const comprarAbono = (n: NuevoAbono): Promise<Abono> =>
+  BASE ? pedir("/abonos", "POST", n) : simular(() => abonos.comprarAbono(n), 1200);
+
+// GET /abonos/:id  (con el QR firmado)
+export const obtenerAbono = (id: string): Promise<Abono> =>
+  BASE ? pedir(`/abonos/${encodeURIComponent(id)}`) : simular(() => abonos.obtenerAbono(id));
