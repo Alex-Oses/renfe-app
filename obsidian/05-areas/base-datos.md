@@ -5,12 +5,12 @@ tags: [area]
 
 # 🗄️ Área Base de datos y datos Renfe
 
-**Código:** `backend/database`, `backend/gtfs-worker` · **Estado:** catálogo AV/LD cargado y verificado en local; siguiente paso: Supabase en la nube y Render ([[supabase-nube]])
+**Código:** `backend/database`, `backend/gtfs-worker` · **Estado:** **catálogo AV/LD cerrado en local** (migración, carga, integridad e idempotencia validadas); siguiente hito: Supabase Cloud + Render ([[supabase-nube]])
 
 ## Pendiente
-- Mergear las tres ramas: contrato v2 → migración `gtfs_*` → importador (ver [[2026-10-28-marina-importador-gtfs-avld]])
-- Supabase en la nube con el catálogo cargado y `DATABASE_URL` (session pooler) en Render
-- Idempotencia: reimportar sin `--reemplazar` y comprobar que no duplica
+- Mergear las tres ramas: contrato v2 → migración `gtfs_*` → importador (ver [[2026-10-28-marina-importador-gtfs-avld]]); necesita aprobación de Alex y CI verde
+- **Supabase Cloud + Render**: proyecto, `db push`, carga y `DATABASE_URL` (session pooler) en Render ([[supabase-nube]])
+- `explain analyze` de `/trenes` y `/estaciones` contra la nube; índice solo si hace falta
 - Reimportación semanal programada (AV/LD tiene horizonte hasta 29/09/2027)
 - Fuera del sprint: Cercanías (497 paradas sin `CODIGO`), `posiciones_trenes`, Stripe
 
@@ -18,7 +18,8 @@ tags: [area]
 - **Catálogo AV/LD (28/10):** migración [[migracion-catalogo-gtfs]] aplicada y
   `backend/gtfs-worker` importando el feed real: 1 035 estaciones · 1 008 estacion_feeds ·
   663 rutas · 8 729 calendarios · 31 702 excepciones · 8 729 viajes · 69 670 horarios.
-  Runbook del importador en `backend/gtfs-worker/README.md`.
+  Integridad y consulta de la API en verde, **idempotencia demostrada** (segunda pasada sin
+  `--reemplazar` no duplica nada). Runbook del importador en `backend/gtfs-worker/README.md`.
 - Supabase local inicializado: `backend/database/supabase/` (config, migraciones, seed).
   CLI como devDependency; `pnpm db:start | db:stop | db:reset | db:status`. Ver [[ADR-003-supabase-local]].
 - **Validado de punta a punta** el 26/10 en una VM Linux de Azure (Docker Desktop está bloqueado en

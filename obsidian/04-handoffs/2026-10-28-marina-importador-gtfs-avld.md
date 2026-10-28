@@ -52,23 +52,36 @@ parser CSV propios):
   origen = destino · 0 viajes con salida > llegada.
 - La consulta real de la API (`SERVICIO_ACTIVO`) devuelve viajes válidos para hoy.
 
-**Conclusión: el catálogo AV/LD queda validado de punta a punta en local.** Lo que falta
-no es técnico, es de repo y de despliegue.
+### 4. Idempotencia demostrada ✅
+
+Segunda pasada **sin** `--reemplazar` (`pnpm gtfs:importar` + `pnpm gtfs:verificar`):
+
+- Conteos **exactamente iguales**: no se duplica ninguna fila.
+- Integridad sigue en verde y la consulta de la API sigue devolviendo viajes válidos.
+- Cumple el último criterio de aceptación de [[plan-ingesta-gtfs]] §10.
+
+**Conclusión: la validación local del catálogo AV/LD está cerrada** (migración, carga,
+integridad, consulta de negocio e idempotencia). Lo que falta ya no es técnico de datos:
+es de repo (PRs) y de despliegue (nube + Render).
 
 ## Qué queda
+
+**Siguiente hito: Supabase Cloud + Render** (ver [[supabase-nube]]).
 
 1. **Mergear las tres ramas**, en este orden (la migración está escrita contra el contrato v2):
    `docs/db-contrato-feeds-reales` → `feat/db-migracion-catalogo-gtfs` →
    `feat/gtfs-importador-catalogo-avld`. Mientras no estén en `develop`, el riesgo
-   «la BD solo existe en la VM de Marina» **sigue abierto**.
-2. **Supabase en la nube + Render** (siguiente paso recomendado, ver [[supabase-nube]]):
-   crear proyecto, `db push`, cargar el catálogo, verificar y poner `DATABASE_URL`
-   (**session pooler**) en Render. Es lo que desbloquea `/estaciones` y `/trenes`, hoy en 503.
-3. **Idempotencia** (2 min, criterio de aceptación de [[plan-ingesta-gtfs]] §10): lanzar
-   `pnpm gtfs:importar` **sin** `--reemplazar` y comprobar con `pnpm gtfs:verificar` que los
-   conteos no cambian.
-4. **Reimportación semanal programada** cuando el feed esté estable en la nube.
-5. **Fuera de alcance**: Cercanías (497 paradas sin `CODIGO`), `posiciones_trenes` y Stripe.
+   «la BD solo existe en la VM de Marina» **sigue abierto**. Necesita aprobación de Alex
+   (`CODEOWNERS`) y CI verde; resolver el conflicto de `estado-equipo.md` en el 2.º y 3.er merge.
+2. **Supabase en la nube**: crear proyecto (Frankfurt), `supabase link`, `db push`, cargar el
+   catálogo y `pnpm gtfs:verificar` contra la nube. Objetivo: **antes del 3/11** (fecha del
+   plan B del sprint).
+3. **`DATABASE_URL` en Render** con el **session pooler** → `/health` con `"baseDatos": "ok"` y
+   `/estaciones` / `/trenes` con datos reales. Es lo que desbloquea a Rubén y a la web de Alex.
+4. **`explain analyze`** de `/trenes` y `/estaciones` contra la nube; índice solo si hace falta
+   (2–3/11 según [[sprint-actual]]).
+5. **Reimportación semanal programada** cuando el feed esté estable en la nube.
+6. **Fuera de alcance**: Cercanías (497 paradas sin `CODIGO`), `posiciones_trenes` y Stripe.
 
 ## Bloqueos / preguntas para otros
 
@@ -80,7 +93,8 @@ no es técnico, es de repo y de despliegue.
   `backend/gtfs-worker/src/verificar.ts` (está comentado a propósito).
 - **Alex:** `rutas.nombre` nunca es `null` (se rellena con
   `route_long_name || route_short_name`), así que `FilaTren.nombre: string` se cumple.
-- Nada bloquea el siguiente paso por mi parte.
+- **Dependencias para cerrar mi parte:** aprobación de Alex en los 3 PRs + CI verde (Kevin)
+  + revisión del contrato v2 (Rubén). El catálogo en sí no bloquea nada más.
 
 ## Cambios en contratos
 
