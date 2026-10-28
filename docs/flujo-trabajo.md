@@ -29,10 +29,11 @@ feat/…         ●●    ●         ●●                ← tu trabajo, squ
 | `pnpm rama` | `scripts/nueva-rama.mjs` | Crea la rama con el nombre correcto desde `origin/develop` actualizado |
 | `pnpm sync` | `scripts/sync-rama.mjs` | Rebase de tu rama sobre `origin/develop` |
 | Reglas de ramas | `scripts/ramas.mjs` | Única definición de tipos/áreas, la usan hooks, scripts y CI |
+| Pruebas de esas reglas | `scripts/ramas.test.mjs` | `pnpm test:ramas`: comprueba que el patrón acepta las ramas del equipo y las de Dependabot |
 | Workflow `PR` | `.github/workflows/pr.yml` | Valida nombre de rama, destino (a `main` solo desde develop/hotfix) y título del PR; etiqueta por carpeta |
-| Workflow `CI` | `.github/workflows/ci.yml` | Lint/test/build solo de las áreas que cambian; check único `CI / ok` |
+| Workflow `CI` | `.github/workflows/ci.yml` | En cada push y PR: `install`, `lint`, `test`, `test:ramas`, e2e de la API y `build` de todo el monorepo; check único `CI / ok` |
 | Revisores | `.github/CODEOWNERS` | Pide revisión al responsable de cada carpeta |
-| Dependencias | `.github/dependabot.yml` | PRs semanales de actualización contra `develop` |
+| Dependencias | `.github/dependabot.yml` | PRs semanales de actualización contra `develop`. Sus ramas (`dependabot/*`) no cumplen el patrón del equipo y están exentas de esa comprobación |
 | Config de GitHub | `scripts/configurar-github.sh` | Protección de ramas, tipos de merge, labels y milestones (una vez) |
 | Agentes de IA | `AGENTS.md`, `/rama`, `/pr` | Las IAs siguen el mismo flujo |
 

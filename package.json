@@ -16,6 +16,7 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "test:ramas": "node --test scripts/ramas.test.mjs",
     "db:start": "supabase start --workdir backend/database",
     "db:stop": "supabase stop --workdir backend/database",
     "db:reset": "supabase db reset --workdir backend/database",
