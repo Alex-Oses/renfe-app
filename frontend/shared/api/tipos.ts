@@ -133,7 +133,7 @@ export interface PosicionTren {
   destino: string;
   lat: number;
   lon: number;
-  rumbo: number; // grados, 0 = norte
+  rumbo: number; // grados, 0 = norte; NaN si la fuente no lo da (el mapa lo calcula al moverse)
   retrasoMin: number;
   progreso: number; // 0..1 del trayecto
   proximaParada: string; // "" si no se conoce

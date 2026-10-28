@@ -53,18 +53,35 @@ const EXTRA: Partial<Record<TipoTren, string>> = {
 export const svgTren = (tipo: TipoTren) =>
   `<svg viewBox="0 0 20 36" width="20" height="36" aria-hidden="true" focusable="false"><path d="${CUERPO[tipo]}" fill="${COLOR_TIPO[tipo]}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="${CRISTAL[tipo]}" fill="#1d2433" opacity=".75"/>${EXTRA[tipo] ?? ""}</svg>`;
 
-const icono = (t: PosicionTren) =>
+// Rumbo entre dos lecturas (el GTFS-RT de Renfe no lo publica). NaN si apenas se ha movido.
+const rumboEntre = (a: L.LatLng, b: L.LatLng) => {
+  if (a.distanceTo(b) < 30) return NaN;
+  const rad = Math.PI / 180;
+  const y = Math.sin((b.lng - a.lng) * rad) * Math.cos(b.lat * rad);
+  const x = Math.cos(a.lat * rad) * Math.sin(b.lat * rad) - Math.sin(a.lat * rad) * Math.cos(b.lat * rad) * Math.cos((b.lng - a.lng) * rad);
+  return (Math.atan2(y, x) / rad + 360) % 360;
+};
+
+// Sin rumbo conocido se pinta como punto: un tren mirando al norte por defecto engaña.
+const claseMarca = (t: PosicionTren, rumbo: number) =>
+  `tren-marca${t.tipo === "Cercanías" ? " tren-marca--cercanias" : ""}${Number.isFinite(rumbo) ? "" : " tren-marca--sin-rumbo"}`;
+
+// Nivel de detalle por zoom para que 600 trenes reales no tapen el mapa (ver mapa.css).
+const nivelZoom = (z: number) => (z < 7 ? "lejos" : z < 10 ? "medio" : "cerca");
+
+const icono = (t: PosicionTren, rumbo: number) =>
   L.divIcon({
-    className: "tren-marca",
+    className: claseMarca(t, rumbo),
     iconSize: [36, 36],
     iconAnchor: [18, 18],
-    html: `<span class="tren-marca__anillo"></span><span class="tren-marca__dibujo" style="transform:rotate(${t.rumbo}deg)">${svgTren(t.tipo)}</span>`,
+    html: `<span class="tren-marca__anillo"></span><span class="tren-marca__dibujo" style="transform:rotate(${Number.isFinite(rumbo) ? rumbo : 0}deg)">${svgTren(t.tipo)}</span><span class="tren-marca__punto" style="background:${COLOR_TIPO[t.tipo]}"></span>`,
   });
 
 interface Marca {
   m: L.Marker;
   desde: L.LatLng;
   hasta: L.LatLng;
+  rumbo: number;
 }
 
 // Marcadores imperativos: así la interpolación solo mueve el transform que pone Leaflet, sin re-render de React.
@@ -99,19 +116,31 @@ export function CapaTrenes({
       const destino = L.latLng(t.lat, t.lon);
       const x = marcas.current.get(t.trenId);
       if (!x) {
-        const m = L.marker(destino, { icon: icono(t), title: `Tren ${t.tipo} ${t.numero}`, keyboard: false }).addTo(mapa);
+        const m = L.marker(destino, { icon: icono(t, t.rumbo), title: `Tren ${t.tipo} ${t.numero}`, keyboard: false }).addTo(mapa);
         m.on("click", () => elegir.current(t.trenId));
-        marcas.current.set(t.trenId, { m, desde: destino, hasta: destino });
+        marcas.current.set(t.trenId, { m, desde: destino, hasta: destino, rumbo: t.rumbo });
       } else {
         x.desde = x.m.getLatLng();
+        const calculado = Number.isFinite(t.rumbo) ? t.rumbo : rumboEntre(x.hasta, destino);
+        if (Number.isFinite(calculado)) x.rumbo = calculado;
         x.hasta = destino;
-        const dibujo = x.m.getElement()?.querySelector<HTMLElement>(".tren-marca__dibujo");
-        if (dibujo) dibujo.style.transform = `rotate(${t.rumbo}deg)`;
+        const el = x.m.getElement();
+        el?.classList.toggle("tren-marca--sin-rumbo", !Number.isFinite(x.rumbo));
+        const dibujo = el?.querySelector<HTMLElement>(".tren-marca__dibujo");
+        if (dibujo && Number.isFinite(x.rumbo)) dibujo.style.transform = `rotate(${x.rumbo}deg)`;
         if (reducido) x.m.setLatLng(destino);
       }
     }
     inicio.current = performance.now();
   }, [trenes, mapa, reducido]);
+
+  useEffect(() => {
+    const contenedor = mapa.getContainer();
+    const aplicar = () => (contenedor.dataset.detalle = nivelZoom(mapa.getZoom()));
+    aplicar();
+    mapa.on("zoomend", aplicar);
+    return () => void mapa.off("zoomend", aplicar);
+  }, [mapa]);
 
   useEffect(() => () => {
     for (const x of marcas.current.values()) x.m.remove();

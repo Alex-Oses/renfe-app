@@ -474,3 +474,24 @@
     min-height: 360px;
   }
 }
+
+/* Menos ruido con cientos de trenes reales: de lejos solo larga distancia y pequeña,
+   Cercanías aparece como punto al acercarse y todo a tamaño completo de cerca. */
+.tren-marca__punto {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  display: none;
+}
+.tren-marca--sin-rumbo .tren-marca__dibujo { display: none; }
+.tren-marca--sin-rumbo .tren-marca__punto { display: block; }
+.tren-marca__dibujo svg { transition: transform var(--duracion-rapida, 0.15s) ease-out; }
+
+[data-detalle="lejos"] .tren-marca--cercanias:not(.tren-marca--activa) { display: none; }
+[data-detalle="lejos"] .tren-marca:not(.tren-marca--activa) .tren-marca__dibujo svg { transform: scale(0.55); }
+[data-detalle="lejos"] .tren-marca:not(.tren-marca--activa) .tren-marca__punto { inset: 14px; }
+[data-detalle="medio"] .tren-marca:not(.tren-marca--activa) .tren-marca__dibujo svg { transform: scale(0.75); }
+[data-detalle="medio"] .tren-marca--cercanias:not(.tren-marca--activa) .tren-marca__dibujo { display: none; }
+[data-detalle="medio"] .tren-marca--cercanias:not(.tren-marca--activa) .tren-marca__punto { display: block; inset: 14px; opacity: 0.85; }

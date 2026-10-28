@@ -1,6 +1,7 @@
 // Único punto de acceso a la API. Sin VITE_API_URL se usan datos simulados.
 // Cada función corresponde a un endpoint de obsidian/02-contratos-api/endpoints.md.
 import type {
+  TipoTren,
   Abono,
   Asiento,
   Billete,
@@ -81,9 +82,20 @@ export function rutaViaje(trenId: string, sufijo = ""): string {
 // GET /posiciones devuelve PosicionApi (contrato); el mapa pinta PosicionTren.
 // Origen, destino, próxima parada y horas solo llegan si la API los cruza con el GTFS estático (Rubén);
 // si no, van vacíos y el mapa no los muestra.
+// El feed AVE/LD no dice el producto; si llega "nombre" (p. ej. "AVE 02070") se saca de ahí.
+const PRODUCTOS: [RegExp, TipoTren][] = [
+  [/^avlo/i, "Avlo"],
+  [/^ave/i, "AVE"],
+  [/^alvia/i, "Alvia"],
+  [/^(intercity|ic)/i, "Intercity"],
+  [/^(md|media distancia|regional)/i, "Media Distancia"],
+];
+export const tipoDeFeed = (feed: string, nombre?: string | null): TipoTren =>
+  feed === "cercanias" ? "Cercanías" : (PRODUCTOS.find(([r]) => r.test(nombre ?? ""))?.[1] ?? "Larga Distancia");
+
 const aPosicion = (p: PosicionApi): PosicionTren => ({
   trenId: `${p.feed}:${p.tripId}`,
-  tipo: p.feed === "cercanias" ? "Cercanías" : "Larga Distancia",
+  tipo: tipoDeFeed(p.feed, p.nombre),
   // Con "nombre" (p. ej. "AVE 02070") se enseña ese; si no, el id del vehículo.
   numero: p.nombre ?? p.vehicleId ?? p.tripId,
   linea: p.linea ?? undefined,
@@ -91,7 +103,7 @@ const aPosicion = (p: PosicionApi): PosicionTren => ({
   destino: p.destino?.nombre ?? "",
   lat: p.lat,
   lon: p.lon,
-  rumbo: p.rumbo ?? 0,
+  rumbo: p.rumbo ?? NaN,
   retrasoMin: Math.round((p.retrasoSeg ?? 0) / 60),
   progreso: 0,
   proximaParada: p.proximaParada?.nombre ?? "",
