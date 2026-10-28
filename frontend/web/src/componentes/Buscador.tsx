@@ -7,7 +7,16 @@ import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
 import type { IdDescuento } from "@renfe/shared/api/tipos";
 import "./buscador.css";
 
-const porNombre = (nombre: string) => ESTACIONES.find((e) => e.nombre === nombre.trim());
+const normal = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").trim().toLowerCase();
+// Acepta el nombre exacto (sin importar tildes ni mayúsculas), el código o una ciudad con una sola estación.
+export function porNombre(texto: string) {
+  const t = normal(texto);
+  if (!t) return undefined;
+  const exacta = ESTACIONES.find((e) => normal(e.nombre) === t || e.id === t);
+  if (exacta) return exacta;
+  const parecidas = ESTACIONES.filter((e) => normal(`${e.nombre} ${e.ciudad}`).includes(t));
+  return parecidas.length === 1 ? parecidas[0] : undefined;
+}
 const hoy = () => new Date().toISOString().slice(0, 10);
 const contar = (uno: string, varios: string) => (n: number) => `${n} ${n === 1 ? uno : varios}`;
 export const CLAVE_DESCUENTO = "anden-descuento";
@@ -45,7 +54,10 @@ export function Buscador({ inicial, compacto }: Props) {
     e.preventDefault();
     const o = porNombre(origen);
     const d = porNombre(destino);
-    if (!o || !d) return setError("Elige el origen y el destino de la lista de estaciones.");
+    if (!o || !d) {
+      const falta = !o ? (origen.trim() ? `No encontramos «${origen.trim()}» como origen` : "Falta el origen") : destino.trim() ? `No encontramos «${destino.trim()}» como destino` : "Falta el destino";
+      return setError(`${falta}. Escribe el nombre de la estación o la ciudad y elígela de la lista.`);
+    }
     if (o.id === d.id) return setError("El origen y el destino tienen que ser estaciones distintas.");
     if (idaVuelta && (!vuelta || vuelta < fecha)) return setError("La fecha de vuelta tiene que ser igual o posterior a la de ida.");
     if (adultos + ninos > 9) return setError("Como máximo 9 viajeros con asiento por compra.");
