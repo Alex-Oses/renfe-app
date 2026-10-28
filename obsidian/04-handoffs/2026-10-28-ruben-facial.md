@@ -53,6 +53,10 @@ tags: [handoff, facial, database]
   Hasta que se elija, el facial no se puede implementar. Está en el ADR como pendiente.
 - El contrato de las tres rutas está en [[endpoints]]; la respuesta de `/auth/cara/verificar` es
   `{ token, usuario }`, así que `Usuario` en `tipos.ts` necesita el campo `rol`.
+- Tu D7 actualizado (#70) ya deja que el facial viva **dentro de la API**, así que en eso estamos de
+  acuerdo. Lo único que queda distinto: tu D7 dice que la app **envía la imagen**; el ADR-007 dice que
+  el dispositivo envía **solo los 512 números** (la foto no sale de él). Si te vale, cambia esa frase de
+  D7 y ya no hay nada que discutir.
 
 ## Cambios en contratos
 
