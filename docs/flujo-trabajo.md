@@ -97,7 +97,7 @@ Si después de `pnpm sync` la rama ya estaba subida: `git push --force-with-leas
 
 ```bash
 gh pr create --base main --head develop --title "chore(release): sprint 1" --body "Entrega del Sprint 1"
-# tras aprobación: "Create a merge commit" (no squash, para conservar la historia)
+# tras las 3 aprobaciones: "Create a merge commit" (no squash, para conservar la historia)
 git fetch origin && git tag v0.1 origin/main && git push origin v0.1
 ```
 
