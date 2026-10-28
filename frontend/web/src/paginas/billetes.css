@@ -572,9 +572,9 @@ a.nav-grupo__paso:hover {
 .ticket__talon::before { top: -11px; }
 .ticket__talon::after { bottom: -11px; }
 
-.ticket--pasado {
-  filter: grayscale(0.85);
-  opacity: 0.8;
+/* Viaje pasado: mismo color y morado; solo cambia la etiqueta y la marca sobre la foto */
+.ticket--pasado .ticket__antetitulo {
+  color: var(--gris);
 }
 
 .ticket__foto {
@@ -799,4 +799,9 @@ a.nav-grupo__paso:hover {
 .billetes__lista:has(.ticket) {
   display: grid;
   gap: 1.25rem;
+}
+
+.ticket__hoy--hecho {
+  background: rgb(255 255 255 / 0.9);
+  color: var(--morado-oscuro);
 }
