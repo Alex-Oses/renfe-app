@@ -4,7 +4,7 @@ import { enlacesAyuda, enlacesLegal, menuPrincipal } from "@renfe/shared/conteni
 import { herramientas } from "./registro";
 
 // Rutas propias de la app (main.tsx) que no son páginas de contenido.
-const RUTAS_APP = ["/", "/trenes", "/billetes", "/acceder", "/cuenta", "/mapa", "/lineas"];
+const RUTAS_APP = ["/", "/trenes", "/billetes", "/acceder", "/cuenta", "/abonos", "/mapa", "/lineas"];
 const existe = new Set([...RUTAS_APP, ...todasLasPaginas.map((p) => p.ruta)]);
 const limpia = (r: string) => r.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
 
