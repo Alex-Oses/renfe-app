@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import { Link } from "react-router-dom";
 import { misBilletes } from "@renfe/shared/api/cliente";
 import type { Billete } from "@renfe/shared/api/tipos";
@@ -6,6 +7,7 @@ import { agrupar, type Viaje } from "./billetes/agrupar";
 import { fecha, hora } from "./reserva/formato";
 import "./billetes.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
+import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
 
 export default function MisBilletes() {
   const [billetes, setBilletes] = useState<Billete[] | null>(null);
@@ -66,41 +68,100 @@ function Lista({ titulo, viajes, vacio, pasado }: { titulo: string; viajes: Viaj
   );
 }
 
+// Slug de la ciudad para buscar su foto ("Málaga" -> "malaga", "A Coruña" -> "a-coruna").
+const slug = (t: string) =>
+  t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// Barras decorativas del talón sacadas del localizador: siempre las mismas para el mismo billete.
+const barras = (codigo: string) => [...codigo.repeat(3)].map((c, i) => ({ x: i * 4, w: 1 + (c.charCodeAt(0) % 3) }));
+
 function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
-  const { tren, localizador } = viaje.billetes[0];
+  const { tren, localizador, qr } = viaje.billetes[0];
   const n = viaje.billetes.length;
   const idT = `viaje-${viaje.reservaId}`;
+  const destino = ciudadDe(tren.destino);
+  const foto = fotoDeRuta(slug(destino));
+  const [qrSvg, setQrSvg] = useState("");
+  useEffect(() => {
+    if (pasado) return;
+    let vivo = true;
+    QRCode.toString(qr, { type: "svg", margin: 0, errorCorrectionLevel: "M" }).then(
+      (s) => vivo && setQrSvg(s),
+      () => {},
+    );
+    return () => {
+      vivo = false;
+    };
+  }, [qr, pasado]);
+  const hoy = tren.salida.slice(0, 10) === new Date().toISOString().slice(0, 10);
+
   return (
-    <article className={`viaje cristal${pasado ? " viaje--pasado" : ""}`} aria-labelledby={idT}>
-      <header className="viaje__cabeza">
-        <h3 id={idT} className="viaje__ruta">
+    <article className={`ticket${pasado ? " ticket--pasado" : ""}`} aria-labelledby={idT}>
+      <div className="ticket__foto">
+        {foto ? (
+          <img src={urlFoto(foto.archivo, 640)} alt="" loading="lazy" decoding="async" title={`Foto: ${foto.autor} (Wikimedia Commons)`} />
+        ) : (
+          <span className="ticket__relleno" aria-hidden="true" />
+        )}
+        {hoy && !pasado && <span className="ticket__hoy">Sale hoy</span>}
+      </div>
+
+      <div className="ticket__cuerpo">
+        <p className="ticket__antetitulo">{pasado ? "Viaje realizado" : "Tu próximo tren"}</p>
+        <h3 id={idT} className="ticket__ruta">
           {ciudadDe(tren.origen)} <span aria-hidden="true">→</span>
-          <span className="sr-solo"> a </span> {ciudadDe(tren.destino)}
+          <span className="sr-solo"> a </span> {destino}
         </h3>
-        <span className="viaje__loc">
-          <span className="sr-solo">Localizador </span>
-          {localizador}
-        </span>
-      </header>
-      <p className="viaje__dato">
-        {fecha(tren.salida)}, {hora(tren.salida)} · {tren.tipo} {tren.numero} · {n} {n === 1 ? "viajero" : "viajeros"}
-      </p>
-      <ul className="viaje__viajeros">
-        {viaje.billetes.map((b: Billete) => (
-          <li key={b.id}>
-            <Link to={`/billetes/${encodeURIComponent(b.id)}`} className="viaje__viajero">
-              <span>
-                {b.pasajero.nombre} {b.pasajero.apellidos}
-              </span>
-              <span className="viaje__asiento">
-                Coche {b.asiento.coche}, asiento {b.asiento.fila}
-                {b.asiento.letra}
-              </span>
-              <span className="sr-solo">. Abrir billete</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+        <dl className="ticket__datos">
+          <div>
+            <dt>Fecha</dt>
+            <dd>{fecha(tren.salida)}</dd>
+          </div>
+          <div>
+            <dt>Salida</dt>
+            <dd>{hora(tren.salida)}</dd>
+          </div>
+          <div>
+            <dt>Llegada</dt>
+            <dd>{hora(tren.llegada)}</dd>
+          </div>
+          <div>
+            <dt>Tren</dt>
+            <dd>
+              {tren.tipo} {tren.numero}
+            </dd>
+          </div>
+        </dl>
+        <div className="ticket__pie">
+          {qrSvg && <span className="ticket__qr" aria-hidden="true" dangerouslySetInnerHTML={{ __html: qrSvg }} />}
+          <ul className="ticket__viajeros" aria-label={`${n} ${n === 1 ? "viajero" : "viajeros"}`}>
+            {viaje.billetes.map((b: Billete) => (
+              <li key={b.id}>
+                <Link to={`/billetes/${encodeURIComponent(b.id)}`} className="ticket__viajero">
+                  <span>
+                    {b.pasajero.nombre} {b.pasajero.apellidos}
+                  </span>
+                  <span className="ticket__asiento">
+                    Coche {b.asiento.coche} · {b.asiento.fila}
+                    {b.asiento.letra}
+                  </span>
+                  <span className="sr-solo">. Abrir billete</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="ticket__talon">
+        <span className="ticket__etiqueta">Localizador</span>
+        <span className="ticket__loc">{localizador}</span>
+        <svg className="ticket__barras" viewBox={`0 0 ${localizador.length * 12} 40`} preserveAspectRatio="none" aria-hidden="true">
+          {barras(localizador).map((b) => (
+            <rect key={b.x} x={b.x} width={b.w} height="40" />
+          ))}
+        </svg>
+      </div>
     </article>
   );
 }
