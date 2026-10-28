@@ -16,7 +16,7 @@ feat/…         ●●    ●         ●●                ← tu trabajo, squ
 2. Cada tarea en su rama `<tipo>/<area>-<tema>`, creada con `pnpm rama`.
 3. Commits con Conventional Commits (`feat(api): ...`).
 4. Antes del PR: `pnpm sync` (rebase sobre develop) y tests en verde.
-5. PR contra `develop`, 1 aprobación (CODEOWNERS) + CI verde → **squash merge**.
+5. PR contra `develop`, 3 aprobaciones (todo el equipo; el autor no cuenta) + CI verde → **squash merge**.
 6. Fin de sprint: PR `develop → main` (merge commit) y tag `v0.<sprint>`.
 
 ## Qué está automatizado y dónde
@@ -86,8 +86,9 @@ Si después de `pnpm sync` la rama ya estaba subida: `git push --force-with-leas
 
 - Contra `develop`, plantilla rellena, `Closes #N`.
 - Título = commit final (squash): `feat(mobile): pantalla de búsqueda de trenes`. El check del título es flexible (tipo sin distinguir mayúsculas, cualquier ámbito y hasta 120 caracteres); los commits siguen las reglas estrictas de `commitlint.config.mjs`.
-- 1 aprobación de CODEOWNERS + `CI / ok` + `PR / reglas` + conversaciones resueltas.
-- Quien abre el PR lo mergea tras la aprobación ("Squash and merge"). La rama se borra sola.
+- 3 aprobaciones (todo el equipo) + `CI / ok` + `PR / reglas` + conversaciones resueltas.
+- La protección de `develop` y `main` exige las 3 aprobaciones, descarta las aprobaciones cuando se suben cambios (`dismiss_stale_reviews`), exige que la última persona que empujó no sea la única que aprueba (`require_last_push_approval`) y se aplica también a los administradores: nadie puede saltárselo. Los force pushes a esas ramas están bloqueados.
+- Quien abre el PR lo mergea tras las 3 aprobaciones ("Squash and merge"). La rama se borra sola.
 - PRs pequeños: mejor 3 PRs de 150 líneas que uno de 450.
 - **PRs solo de documentación o vault** (`docs/`, `obsidian/`, PDF, Word, imágenes en `obsidian/adjuntos/`): no tienen dueño en CODEOWNERS: basta con que los apruebe cualquier compañero. Rama `docs/vault-<tema>` o `docs/docs-<tema>`.
 - Si cambias un contrato en `obsidian/02-contratos-api/`, CODEOWNERS pide revisión a Rubén, Marina y Alex.
