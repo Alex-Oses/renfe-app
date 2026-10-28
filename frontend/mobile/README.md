@@ -1,39 +1,28 @@
-# @renfe/mobile — App Expo
+# @renfe/mobile — App Expo (iOS y Android)
 
-> Esqueleto vacío. La app se genera en el Sprint 0/1 con el comando de abajo.
-
-## Crear la app (una sola vez, la hace Alex)
-
-Desde la raíz del repo:
-
-```bash
-cd frontend
-# Borra el contenido de mobile/ salvo este README y luego:
-pnpm create expo-app mobile --template tabs
-```
-
-Después, en `mobile/package.json`, cambia `"name"` a `"@renfe/mobile"` y añade el script `"dev": "expo start"`.
-
-## Estructura prevista
-
-```
-mobile/
-├── src/
-│   ├── app/          # Rutas (Expo Router): (viajero)/, (revisor)/, auth/
-│   ├── features/     # Una carpeta por funcionalidad: busqueda, reserva, billetes, mapa, chatbot, face-login
-│   ├── components/   # Componentes UI reutilizables
-│   ├── services/     # Cliente de la API, Supabase, Stripe
-│   └── theme/        # Colores, tipografía (estilo Renfe)
-├── app.json
-└── package.json
-```
-
-## Librerías previstas
-
-expo-router, @supabase/supabase-js, @stripe/stripe-react-native, expo-camera (QR + cara), react-native-maps, @tanstack/react-query.
+Expo SDK 58 con expo-router y TypeScript estricto. Funciona en **Expo Go** (sin módulos nativos fuera del SDK).
+La lógica (cliente de la API, simulados, QR, tokens de diseño) viene de `@renfe/shared` (ver ADR-005).
 
 ## Ejecutar
 
 ```bash
-pnpm dev:mobile        # desde la raíz
+pnpm install            # desde la raíz
+pnpm dev:mobile         # expo start; escanea el QR con Expo Go
 ```
+
+Variables (en `.env` de la raíz o de esta carpeta): `EXPO_PUBLIC_API_URL` (vacía = datos simulados) y
+`EXPO_PUBLIC_POSICIONES_URL` (vacía = `https://renfe-api.onrender.com`).
+
+## Estructura
+
+- `src/app/`: rutas. Pestañas `(tabs)/`: Comprar, En directo, Billetes, Líneas, Cuenta; `pasajero` y `billete/[id]`.
+- `src/components/`: botón, tarjeta de billete, mapa (`MapaTrenes.web.tsx` es el sustituto en web).
+- `src/polyfills.ts`: `localStorage` (expo-sqlite) y `crypto` (expo-crypto + @noble/hashes para SHA-256/HMAC).
+- `src/tema.ts`: estilos hechos solo con `@renfe/shared/tema/tokens` y la fuente Instrument Sans.
+
+Metro no necesita `metro.config.js`: desde el SDK 52 Expo detecta el monorepo pnpm solo.
+
+## Compilar con EAS
+
+`eas build --profile preview --platform android` saca un APK interno. Perfiles en `eas.json`:
+`development` (dev client), `preview` (APK interno) y `production`.
