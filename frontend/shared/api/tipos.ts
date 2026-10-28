@@ -201,6 +201,7 @@ export type EstadoValidacion =
   | "otro_dia" // auténtico, pero el viaje es otro día
   | "caducado" // auténtico, pero el tren ya llegó a su destino
   | "anulado" // auténtico, pero la reserva está cancelada
+  | "agotado" // bono auténtico y vigente, pero sin viajes
   | "falso" // la firma no cuadra: QR inventado o manipulado
   | "no_existe"; // firma correcta pero el billete no está en el sistema (solo lo sabe la API)
 
@@ -221,9 +222,22 @@ export interface BilleteValidado {
   clase: string;
 }
 
+// Lo que ve el revisor de un abono o bono escaneado (QR "RNA1").
+export interface AbonoValidado {
+  id: string;
+  nombre: string; // "Bono 10 viajes"…
+  titular: string; // enmascarado: "Lucía P."
+  origen: string | null; // null = todo el núcleo (Cercanías)
+  destino: string | null;
+  inicio: string; // AAAA-MM-DD
+  fin: string; // último día válido, inclusive
+  viajesRestantes: number | null; // tras descontar esta lectura; null = sin límite
+}
+
 export interface ResultadoValidacion {
   estado: EstadoValidacion;
-  billete?: BilleteValidado; // no hay si es falso
+  billete?: BilleteValidado; // no hay si es falso o si es un abono
+  abono?: AbonoValidado;
   validadoEn: string; // ISO, esta lectura
   primeraValidacion?: string; // ISO, si ya se había validado
   comprobadoEnServidor: boolean; // false = solo firma, sin API (modo simulado)

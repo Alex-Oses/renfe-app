@@ -156,6 +156,12 @@ const mios = () => {
   return id ? leer().filter((a) => a.usuarioId === id) : [];
 };
 
+// Si el abono se compró en este dispositivo, guarda el viaje que ha descontado el revisor.
+export function apuntarViaje(id: string, viajesRestantes: number) {
+  const l = leer();
+  if (l.some((a) => a.id === id)) guardar(l.map((a) => (a.id === id ? { ...a, viajesRestantes } : a)));
+}
+
 export const misAbonos = (): Abono[] => mios();
 
 export function obtenerAbono(id: string): Abono {
