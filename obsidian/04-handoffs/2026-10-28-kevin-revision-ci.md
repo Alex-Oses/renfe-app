@@ -4,7 +4,7 @@ autor: Kevin
 area: devops
 para: Alex, Rubén, Marina
 rama: ci/infra-revision-ci-dependabot
-pr: (pendiente de abrir; ver "Qué queda")
+pr: 75 (https://github.com/Alex-Oses/renfe-app/pull/75)
 tags: [handoff, ci, render, dependabot]
 ---
 
@@ -28,7 +28,7 @@ Verificado en local, sobre `develop` al día (`bd17135`): `pnpm lint` ✅, `pnpm
 
 ## Qué queda
 
-- **Kevin (yo), ahora:** abrir la PR de esta rama contra `develop` (necesita aprobación de otra persona: `/.github/` es mío en CODEOWNERS y nadie aprueba su propia PR) y mergearla.
+- **Kevin (yo), ahora:** la PR es la **#75** y ya tiene `CI / ok` y `PR / reglas` en verde. Falta que **otra persona la apruebe** (`/.github/` es mío en CODEOWNERS y nadie aprueba su propia PR) y mergearla con *Squash and merge*.
 - **Kevin, bloqueado por Marina:** rellenar `DATABASE_URL` y `SUPABASE_JWT_SECRET` en Render → Environment. Comprobación de éxito: `/health` debe pasar de `"no configurada"` a `"ok"`.
 - **Kevin, 5/11:** abrir `/health` un minuto antes del ensayo (el plan Free de Render se duerme a los 15 min y tarda 30-50 s en despertar).
 - **Kevin, siguiente tarea de verdad:** **D10 de [[ADR-005-app-movil-expo]]** (qué se dockeriza y cómo se levanta con un comando). Docker sigue siendo mío; el **facial ya NO es mío**: [[ADR-007-reconocimiento-facial]] lo mete en la API (el vector lo calcula el dispositivo, decide Postgres), así que `backend/face-service` ha desaparecido y no hay PoC de InsightFace.
