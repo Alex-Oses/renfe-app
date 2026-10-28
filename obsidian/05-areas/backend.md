@@ -1,5 +1,5 @@
 ---
-responsable: Rubén (pagos y face-service: Kevin)
+responsable: Rubén (pagos: Kevin)
 tags: [area]
 ---
 

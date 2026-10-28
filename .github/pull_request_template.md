@@ -8,7 +8,6 @@
 - [ ] backend/api
 - [ ] backend/database
 - [ ] backend/gtfs-worker
-- [ ] backend/face-service
 - [ ] obsidian/ (vault)
 - [ ] infra / CI / docs
 

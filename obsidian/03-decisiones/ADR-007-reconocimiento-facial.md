@@ -86,7 +86,10 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
 
 - **Alex**: OK a cambiar `description` de Human por ArcFace en la web (es su área), y decidir si la app
   reutiliza la web en webview o monta el modelo nativo.
-- **Kevin**: borrar `backend/face-service/` y su `Dockerfile`, y su línea en `CODEOWNERS`.
+- **Kevin**: `backend/face-service/` ya está borrado, junto con su servicio en `docker-compose.yml`, su
+  línea en `CODEOWNERS`, el bloque de `dependabot.yml`, la etiqueta de `labeler.yml` y
+  `FACE_SERVICE_URL` del `.env.example`. Solo queda que lo revise y que borre la etiqueta `face` en
+  GitHub si quiere.
 - **Marina**: aplicar la migración en el proyecto de Supabase cuando lo cree (el facial no funciona sin
   ella) y confirmar si el proyecto firma los JWT con HS256 o con claves asimétricas.
 - **Rubén**: medir el umbral con una ejecución real y ajustar `config_cara`.

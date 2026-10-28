@@ -7,7 +7,6 @@
 /backend/api/             @ruben-munoz-bl
 /backend/database/        @maga369
 /backend/gtfs-worker/     @maga369
-/backend/face-service/    @keta372
 /docker-compose.yml       @keta372
 /.github/                 @keta372
 # Docs y vault sin dueño: basta la aprobación de cualquier compañero (los contratos sí tienen dueño)

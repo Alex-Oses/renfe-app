@@ -20,6 +20,6 @@ Versión corta del protocolo de `AGENTS.md`. OpenCode la carga siempre (vía `op
 | Alex | Frontend + PO | `frontend/` |
 | Rubén | Backend + chatbot | `backend/api/` |
 | Marina | Base de datos + SM | `backend/database/`, `backend/gtfs-worker/` |
-| Kevin | DevOps + Stripe + face | `backend/face-service/`, Docker, CI |
+| Kevin | DevOps + Stripe | `docker-compose.yml`, `.github/`, CI |
 
 Si tu tarea necesita algo de otra área, **no lo hagas tú**: déjalo en el handoff dirigido a esa persona (campo `para:`).

@@ -3,9 +3,9 @@ responsable: Kevin
 tags: [area]
 ---
 
-# 🐳 Área DevOps, Stripe y face service
+# 🐳 Área DevOps y Stripe
 
-**Código:** `docker-compose.yml`, `.github/`, `backend/face-service` · **Estado:** placeholders
+**Código:** `docker-compose.yml`, `.github/` · **Estado:** placeholders
 
 ## Hecho (sprint final, por Alex para descargar a Kevin)
 - CI real: `.github/workflows/ci.yml` ejecuta `pnpm lint`, `pnpm test` y `pnpm build` (job `ok`).

@@ -12,6 +12,6 @@ labels: historia
 - [ ] ...
 
 ### Área
-frontend / api / database / gtfs-worker / face-service / devops
+frontend / api / database / gtfs-worker / devops
 
 ### Estimación (story points)

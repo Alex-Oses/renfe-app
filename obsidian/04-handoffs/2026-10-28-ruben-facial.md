@@ -1,7 +1,7 @@
 ---
 fecha: 2026-10-28
 autor: Rubén
-area: face-service
+area: api
 para: Marina, Alex
 rama: feat/api-retrasos
 pr: 47

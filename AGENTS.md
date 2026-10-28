@@ -7,7 +7,7 @@ Este fichero lo leen automáticamente OpenCode, Codex, Claude Code (vía `CLAUDE
 Monorepo pnpm de una app tipo Renfe hecha por un equipo de 4 personas con Scrum. Está dividido en tres zonas:
 
 - `frontend/` → app Expo / React Native (responsable: Alex).
-- `backend/` → API NestJS (Rubén), Supabase (Marina), worker GTFS (Marina), servicio facial (Rubén; tecnología libre, ver ADR-005 D7).
+- `backend/` → API NestJS (Rubén, con el login facial dentro), Supabase (Marina), worker GTFS (Marina).
 - `obsidian/` → **vault de Obsidian, memoria compartida entre humanos e IAs.**
 
 Antes de tocar una zona, lee su `README.md`. No modifiques zonas de otra persona sin que la tarea lo pida; si es necesario, déjalo anotado en el handoff.
@@ -81,7 +81,8 @@ Comandos: `/rama` (empezar tarea), `/pr` (commits + handoff + push + PR), `/hand
 ## 4. Convenciones de código
 
 - Gestor de paquetes: **pnpm** (nunca npm ni yarn). Node 22.
-- TypeScript estricto en frontend, API y worker. El servicio facial puede no ser Python (ADR-005 D7); si lo es, Python 3.12 en `backend/face-service/`.
+- TypeScript estricto en frontend, API y worker. No hay servicio facial aparte ni código Python: el
+  vector lo calcula el dispositivo y decide Postgres (ADR-007).
 - Variables de entorno: añade la clave a `.env.example` (sin valor real). Nunca subas `.env`.
 
 ## 5. Límites
