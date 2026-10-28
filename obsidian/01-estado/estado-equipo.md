@@ -12,7 +12,7 @@ tags: [estado]
 |---|---|---|---|---|---|
 | Alex | PO + Frontend | 🟢 | Lógica común en `@renfe/shared` (web + futura app), mejora de la UI de la web y decisiones de la app en [[ADR-005-app-movil-expo]] | Para la app: BD (Marina) y facial (Rubén) | 2026-10-28 |
 | Rubén | Backend + chatbot | 🟢 | #47 abierto (retrasos reales, `paradaActual` y login facial), esperando 1 aprobación. Hecho: ADR-007 (ArcFace 512, sin servidor Python, decide Postgres), la migración `20261028120300_reconocimiento_facial.sql` (adaptada a `perfiles` de Marina) y las **3 rutas `/auth/cara/*` con tests**. Siguiente: migración mínima `gtfs_*` si Marina no vuelve antes del 29 | Necesita las migraciones de Marina (su rama no tiene PR) para validar el SQL; sin BD el facial no se puede probar | 2026-10-28 |
-| Marina | SM + Base de datos | 🟢 | Migración `gtfs_*` validada en la VM (rama `feat/db-migracion-catalogo-gtfs`) e **importador AV/LD/MD** implementado en `backend/gtfs-worker` (rama `feat/gtfs-importador-catalogo-avld`). Siguiente: importar en la VM y subir Supabase a la nube | La migración y el importador van en ramas distintas: el importador necesita que se mergee antes la migración | 2026-10-28 |
+| Marina | SM + Base de datos | 🟢 | Catálogo AV/LD **validado de punta a punta en la VM**: migración aplicada, 1 035 estaciones / 663 rutas / 8 729 viajes / 69 670 horarios cargados y `gtfs:verificar` en verde. Siguiente: Supabase en la nube + `DATABASE_URL` en Render ([[supabase-nube]]) | Pendiente mergear 3 ramas (contrato v2 → migración → importador) y la idempotencia (2 min) | 2026-10-28 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
 
 ## Bloqueos globales

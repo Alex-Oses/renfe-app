@@ -5,15 +5,20 @@ tags: [area]
 
 # 🗄️ Área Base de datos y datos Renfe
 
-**Código:** `backend/database`, `backend/gtfs-worker` · **Estado:** contrato revisado contra los feeds reales (28/10); siguiente: migración del catálogo para el sprint
+**Código:** `backend/database`, `backend/gtfs-worker` · **Estado:** catálogo AV/LD cargado y verificado en local; siguiente paso: Supabase en la nube y Render ([[supabase-nube]])
 
 ## Pendiente
-- **Primera migración** (`vector` + identidad + catálogo GTFS), sin RT ni reservas: bloquea a Rubén y a Alex
-- Import del feed `avld` (69 670 horarios) — Cercanías queda fuera del sprint
-- Revisión de [[modelo-datos]] v2 y de [[plan-ingesta-gtfs]] por el equipo
-- Respuesta de Kevin a §10.2 (webhook de Stripe): **no bloquea** la primera migración
+- Mergear las tres ramas: contrato v2 → migración `gtfs_*` → importador (ver [[2026-10-28-marina-importador-gtfs-avld]])
+- Supabase en la nube con el catálogo cargado y `DATABASE_URL` (session pooler) en Render
+- Idempotencia: reimportar sin `--reemplazar` y comprobar que no duplica
+- Reimportación semanal programada (AV/LD tiene horizonte hasta 29/09/2027)
+- Fuera del sprint: Cercanías (497 paradas sin `CODIGO`), `posiciones_trenes`, Stripe
 
 ## Notas técnicas
+- **Catálogo AV/LD (28/10):** migración [[migracion-catalogo-gtfs]] aplicada y
+  `backend/gtfs-worker` importando el feed real: 1 035 estaciones · 1 008 estacion_feeds ·
+  663 rutas · 8 729 calendarios · 31 702 excepciones · 8 729 viajes · 69 670 horarios.
+  Runbook del importador en `backend/gtfs-worker/README.md`.
 - Supabase local inicializado: `backend/database/supabase/` (config, migraciones, seed).
   CLI como devDependency; `pnpm db:start | db:stop | db:reset | db:status`. Ver [[ADR-003-supabase-local]].
 - **Validado de punta a punta** el 26/10 en una VM Linux de Azure (Docker Desktop está bloqueado en
