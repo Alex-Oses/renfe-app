@@ -637,3 +637,41 @@
 .entrada__panel .parada {
   padding-block: 0.4rem;
 }
+
+/* Rutas: la foto va de fondo con un velo morado abajo para que el texto blanco siga legible. */
+.ruta {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 13rem;
+}
+
+.ruta__foto {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  aspect-ratio: auto;
+}
+
+.ruta__foto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(43 0 32 / 0.1) 20%, rgb(43 0 32 / 0.88) 100%);
+}
+
+.ruta__foto .foto__credito {
+  top: 0;
+  bottom: auto;
+  z-index: 1;
+  border-radius: 0 0 0 6px;
+}
+
+/* Destinos: foto a sangre arriba de la tarjeta. */
+.destino {
+  overflow: hidden;
+}
+
+.destino__foto {
+  margin: -1.25rem -1.25rem 0.5rem;
+}

@@ -1,6 +1,6 @@
 // Mis líneas: favoritas con los próximos trenes de hoy, al estilo de las apps de horarios de autobús.
 import { useState, type FormEvent } from "react";
-import { buscarEstaciones } from "../api/cliente";
+import { buscarEstaciones } from "@renfe/shared/api/cliente";
 import { Desplegable } from "../componentes/Desplegable";
 import { useAvisos } from "../estado/avisos";
 import { TarjetaLinea } from "./lineas/TarjetaLinea";

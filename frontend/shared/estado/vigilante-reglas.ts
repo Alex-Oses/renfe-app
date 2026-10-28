@@ -1,7 +1,7 @@
 // Reglas puras del vigilante: reciben datos y la hora, devuelven avisos con una clave única.
 // La clave evita repetir el mismo aviso; el vigilante guarda las ya enviadas.
 import type { Billete, PosicionTren, Seguimiento, Tren } from "../api/tipos";
-import type { NuevoAviso } from "./avisos";
+import type { NuevoAviso } from "../api/tipos";
 
 export type AvisoClave = NuevoAviso & { clave: string };
 

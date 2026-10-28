@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { posiciones } from "../../api/simulado-tiempo-real";
+import { posiciones } from "@renfe/shared/api/simulado-tiempo-real";
 import { Herramienta } from "./comun";
 
 // Corredores sacados de los recorridos simulados en tiempo real, sin repetir sentido.

@@ -10,7 +10,7 @@ tags: [estado]
 
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
-| Alex | PO + Frontend | 🟢 | API en Render (https://renfe-api.onrender.com), CI completa y mapa con trenes reales. Siguiente: `VITE_POSICIONES_URL` en Vercel | Base de datos de Marina; reactivar protección de ramas | 2026-10-27 |
+| Alex | PO + Frontend | 🟢 | Lógica común en `@renfe/shared` (web + futura app), mejora de la UI de la web y decisiones de la app en [[ADR-005-app-movil-expo]] | Para la app: BD (Marina) y facial (Rubén) | 2026-10-28 |
 | Rubén | Backend + chatbot | 🟢 | `GET /estaciones` (#26), `GET /trenes` (#33), `GET /posiciones` (GTFS-RT real, probado) y `GET /trenes/:feed/:tripId` hechos. Siguiente: `/incidencias` | Necesita migraciones de Marina para validar el SQL; `/trenes/:feed/:tripId/posicion` bloqueado por el `tripId` de GTFS-RT | 2026-10-27 |
 | Marina | SM + Base de datos | 🟢 | Contrato [[modelo-datos]] v2 revisado contra los feeds reales y plan de ingesta en [[plan-ingesta-gtfs]]. Siguiente: migración del catálogo | — | 2026-10-28 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |

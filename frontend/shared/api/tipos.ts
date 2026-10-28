@@ -133,7 +133,7 @@ export interface PosicionTren {
   destino: string;
   lat: number;
   lon: number;
-  rumbo: number; // grados, 0 = norte
+  rumbo: number; // grados, 0 = norte; NaN si la fuente no lo da (el mapa lo calcula al moverse)
   retrasoMin: number;
   progreso: number; // 0..1 del trayecto
   proximaParada: string; // "" si no se conoce
@@ -201,6 +201,7 @@ export type EstadoValidacion =
   | "otro_dia" // auténtico, pero el viaje es otro día
   | "caducado" // auténtico, pero el tren ya llegó a su destino
   | "anulado" // auténtico, pero la reserva está cancelada
+  | "agotado" // bono auténtico y vigente, pero sin viajes
   | "falso" // la firma no cuadra: QR inventado o manipulado
   | "no_existe"; // firma correcta pero el billete no está en el sistema (solo lo sabe la API)
 
@@ -221,9 +222,22 @@ export interface BilleteValidado {
   clase: string;
 }
 
+// Lo que ve el revisor de un abono o bono escaneado (QR "RNA1").
+export interface AbonoValidado {
+  id: string;
+  nombre: string; // "Bono 10 viajes"…
+  titular: string; // enmascarado: "Lucía P."
+  origen: string | null; // null = todo el núcleo (Cercanías)
+  destino: string | null;
+  inicio: string; // AAAA-MM-DD
+  fin: string; // último día válido, inclusive
+  viajesRestantes: number | null; // tras descontar esta lectura; null = sin límite
+}
+
 export interface ResultadoValidacion {
   estado: EstadoValidacion;
-  billete?: BilleteValidado; // no hay si es falso
+  billete?: BilleteValidado; // no hay si es falso o si es un abono
+  abono?: AbonoValidado;
   validadoEn: string; // ISO, esta lectura
   primeraValidacion?: string; // ISO, si ya se había validado
   comprobadoEnServidor: boolean; // false = solo firma, sin API (modo simulado)
@@ -239,4 +253,34 @@ export interface ResumenAdmin {
   validaciones: number;
   usuarios: number;
   ultimasReservas: { localizador: string; trayecto: string; total: number; estado: Reserva["estado"]; creada: string }[];
+}
+
+// Aviso aún sin guardar; grave: retraso importante (el pop-up usa role="alert").
+export type NuevoAviso = Omit<Aviso, "id" | "creado" | "leido"> & { grave?: boolean };
+
+// --- Abonos y bonos (propuesto por la web en endpoints.md) ---
+
+export type TipoAbono = "ave-ld-mensual" | "avant-mensual" | "cercanias-recurrente" | "bono-10";
+
+export interface NuevoAbono {
+  tipo: TipoAbono;
+  origenId?: string;
+  destinoId?: string;
+  inicio: string; // AAAA-MM-DD
+}
+
+export interface Abono {
+  id: string;
+  usuarioId?: string;
+  tipo: TipoAbono;
+  nombre: string;
+  origen: Pick<Estacion, "id" | "nombre"> | null;
+  destino: Pick<Estacion, "id" | "nombre"> | null;
+  inicio: string; // AAAA-MM-DD
+  fin: string; // último día válido, inclusive
+  viajesTotales: number | null; // null = sin límite
+  viajesRestantes: number | null;
+  precio: number;
+  creado: string;
+  qr: string;
 }

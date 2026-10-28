@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import type { Asiento, Pasajero, TipoViajero } from "../../api/tipos";
+import type { Asiento, Pasajero, TipoViajero } from "@renfe/shared/api/tipos";
 import { useSesion } from "../../estado/sesion";
 
 type Campo = Exclude<keyof Pasajero, "tipo">;

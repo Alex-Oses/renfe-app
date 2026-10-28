@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { resumenAdmin } from "../api/cliente";
-import type { ResumenAdmin } from "../api/tipos";
+import { resumenAdmin } from "@renfe/shared/api/cliente";
+import type { ResumenAdmin } from "@renfe/shared/api/tipos";
 import { useSesion } from "../estado/sesion";
 import "./revisor/revisor.css";
 

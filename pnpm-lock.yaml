@@ -110,8 +110,20 @@ importers:
 
   frontend/mobile: {}
 
+  frontend/shared:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@26.6.5)(lightningcss@1.33.0)
+
   frontend/web:
     dependencies:
+      '@renfe/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@vladmandic/human':
         specifier: ^3.3.6
         version: 3.3.6

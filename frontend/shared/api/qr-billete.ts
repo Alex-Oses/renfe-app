@@ -60,22 +60,26 @@ export function datosDeBillete(b: Billete): DatosQr {
   };
 }
 
-export async function crearQr(b: Billete): Promise<string> {
-  const datos = b64url(new TextEncoder().encode(JSON.stringify(datosDeBillete(b))));
-  const firma = new Uint8Array(await crypto.subtle.sign("HMAC", await claveHmac(), new TextEncoder().encode(`${PREFIJO_QR}.${datos}`)));
-  return `${PREFIJO_QR}.${datos}.${b64url(firma)}`;
+// Firma "<prefijo>.<datos>" y devuelve "<prefijo>.<datos>.<firma>". La usan billetes y abonos.
+export async function firmarQr(prefijo: string, obj: unknown): Promise<string> {
+  const datos = b64url(new TextEncoder().encode(JSON.stringify(obj)));
+  const firma = new Uint8Array(await crypto.subtle.sign("HMAC", await claveHmac(), new TextEncoder().encode(`${prefijo}.${datos}`)));
+  return `${prefijo}.${datos}.${b64url(firma)}`;
 }
 
-export type LecturaQr = { ok: true; datos: DatosQr } | { ok: false; motivo: "formato" | "firma" };
+export const crearQr = (b: Billete): Promise<string> => firmarQr(PREFIJO_QR, datosDeBillete(b));
 
-export async function leerQr(texto: string): Promise<LecturaQr> {
+export type Lectura<T> = { ok: true; datos: T } | { ok: false; motivo: "formato" | "firma" };
+export type LecturaQr = Lectura<DatosQr>;
+
+export async function leerQrFirmado<T extends { v: number; id: string }>(prefijo: string, texto: string): Promise<Lectura<T>> {
   const partes = texto.trim().split(".");
-  if (partes.length !== 3 || partes[0] !== PREFIJO_QR) return { ok: false, motivo: "formato" };
+  if (partes.length !== 3 || partes[0] !== prefijo) return { ok: false, motivo: "formato" };
   let firma: Uint8Array<ArrayBuffer>;
-  let datos: DatosQr;
+  let datos: T;
   try {
     firma = deB64url(partes[2]);
-    datos = JSON.parse(new TextDecoder().decode(deB64url(partes[1]))) as DatosQr;
+    datos = JSON.parse(new TextDecoder().decode(deB64url(partes[1]))) as T;
   } catch {
     return { ok: false, motivo: "formato" };
   }
@@ -84,3 +88,5 @@ export async function leerQr(texto: string): Promise<LecturaQr> {
   if (datos?.v !== 1 || !datos.id) return { ok: false, motivo: "formato" };
   return { ok: true, datos };
 }
+
+export const leerQr = (texto: string): Promise<LecturaQr> => leerQrFirmado<DatosQr>(PREFIJO_QR, texto);

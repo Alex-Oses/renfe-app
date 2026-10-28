@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { validarBillete } from "../api/cliente";
-import type { EstadoValidacion, ResultadoValidacion } from "../api/tipos";
+import { validarBillete } from "@renfe/shared/api/cliente";
+import type { EstadoValidacion, ResultadoValidacion } from "@renfe/shared/api/tipos";
 import { useSesion } from "../estado/sesion";
 import { leerDeArchivo } from "./revisor/decodificar";
 import { Escaner } from "./revisor/Escaner";
@@ -14,9 +14,19 @@ const ESTADOS: Record<EstadoValidacion, { tono: "ok" | "aviso" | "mal"; titulo: 
   otro_dia: { tono: "aviso", titulo: "No es para hoy", accion: "El billete es auténtico, pero de otro día." },
   caducado: { tono: "mal", titulo: "Billete caducado", accion: "Ese viaje ya terminó." },
   anulado: { tono: "mal", titulo: "Billete anulado", accion: "La reserva está cancelada." },
+  agotado: { tono: "mal", titulo: "Bono sin viajes", accion: "Este bono ya no tiene viajes. Tiene que comprar un billete." },
   falso: { tono: "mal", titulo: "Billete falso", accion: "El código no es de un billete de Renfe o ha sido modificado." },
   no_existe: { tono: "mal", titulo: "Billete no encontrado", accion: "El código es auténtico pero no consta en el sistema." },
 };
+
+// Con abonos cambia el texto de algunos estados.
+const ESTADOS_ABONO: Partial<typeof ESTADOS> = {
+  valido: { tono: "ok", titulo: "Abono válido", accion: "Puede viajar." },
+  otro_dia: { tono: "aviso", titulo: "Abono aún no vigente", accion: "El abono es auténtico, pero empieza otro día." },
+  caducado: { tono: "mal", titulo: "Abono caducado", accion: "Su validez ya terminó. Tiene que comprar un billete." },
+};
+const ver = (r: ResultadoValidacion) => (r.abono && ESTADOS_ABONO[r.estado]) || ESTADOS[r.estado];
+const diaCorto = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 
 const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 const dia = (iso: string) => new Date(iso).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
@@ -78,8 +88,9 @@ export default function Revisor() {
       </div>
     );
 
-  const info = resultado && ESTADOS[resultado.estado];
+  const info = resultado && ver(resultado);
   const b = resultado?.billete;
+  const a = resultado?.abono;
 
   return (
     <div className="contenedor seccion revisor">
@@ -106,7 +117,7 @@ export default function Revisor() {
               <label htmlFor="codigo-qr" className="sr-solo">
                 Código del QR
               </label>
-              <input id="codigo-qr" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="O pega aquí el código (RNF1…)" />
+              <input id="codigo-qr" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="O pega aquí el código (RNF1… o RNA1…)" />
               <button className="boton" type="submit" disabled={!codigo.trim()}>
                 Comprobar
               </button>
@@ -181,6 +192,35 @@ export default function Revisor() {
             </dl>
           )}
 
+          {a && (
+            <dl className="veredicto__datos">
+              <div className="veredicto__ancho">
+                <dt>Tipo</dt>
+                <dd>{a.nombre}</dd>
+              </div>
+              <div className="veredicto__ancho">
+                <dt>Titular</dt>
+                <dd>{a.titular}</dd>
+              </div>
+              <div className="veredicto__ancho">
+                <dt>Trayecto</dt>
+                <dd>{a.origen && a.destino ? `${a.origen} ↔ ${a.destino}` : "Todo el núcleo de Cercanías"}</dd>
+              </div>
+              <div className="veredicto__ancho">
+                <dt>Validez</dt>
+                <dd>
+                  {diaCorto(a.inicio)} – {diaCorto(a.fin)}
+                </dd>
+              </div>
+              {a.viajesRestantes !== null && (
+                <div className="veredicto__ancho">
+                  <dt>Viajes que quedan</dt>
+                  <dd>{a.viajesRestantes}</dd>
+                </div>
+              )}
+            </dl>
+          )}
+
           {!resultado.comprobadoEnServidor && (
             <p className="veredicto__nota">
               Comprobado sin conexión: firma y fechas. Que el billete exista y no esté anulado se comprobará en el servidor cuando la API esté
@@ -189,7 +229,7 @@ export default function Revisor() {
           )}
 
           <button className="boton veredicto__siguiente" onClick={() => setModo("camara")}>
-            Escanear otro billete
+            Escanear otro código
           </button>
         </section>
       )}
@@ -199,10 +239,12 @@ export default function Revisor() {
           <h2 id="historial-titulo">Últimas lecturas</h2>
           <ol>
             {historial.map((h) => (
-              <li key={h.validadoEn} className={`lectura lectura--${ESTADOS[h.estado].tono}`}>
+              <li key={h.validadoEn} className={`lectura lectura--${ver(h).tono}`}>
                 <span>{hora(h.validadoEn)}</span>
-                <strong>{ESTADOS[h.estado].titulo}</strong>
-                <span>{h.billete ? `${h.billete.pasajero} · coche ${h.billete.coche}, ${h.billete.asiento}` : "—"}</span>
+                <strong>{ver(h).titulo}</strong>
+                <span>
+                  {h.billete ? `${h.billete.pasajero} · coche ${h.billete.coche}, ${h.billete.asiento}` : h.abono ? `${h.abono.titular} · ${h.abono.nombre}` : "—"}
+                </span>
               </li>
             ))}
           </ol>

@@ -54,7 +54,7 @@
   min-width: 44px;
   min-height: 44px;
 }
-.emergente__cerrar { min-width: 32px; min-height: 32px; margin: -0.35rem -0.35rem 0 0; }
+.emergente__cerrar { margin: -0.6rem -0.6rem 0 0; }
 .emergente__cerrar:hover,
 .campana__boton:hover { background: rgb(129 0 94 / 0.08); }
 
@@ -68,9 +68,13 @@
   to { opacity: 0; transform: translateX(24px); }
 }
 
+@media (max-width: 47.99rem) {
+  .emergentes { bottom: calc(var(--alto-barra) + var(--esp-6) + env(safe-area-inset-bottom)); }
+}
+
 @media (max-width: 640px) {
   .emergentes {
-    top: var(--esp-3);
+    top: calc(var(--esp-3) + env(safe-area-inset-top));
     bottom: auto;
     right: 50%;
     transform: translateX(50%);
@@ -107,6 +111,7 @@
   width: min(360px, calc(100vw - 2rem));
   max-height: min(70vh, 520px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--esp-4);
   border-radius: 20px;
   animation: emergente-entra var(--dur-media) var(--curva-salida);
@@ -136,11 +141,12 @@
 .campana__hora { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--gris); }
 
 @media (max-width: 640px) {
-  .campana__panel { position: fixed; left: 1rem; right: 1rem; top: 4.5rem; width: auto; }
+  .campana__panel { position: fixed; left: 1rem; right: 1rem; top: 4.5rem; width: auto;
+    max-height: calc(100dvh - 6rem - var(--alto-barra) - env(safe-area-inset-bottom)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .emergente,
   .emergente--saliendo,
-  .campana__panel { animation: none; }
+  .campana__panel { animation: fundido 150ms ease-out both !important; }
 }

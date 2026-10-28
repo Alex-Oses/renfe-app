@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { misBilletes, registrarCara } from "../api/cliente";
-import { DESCUENTOS } from "../api/simulado-precios";
+import { misBilletes, registrarCara } from "@renfe/shared/api/cliente";
+import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
 import { CLAVE_DESCUENTO, descuentoGuardado } from "../componentes/Buscador";
 import { useSesion } from "../estado/sesion";
 import { CamaraFacial } from "./cuenta/CamaraFacial";
+import { MisAbonos } from "./cuenta/MisAbonos";
 import "./cuenta/cuenta.css";
 
 export default function Cuenta() {
@@ -65,6 +66,8 @@ export default function Cuenta() {
         </p>
         <p>Sumas un punto por cada euro de tus billetes. Es una simulación: todavía no se pueden canjear.</p>
       </section>
+
+      <MisAbonos usuario={usuario} />
 
       <section className="tarjeta" aria-labelledby="cuenta-cara">
         <h2 id="cuenta-cara">Acceso con tu cara</h2>

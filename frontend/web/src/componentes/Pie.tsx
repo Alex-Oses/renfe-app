@@ -1,7 +1,7 @@
 // Pie de página con el mapa de secciones. Dueño: agente de diseño.
 import { Link } from "react-router-dom";
-import { usaDatosSimulados } from "../api/cliente";
-import { enlacesAyuda, enlacesLegal, menuPrincipal, type Enlace } from "../contenido/navegacion";
+import { usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { enlacesAyuda, enlacesLegal, menuPrincipal, type Enlace } from "@renfe/shared/contenido/navegacion";
 
 const menu = (ruta: string) => menuPrincipal.find((m) => m.ruta === ruta);
 const enlacesDe = (ruta: string): Enlace[] =>

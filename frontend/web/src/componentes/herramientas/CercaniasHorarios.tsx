@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { nucleosCercanias } from "../../contenido/navegacion";
+import { nucleosCercanias } from "@renfe/shared/contenido/navegacion";
 import { horariosCercanias, lineasNucleo } from "./logica";
 import { Herramienta, Selector } from "./comun";
 

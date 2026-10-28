@@ -1,9 +1,9 @@
 import { useState } from "react";
 import QRCode from "qrcode";
-import { enlaceWallet } from "../../api/cliente";
-import type { Billete, EnlaceWallet } from "../../api/tipos";
+import { enlaceWallet } from "@renfe/shared/api/cliente";
+import type { Billete, EnlaceWallet } from "@renfe/shared/api/tipos";
 import { fecha, hora } from "../reserva/formato";
-import { ciudadDe } from "../../api/tipos";
+import { ciudadDe } from "@renfe/shared/api/tipos";
 
 type Plataforma = EnlaceWallet["plataforma"];
 

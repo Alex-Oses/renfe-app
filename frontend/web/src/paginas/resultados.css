@@ -10,6 +10,32 @@
   vertical-align: middle;
 }
 
+/* Día anterior / siguiente: objetivo táctil de 44 px */
+.dias a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.vacio {
+  display: grid;
+  justify-items: start;
+  gap: var(--esp-3);
+}
+
+.vacio p {
+  margin: 0;
+}
+
+.calendario-precios ul {
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+
+.calendario-precios li {
+  scroll-snap-align: start;
+}
+
 .calendario-precios ul {
   display: flex;
   gap: var(--esp-2);
@@ -17,6 +43,7 @@
   margin: 0 0 var(--esp-4);
   padding: 0 0 var(--esp-1);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .calendario-precios a {

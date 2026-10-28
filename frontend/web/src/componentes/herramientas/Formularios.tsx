@@ -1,6 +1,6 @@
 // Formularios de trámites: se validan en el navegador y el envío es simulado (devuelve nº de expediente).
 import { useId, useState, type FormEvent } from "react";
-import { ESTACIONES } from "../../api/simulado";
+import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { semilla } from "./logica";
 import { Campo, emailValido, Exito, Herramienta, Selector, useEnvio } from "./comun";
 

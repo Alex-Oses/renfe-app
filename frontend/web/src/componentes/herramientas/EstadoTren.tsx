@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { posicionesTrenes } from "../../api/cliente";
-import type { PosicionTren } from "../../api/tipos";
+import { posicionesTrenes } from "@renfe/shared/api/cliente";
+import type { PosicionTren } from "@renfe/shared/api/tipos";
 import { Campo, Herramienta } from "./comun";
 
 const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();

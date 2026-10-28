@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
-import type { Asiento } from "../../api/tipos";
+import type { Asiento } from "@renfe/shared/api/tipos";
 import { euros } from "./formato";
 
 interface Props {
