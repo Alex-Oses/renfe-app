@@ -1,7 +1,7 @@
 // Cámara para el acceso con la cara. Todo el análisis ocurre en el navegador con Human:
 // ningún fotograma sale del dispositivo, solo el embedding (una lista de números).
 import { useEffect, useRef, useState } from "react";
-import type { EmbeddingFacial } from "../../api/tipos";
+import type { EmbeddingFacial } from "@renfe/shared/api/tipos";
 import "./cuenta.css";
 
 type Estado = "permiso" | "cargando" | "capturando" | "enviando" | "exito" | "error" | "sin-permiso" | "sin-camara";

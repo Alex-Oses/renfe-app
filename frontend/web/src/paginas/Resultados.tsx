@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { buscarTrenes } from "../api/cliente";
-import type { TipoTren, Tren } from "../api/tipos";
+import { buscarTrenes } from "@renfe/shared/api/cliente";
+import type { TipoTren, Tren } from "@renfe/shared/api/tipos";
 import { Buscador } from "../componentes/Buscador";
-import { TARIFAS, precioViajero } from "../api/simulado-precios";
+import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
 import "./resultados.css";
-import { ciudadDe } from "../api/tipos";
+import { ciudadDe } from "@renfe/shared/api/tipos";
 
 const minutos = (iso: string) => {
   const [h, m] = iso.slice(11, 16).split(":").map(Number);

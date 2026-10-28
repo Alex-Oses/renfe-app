@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { misBilletes, registrarCara } from "../api/cliente";
-import { DESCUENTOS } from "../api/simulado-precios";
+import { misBilletes, registrarCara } from "@renfe/shared/api/cliente";
+import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
 import { CLAVE_DESCUENTO, descuentoGuardado } from "../componentes/Buscador";
 import { useSesion } from "../estado/sesion";
 import { CamaraFacial } from "./cuenta/CamaraFacial";

@@ -1,7 +1,7 @@
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
-import type { PosicionTren, TipoTren } from "../../api/tipos";
+import type { PosicionTren, TipoTren } from "@renfe/shared/api/tipos";
 
 export const COLOR_TIPO: Record<TipoTren, string> = {
   AVE: "#81005e",

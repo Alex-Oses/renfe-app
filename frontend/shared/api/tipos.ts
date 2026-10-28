@@ -240,3 +240,6 @@ export interface ResumenAdmin {
   usuarios: number;
   ultimasReservas: { localizador: string; trayecto: string; total: number; estado: Reserva["estado"]; creada: string }[];
 }
+
+// Aviso aún sin guardar; grave: retraso importante (el pop-up usa role="alert").
+export type NuevoAviso = Omit<Aviso, "id" | "creado" | "leido"> & { grave?: boolean };

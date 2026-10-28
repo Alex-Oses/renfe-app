@@ -22,10 +22,27 @@ import * as cuenta from "./simulado-cuenta";
 import * as tiempoReal from "./simulado-tiempo-real";
 import * as revisor from "./simulado-revisor";
 import * as admin from "./simulado-admin";
-import type { PosicionApi } from "./gtfs-rt";
+// Solo el tipo: la función de Vercel no puede importar nada, así que la forma vive allí.
+import type { PosicionApi } from "../../web/api/posiciones";
 
-const BASE = import.meta.env.VITE_API_URL as string | undefined;
-export const usaDatosSimulados = !BASE;
+// Cada app fija las URLs al arrancar (la web desde VITE_*, la app Expo desde EXPO_PUBLIC_*).
+// api: API de Render; posiciones: API solo para el mapa; tiempoReal: función /api/posiciones de Vercel.
+// Sin api se usan datos simulados; sin ninguna de las tres, el mapa usa trenes simulados.
+export interface ConfigApi {
+  api?: string;
+  posiciones?: string;
+  tiempoReal?: string;
+}
+let BASE: string | undefined;
+let BASE_POSICIONES: string | undefined;
+let URL_TIEMPO_REAL: string | undefined;
+export let usaDatosSimulados = true;
+export function configurarApi(c: ConfigApi) {
+  BASE = c.api || undefined;
+  BASE_POSICIONES = c.posiciones || BASE;
+  URL_TIEMPO_REAL = c.tiempoReal || undefined;
+  usaDatosSimulados = !BASE;
+}
 
 let token: string | null = null;
 export function usarToken(t: string | null) {
@@ -84,11 +101,10 @@ const aPosicion = (p: PosicionApi): PosicionTren => ({
 
 // Tiempo real sin API desplegada: en producción (Vercel) lo sirve api/posiciones.ts.
 // Con VITE_TIEMPO_REAL=simulado se fuerzan los trenes simulados (plan B de la demo).
-const TIEMPO_REAL_VERCEL = import.meta.env.PROD && import.meta.env.VITE_TIEMPO_REAL !== "simulado";
 export let posicionesReales = false;
 
 async function posicionesVercel(): Promise<PosicionTren[]> {
-  const r = await fetch("/api/posiciones");
+  const r = await fetch(URL_TIEMPO_REAL!);
   if (!r.ok) throw new Error(`Tiempo real no disponible (${r.status})`);
   const { datos: lista } = (await r.json()) as Lista<PosicionApi>;
   return lista.map(aPosicion);
@@ -156,7 +172,6 @@ export const verificarCara = (datos: { email: string; embedding: EmbeddingFacial
 // Orden: API (VITE_POSICIONES_URL o VITE_API_URL); si no, la función de Vercel con datos reales de Renfe;
 // si falla (o en local con `pnpm dev`), trenes simulados para que el mapa nunca se quede vacío.
 // VITE_POSICIONES_URL: API desplegada solo para el mapa (p. ej. Render sin base de datos todavía).
-const BASE_POSICIONES = (import.meta.env.VITE_POSICIONES_URL as string | undefined) || BASE;
 
 export async function posicionesTrenes(): Promise<PosicionTren[]> {
   if (BASE_POSICIONES) {
@@ -165,7 +180,7 @@ export async function posicionesTrenes(): Promise<PosicionTren[]> {
     posicionesReales = true;
     return ((await r.json()) as Lista<PosicionApi>).datos.map(aPosicion);
   }
-  if (TIEMPO_REAL_VERCEL) {
+  if (URL_TIEMPO_REAL) {
     try {
       const reales = await posicionesVercel();
       posicionesReales = true;

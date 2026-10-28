@@ -1,6 +1,6 @@
 // Añadir niño o servicios extra a una reserva existente (precios simulados).
 import { useState } from "react";
-import type { Reserva } from "../../api/tipos";
+import type { Reserva } from "@renfe/shared/api/tipos";
 import { euros } from "./logica";
 import { BuscaReserva, Exito, Herramienta, ResumenReserva, useEnvio } from "./comun";
 

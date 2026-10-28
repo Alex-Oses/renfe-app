@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { ESTACIONES } from "../api/simulado";
+import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { Desplegable } from "./Desplegable";
 import { SelectorNumero } from "./ui/SelectorNumero";
-import { DESCUENTOS } from "../api/simulado-precios";
-import type { IdDescuento } from "../api/tipos";
+import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
+import type { IdDescuento } from "@renfe/shared/api/tipos";
 import "./buscador.css";
 
 const porNombre = (nombre: string) => ESTACIONES.find((e) => e.nombre === nombre.trim());

@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { buscarTrenes } from "../../api/cliente";
-import { ESTACIONES } from "../../api/simulado";
-import type { Tren } from "../../api/tipos";
+import { buscarTrenes } from "@renfe/shared/api/cliente";
+import { ESTACIONES } from "@renfe/shared/api/simulado";
+import type { Tren } from "@renfe/shared/api/tipos";
 import { euros } from "./logica";
 import { Campo, Herramienta, Selector } from "./comun";
 

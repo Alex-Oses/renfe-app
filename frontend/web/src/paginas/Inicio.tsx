@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { nucleosCercanias } from "../contenido/navegacion";
+import { nucleosCercanias } from "@renfe/shared/contenido/navegacion";
 import { EntradaTren } from "./inicio/EntradaTren";
 import "./inicio/inicio.css";
 

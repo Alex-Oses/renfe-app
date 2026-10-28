@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { todasLasPaginas } from "./index";
-import { enlacesAyuda, enlacesLegal, menuPrincipal } from "./navegacion";
-import { herramientas } from "../componentes/herramientas/registro";
+import { todasLasPaginas } from "@renfe/shared/contenido/index";
+import { enlacesAyuda, enlacesLegal, menuPrincipal } from "@renfe/shared/contenido/navegacion";
+import { herramientas } from "./registro";
 
 // Rutas propias de la app (main.tsx) que no son páginas de contenido.
 const RUTAS_APP = ["/", "/trenes", "/billetes", "/acceder", "/cuenta", "/mapa", "/lineas"];

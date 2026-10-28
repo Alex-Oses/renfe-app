@@ -2,9 +2,9 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { herramientas } from "../componentes/herramientas/registro";
-import { buscarPagina, hijasDe } from "../contenido";
-import { menuPrincipal } from "../contenido/navegacion";
-import type { Bloque, Tarjeta } from "../contenido/tipos";
+import { buscarPagina, hijasDe } from "@renfe/shared/contenido";
+import { menuPrincipal } from "@renfe/shared/contenido/navegacion";
+import type { Bloque, Tarjeta } from "@renfe/shared/contenido/tipos";
 import "./contenido.css";
 
 // Nombre legible de un tramo de ruta: página real, menú, o el propio slug.

@@ -1,7 +1,7 @@
 // Cabecera y navegación principal. Dueño: agente de diseño.
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { avisoDestacado, enlacesAyuda, menuPrincipal, type Menu } from "../contenido/navegacion";
+import { avisoDestacado, enlacesAyuda, menuPrincipal, type Menu } from "@renfe/shared/contenido/navegacion";
 import { useSesion } from "../estado/sesion";
 import { CampanaAvisos } from "./CampanaAvisos";
 

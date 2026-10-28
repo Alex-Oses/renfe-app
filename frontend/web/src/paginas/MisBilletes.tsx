@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { misBilletes } from "../api/cliente";
-import type { Billete } from "../api/tipos";
+import { misBilletes } from "@renfe/shared/api/cliente";
+import type { Billete } from "@renfe/shared/api/tipos";
 import { agrupar, type Viaje } from "./billetes/agrupar";
 import { fecha, hora } from "./reserva/formato";
 import "./billetes.css";
-import { ciudadDe } from "../api/tipos";
+import { ciudadDe } from "@renfe/shared/api/tipos";
 
 export default function MisBilletes() {
   const [billetes, setBilletes] = useState<Billete[] | null>(null);

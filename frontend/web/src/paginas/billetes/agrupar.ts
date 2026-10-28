@@ -1,4 +1,4 @@
-import type { Billete } from "../../api/tipos";
+import type { Billete } from "@renfe/shared/api/tipos";
 
 export interface Viaje {
   reservaId: string;

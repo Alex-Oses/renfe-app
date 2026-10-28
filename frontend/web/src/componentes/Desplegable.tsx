@@ -1,7 +1,7 @@
 // Combobox accesible de estaciones (patrón ARIA 1.2 combobox + listbox).
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { buscarEstaciones } from "../api/cliente";
-import type { Estacion } from "../api/tipos";
+import { buscarEstaciones } from "@renfe/shared/api/cliente";
+import type { Estacion } from "@renfe/shared/api/tipos";
 
 const base = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 

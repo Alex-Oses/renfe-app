@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { obtenerAsientos, obtenerTren } from "../../api/cliente";
-import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "../../api/tipos";
-import { DESCUENTOS, TARIFAS, calcularTotal } from "../../api/simulado-precios";
+import { obtenerAsientos, obtenerTren } from "@renfe/shared/api/cliente";
+import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
+import { DESCUENTOS, TARIFAS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import { PasoAsientos } from "./PasoAsientos";
 import { PasoViajeros } from "./PasoViajeros";
 import { PasoPago } from "./PasoPago";
 import { PasoListo } from "./PasoListo";
 import { euros, hora } from "./formato";
 import "./reserva.css";
-import { ciudadDe } from "../../api/tipos";
+import { ciudadDe } from "@renfe/shared/api/tipos";
 
 const PASOS = [
   { id: "asientos", nombre: "Asientos" },
