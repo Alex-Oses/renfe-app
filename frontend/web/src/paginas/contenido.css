@@ -368,3 +368,28 @@
 .no-encontrada__acciones .boton {
   flex: none;
 }
+
+/* Fotos: portada a dos columnas desde tablet; tarjetas con la foto a sangre arriba. */
+.contenido__titular--foto {
+  display: grid;
+  gap: var(--esp-6);
+  align-items: center;
+}
+
+.contenido__foto {
+  border-radius: var(--radio-grande, 16px);
+}
+
+@media (min-width: 48rem) {
+  .contenido__titular--foto {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+.tarjeta {
+  overflow: hidden;
+}
+
+.tarjeta__foto {
+  margin: calc(var(--esp-6) * -1) calc(var(--esp-6) * -1) var(--esp-4);
+}

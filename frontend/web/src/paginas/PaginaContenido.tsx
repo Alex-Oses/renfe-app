@@ -2,9 +2,11 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { herramientas } from "../componentes/herramientas/registro";
-import { buscarPagina, hijasDe } from "../contenido";
-import { menuPrincipal } from "../contenido/navegacion";
-import type { Bloque, Tarjeta } from "../contenido/tipos";
+import { buscarPagina, hijasDe } from "@renfe/shared/contenido";
+import { menuPrincipal } from "@renfe/shared/contenido/navegacion";
+import { fotoDeRuta, type Foto as DatosFoto } from "@renfe/shared/contenido/imagenes";
+import type { Bloque, ConImagen, Tarjeta } from "@renfe/shared/contenido/tipos";
+import { Foto } from "../componentes/Foto";
 import "./contenido.css";
 
 // Nombre legible de un tramo de ruta: página real, menú, o el propio slug.
@@ -42,9 +44,24 @@ function Migas({ ruta }: { ruta: string }) {
   );
 }
 
+// Foto propia del dato; si no, la de su ruta (destino, estación, núcleo...).
+function fotoDe(x: ConImagen, ruta?: string): DatosFoto | undefined {
+  if (x.imagen) return { archivo: x.imagen, autor: x.autor ?? "Wikimedia Commons" };
+  if (!ruta?.startsWith("/")) return undefined;
+  const p = buscarPagina(ruta);
+  return (p?.imagen ? { archivo: p.imagen, autor: p.autor ?? "Wikimedia Commons" } : undefined) ?? fotoDeRuta(ruta);
+}
+
+// Secciones visuales: sus tarjetas llevan foto o, si no hay, el relleno ilustrado.
+const conFoto = (ruta?: string) => /^\/(inspirate|cercanias)/.test(ruta ?? "");
+
 function EnlaceTarjeta({ t }: { t: Tarjeta }) {
+  const foto = fotoDe(t, t.enlace);
   const cuerpo = (
     <>
+      {(foto || conFoto(t.enlace)) && (
+        <Foto foto={foto} alt={`Imagen de ${t.titulo}`} categoria={t.enlace?.split("/")[1]} clase="tarjeta__foto" />
+      )}
       {t.etiqueta && <span className="tarjeta__etiqueta">{t.etiqueta}</span>}
       <h3>{t.titulo}</h3>
       <p>{t.texto}</p>
@@ -218,6 +235,7 @@ export default function PaginaContenido() {
   if (!pagina) return <NoEncontrada />;
 
   const hijas = hijasDe(pagina.ruta);
+  const portada = fotoDe(pagina, pagina.ruta);
   const indice = pagina.bloques
     .map((b, i) => ({ id: `seccion-${i}`, titulo: "titulo" in b ? b.titulo : undefined }))
     .filter((x): x is { id: string; titulo: string } => Boolean(x.titulo));
@@ -227,9 +245,14 @@ export default function PaginaContenido() {
       <header className="contenido__cabecera">
         <div className="contenedor">
           <Migas ruta={pagina.ruta} />
-          <div className="contenido__titular cristal cristal--fuerte">
-            <h1>{pagina.titulo}</h1>
-            <p>{pagina.resumen}</p>
+          <div className={`contenido__titular cristal cristal--fuerte${portada || conFoto(pagina.ruta) ? " contenido__titular--foto" : ""}`}>
+            <div>
+              <h1>{pagina.titulo}</h1>
+              <p>{pagina.resumen}</p>
+            </div>
+            {(portada || conFoto(pagina.ruta)) && (
+              <Foto foto={portada} alt={`Vista de ${pagina.titulo}`} categoria={pagina.seccion} clase="contenido__foto" />
+            )}
           </div>
         </div>
       </header>

@@ -1,0 +1,55 @@
+/* Foto con proporción fija: el layout no salta mientras carga. */
+.foto {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--morado, #8a0c63), var(--morado-oscuro, #5c0043));
+}
+
+.foto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.foto__credito {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  max-width: 100%;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.65rem;
+  line-height: 1.3;
+  color: #fff;
+  background: rgb(0 0 0 / 0.55);
+  border-top-left-radius: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Relleno ilustrado: degradado de la marca, vías en diagonal y el icono de la categoría. */
+.foto--relleno {
+  display: grid;
+  place-items: center;
+  color: rgb(255 255 255 / 0.9);
+  background:
+    repeating-linear-gradient(135deg, rgb(255 255 255 / 0.07) 0 2px, transparent 2px 22px),
+    radial-gradient(circle at 80% 15%, rgb(214 45 97 / 0.75), transparent 60%),
+    linear-gradient(160deg, var(--morado, #8a0c63), var(--morado-oscuro, #5c0043));
+}
+
+.foto--cercanias {
+  background:
+    repeating-linear-gradient(135deg, rgb(255 255 255 / 0.07) 0 2px, transparent 2px 22px),
+    linear-gradient(160deg, #d62d61, #8a0c63);
+}
+
+.foto--ayuda,
+.foto--gestiona {
+  background:
+    repeating-linear-gradient(135deg, rgb(255 255 255 / 0.07) 0 2px, transparent 2px 22px),
+    linear-gradient(160deg, #5c0043, #2b0020);
+}

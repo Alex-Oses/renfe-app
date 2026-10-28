@@ -9,6 +9,14 @@ import { ProveedorSesion } from "./estado/sesion";
 import { Inicio } from "./paginas/Inicio";
 import { Resultados } from "./paginas/Resultados";
 import "./estilos/base.css";
+import { configurarApi } from "@renfe/shared/api/cliente";
+
+// En producción (Vercel) el tiempo real lo sirve api/posiciones.ts; VITE_TIEMPO_REAL=simulado lo apaga (plan B).
+configurarApi({
+  api: import.meta.env.VITE_API_URL,
+  posiciones: import.meta.env.VITE_POSICIONES_URL,
+  tiempoReal: import.meta.env.PROD && import.meta.env.VITE_TIEMPO_REAL !== "simulado" ? "/api/posiciones" : undefined,
+});
 
 // Las páginas pesadas (mapa, cámara, QR) se cargan solo al entrar en ellas.
 const Reserva = lazy(() => import("./paginas/reserva/Reserva"));
@@ -16,6 +24,7 @@ const MisBilletes = lazy(() => import("./paginas/MisBilletes"));
 const Billete = lazy(() => import("./paginas/Billete"));
 const Acceder = lazy(() => import("./paginas/Acceder"));
 const Cuenta = lazy(() => import("./paginas/Cuenta"));
+const Abonos = lazy(() => import("./paginas/abonos/Abonos"));
 const Mapa = lazy(() => import("./paginas/Mapa"));
 const MisLineas = lazy(() => import("./paginas/MisLineas"));
 const Revisor = lazy(() => import("./paginas/Revisor"));
@@ -41,6 +50,7 @@ function App() {
             <Route path="/billetes/:id" element={<Billete />} />
             <Route path="/acceder" element={<Acceder />} />
             <Route path="/cuenta" element={<Cuenta />} />
+            <Route path="/abonos" element={<Abonos />} />
             <Route path="/mapa" element={<Mapa />} />
             <Route path="/lineas" element={<MisLineas />} />
             <Route path="/revisor" element={<Revisor />} />

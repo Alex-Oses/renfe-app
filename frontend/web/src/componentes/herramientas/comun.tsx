@@ -1,6 +1,6 @@
 // Piezas compartidas por los widgets: campo accesible, búsqueda de reserva y confirmación.
 import { useId, useState, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
-import type { Reserva } from "../../api/tipos";
+import type { Reserva } from "@renfe/shared/api/tipos";
 import { expediente } from "./logica";
 import "./herramientas.css";
 

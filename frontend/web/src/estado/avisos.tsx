@@ -1,13 +1,13 @@
 // Avisos (pop-ups), líneas favoritas y trenes seguidos. Dueño: agente de notificaciones.
 // API estable que usan otras páginas: useAvisos().{avisar, favoritos, alternarFavorito, seguir, dejarDeSeguir, seguimientos}
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import type { Aviso, LineaFavorita, Seguimiento } from "../api/tipos";
+import type { Aviso, LineaFavorita, NuevoAviso, Seguimiento } from "@renfe/shared/api/tipos";
 import { AvisosEmergentes } from "../componentes/AvisosEmergentes";
 import { Vigilante } from "./vigilante";
 
 // grave: retraso importante; el pop-up usa role="alert" en vez de "status".
 export type AvisoLocal = Aviso & { grave?: boolean };
-export type NuevoAviso = Omit<Aviso, "id" | "creado" | "leido"> & { grave?: boolean };
+export type { NuevoAviso };
 export type PermisoAvisos = NotificationPermission | "no-disponible";
 
 interface ValorAvisos {

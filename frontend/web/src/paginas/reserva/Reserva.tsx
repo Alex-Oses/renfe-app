@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { obtenerAsientos, obtenerTren } from "../../api/cliente";
-import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "../../api/tipos";
-import { DESCUENTOS, TARIFAS, calcularTotal } from "../../api/simulado-precios";
+import { obtenerAsientos, obtenerTren } from "@renfe/shared/api/cliente";
+import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
+import { DESCUENTOS, TARIFAS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import { PasoAsientos } from "./PasoAsientos";
 import { PasoViajeros } from "./PasoViajeros";
 import { PasoPago } from "./PasoPago";
 import { PasoListo } from "./PasoListo";
 import { euros, hora } from "./formato";
 import "./reserva.css";
-import { ciudadDe } from "../../api/tipos";
+import { ciudadDe } from "@renfe/shared/api/tipos";
 
 const PASOS = [
   { id: "asientos", nombre: "Asientos" },
@@ -72,12 +72,22 @@ export default function Reserva() {
 
   if (error)
     return (
-      <div className="contenedor seccion" role="alert">
-        <p>{error}</p>
-        <Link to="/">Vuelve a buscar trenes</Link>
+      <div className="contenedor seccion">
+        <div className="aviso reserva__estado" role="alert">
+          <p>{error}</p>
+          <Link className="boton" to="/">
+            Vuelve a buscar trenes
+          </Link>
+        </div>
       </div>
     );
-  if (!tren || !asientos) return <p className="contenedor seccion cargando">Cargando el tren…</p>;
+  if (!tren || !asientos)
+    return (
+      <div className="contenedor seccion" aria-busy="true">
+        <p className="cargando" role="status">Cargando el tren…</p>
+        <span className="esqueleto reserva__esqueleto" aria-hidden="true" />
+      </div>
+    );
 
   const seleccion = elegidos.map((id) => asientos.find((a) => a.id === id)!);
   const desglose = calcularTotal({ precios: seleccion.map((a) => a.precio), tipos, tarifa, descuento, extras });

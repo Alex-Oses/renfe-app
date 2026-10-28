@@ -1,8 +1,8 @@
 import L from "leaflet";
 import { useMemo, useState } from "react";
 import { CircleMarker, Marker, Polyline, Tooltip, useMapEvents } from "react-leaflet";
-import { ESTACIONES } from "../../api/simulado";
-import type { PosicionTren } from "../../api/tipos";
+import { ESTACIONES } from "@renfe/shared/api/simulado";
+import type { PosicionTren } from "@renfe/shared/api/tipos";
 import { COLOR_TIPO } from "./CapaTrenes";
 
 type LL = [number, number];

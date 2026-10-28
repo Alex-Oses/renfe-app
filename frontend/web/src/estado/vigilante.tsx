@@ -1,9 +1,9 @@
 // Vigila trenes seguidos, billetes próximos y líneas favoritas con un único intervalo.
 import { useEffect, useRef, useState } from "react";
-import { buscarTrenes, misBilletes, posicionesTrenes } from "../api/cliente";
-import type { Billete } from "../api/tipos";
+import { buscarTrenes, misBilletes, posicionesTrenes } from "@renfe/shared/api/cliente";
+import type { Billete } from "@renfe/shared/api/tipos";
 import { useAvisos } from "./avisos";
-import { novedadesBillete, reglasFavorita, reglasSeguimientos, type AvisoClave } from "./vigilante-reglas";
+import { novedadesBillete, reglasFavorita, reglasSeguimientos, type AvisoClave } from "@renfe/shared/estado/vigilante-reglas";
 
 const CADA_MS = 20_000;
 const CLAVE = "anden.avisados";

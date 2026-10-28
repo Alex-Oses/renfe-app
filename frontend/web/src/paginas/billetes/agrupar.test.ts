@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Billete } from "../../api/tipos";
+import type { Billete } from "@renfe/shared/api/tipos";
 import { agrupar } from "./agrupar";
 
 const b = (id: string, reservaId: string, salida: string) => ({ id, reservaId, tren: { salida } }) as unknown as Billete;

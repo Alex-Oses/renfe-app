@@ -28,6 +28,7 @@ export const menuPrincipal: Menu[] = [
         enlaces: [
           { texto: "Billetes AVE y Larga Distancia", ruta: "/viajar/prepara-tu-viaje/billetes-ave-larga-distancia" },
           { texto: "Abonos AVE y Larga Distancia", ruta: "/viajar/prepara-tu-viaje/abonos-ave-larga-distancia" },
+          { texto: "Comprar abono o bono", ruta: "/abonos" },
           { texto: "Avant y Media Distancia", ruta: "/viajar/prepara-tu-viaje/avant-media-distancia" },
           { texto: "Descuentos", ruta: "/viajar/prepara-tu-viaje/descuentos" },
           { texto: "Avlo", ruta: "/viajar/prepara-tu-viaje/avlo" },
