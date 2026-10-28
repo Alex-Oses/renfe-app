@@ -1,26 +1,21 @@
--- Reconocimiento facial (ADR-005).
--- SOLO toca lo del facial: no crea ni modifica tablas de Marina (`perfiles`, GTFS…).
--- Depende únicamente de `auth.users`, que es de Supabase.
+-- Reconocimiento facial (ADR-007).
+-- Depende de 20261028120100_identidad.sql: usa `perfiles` y `embeddings_faciales`,
+-- que son de Marina. Aquí no se crea ninguna de las dos.
 -- Requiere pgvector >= 0.7 (`l2_normalize` y `vector_norm`); Supabase lo trae.
 
 create extension if not exists vector with schema extensions;
 set search_path = public, extensions, pg_temp;
 
 -- ---------------------------------------------------------------------------
--- embeddings_faciales: la plantilla. 1:1 con el usuario, nunca una foto.
--- FK a `auth.users` y no a `perfiles` para no depender del esquema de Marina.
+-- perfiles.rol: añadir `admin`
+-- `resetear_cara` necesita un rol que no es de la app. El CHECK es de Marina;
+-- esto lo amplía sin quitarle nada. Si ella lo mete en su migración, esta línea
+-- sobra y se puede borrar.
 -- ---------------------------------------------------------------------------
 
-create table embeddings_faciales (
-  usuario_id uuid primary key references auth.users (id) on delete cascade,
-  embedding vector(512) not null,
-  modelo text not null,
-  creado_en timestamptz not null default now()
-);
-
--- Sin políticas: ni `anon` ni `authenticated` pueden leer la plantilla.
-alter table embeddings_faciales enable row level security;
-revoke all on embeddings_faciales from anon, authenticated;
+alter table perfiles drop constraint if exists perfiles_rol_check;
+alter table perfiles add constraint perfiles_rol_check
+  check (rol in ('viajero', 'revisor', 'admin'));
 
 -- ---------------------------------------------------------------------------
 -- config_cara: una sola fila. El umbral es dato, no código.
@@ -73,6 +68,7 @@ exception
   when unique_violation then
     raise exception 'cara_ya_registrada' using errcode = 'RF004';
   when foreign_key_violation then
+    -- La FK de `embeddings_faciales` va a `perfiles`: sin perfil no hay cara.
     raise exception 'usuario_inexistente' using errcode = 'RF005';
 end;
 $$;
@@ -125,7 +121,7 @@ $$;
 
 -- ---------------------------------------------------------------------------
 -- resetear_cara: solo un admin puede borrar la plantilla (el registro es único).
--- El rol se lee de `app_metadata`, el mismo sitio del que lo lee el guard.
+-- El rol se lee de `perfiles.rol`, que es donde vive según el contrato.
 -- ---------------------------------------------------------------------------
 
 create function resetear_cara(p_admin uuid, p_usuario uuid)
@@ -136,8 +132,8 @@ set search_path = public, extensions, pg_temp
 as $$
 begin
   if not exists (
-    select 1 from auth.users u
-    where u.id = p_admin and u.raw_app_meta_data ->> 'rol' = 'admin'
+    select 1 from perfiles p
+    where p.id = p_admin and p.rol = 'admin'
   ) then
     raise exception 'no_autorizado' using errcode = 'RF006';
   end if;

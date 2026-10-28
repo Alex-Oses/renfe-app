@@ -108,11 +108,10 @@ export class CaraService {
 
   private async usuario(id: string, emailPedido: string): Promise<UsuarioSesion> {
     const [fila] = await this.consultar<FilaUsuario>(
-      `select u.email,
-              coalesce(u.raw_user_meta_data ->> 'nombre', split_part(u.email, '@', 1)) as nombre,
-              coalesce(u.raw_app_meta_data ->> 'rol', 'viajero') as rol
-         from auth.users u
-        where u.id = $1`,
+      `select u.email, p.nombre, p.rol
+         from perfiles p
+         join auth.users u on u.id = p.id
+        where p.id = $1`,
       [id],
     );
 
