@@ -56,11 +56,10 @@ Piezas y responsabilidad:
 
 | Pieza                                      | Responsable | Qué hace                                        | Qué NO hace                           |
 | ------------------------------------------ | ----------- | ----------------------------------------------- | ------------------------------------- |
-| `frontend/mobile` (Expo)                   | Alex        | UI viajero y revisor                            | No habla con Renfe ni con Postgres    |
+| `frontend/mobile` (Expo)                   | Alex        | UI viajero y revisor; calcula el vector facial en el dispositivo | No habla con Renfe ni con Postgres    |
 | `backend/api` (NestJS)                     | Rubén       | Una sola superficie REST para la app            | No descarga GTFS ni firma pagos       |
 | `backend/gtfs-worker` (Node)               | Marina      | Única entrada de datos de Renfe                 | No atiende peticiones de usuarios     |
-| Supabase (Postgres/Auth/pgvector/Realtime) | Marina      | Datos, sesiones, embeddings, push de posiciones | No expone tablas de negocio a la app  |
-| `backend/face-service` (FastAPI)           | Kevin       | Embedding facial, red interna                   | No es accesible desde internet        |
+| Supabase (Postgres/Auth/pgvector/Realtime) | Marina      | Datos, sesiones, embeddings, decisión del login facial, push de posiciones | No expone tablas de negocio a la app  |
 | Stripe (test)                              | Kevin       | Cobro simulado                                  | La tarjeta nunca pasa por nuestra API |
 | Gemini API                                 | Rubén       | Chatbot con *tool use*                          | No tiene acceso directo a la BD       |
 
@@ -172,8 +171,10 @@ El móvil no pide nada: recibe. Ir directo a Renfe costaría ~24 MB/hora por usu
 ### 5.4 Login facial y chatbot
 
 ```
-Login facial   POST /auth/cara/verificar → API → face-service (embedding 512)
-               → pgvector similitud ≥ umbral → JWT        (la foto no se guarda)
+Login facial   dispositivo: Human (detección, antispoof, malla) + ArcFace → vector de 512
+               POST /auth/cara/verificar → API → verificar_cara() en Postgres
+               → similitud coseno ≥ umbral de config_cara → JWT de la API
+               (la foto no sale del dispositivo y no se guarda nunca; ver ADR-005)
 
 Chatbot        POST /chatbot/mensaje → API → Claude API (tool use)
                → Claude pide /trenes y /billetes → respuesta en lenguaje natural

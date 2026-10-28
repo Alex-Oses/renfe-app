@@ -62,13 +62,32 @@ responderán `503`. Sin ORM: `bd.consultar(sql, valores)` y SQL a mano (ver ADR-
 
 `SupabaseJwtGuard` verifica el `Bearer` contra `SUPABASE_JWT_SECRET` (HS256) y deja en
 `request.usuario` → `{ id, email, rol }`. El rol sale de `app_metadata.rol` (`viajero` por defecto,
-`revisor` explícito). `RolesGuard` + `@Roles('revisor')` limitan endpoints por rol.
+`revisor` y `admin` explícitos). `RolesGuard` + `@Roles('revisor')` limitan endpoints por rol.
 
 ```ts
 @UseGuards(SupabaseJwtGuard, RolesGuard)
 @Roles('revisor')
 @Post('billetes/validar')
 ```
+
+### Login facial
+
+Dos formas de entrar, **un solo formato de token**. Con contraseña lo emite Supabase Auth; con la cara
+lo firma la API (`HS256`, mismos claims, 12 h, sin `refresh_token`). Ver
+`obsidian/03-decisiones/ADR-005-reconocimiento-facial.md`.
+
+La API no decide nada: llama a las funciones de Postgres y traduce el `SQLSTATE` a HTTP.
+
+| Función | SQLSTATE | HTTP |
+|---|---|---|
+| `registrar_cara` | `RF001` modelo distinto · `RF002` dimensión · `RF003` vector vacío | 400 |
+| `registrar_cara` | `RF004` ya registrada | 409 |
+| `registrar_cara` | `RF005` usuario inexistente | 404 |
+| `resetear_cara` | `RF006` no es admin | 403 |
+
+`verificar_cara` no lanza: devuelve `{ usuario_id, coincide, similitud, motivo }`. La `similitud` **no
+se expone al cliente** (es un oráculo para reconstruir la plantilla); todos los fallos se responden con
+el mismo `401`.
 
 Todavía no hay endpoints privados: los guards están listos para cuando lleguen `/auth`, `/reservas`
 y `/billetes`. El contrato de auth está en `obsidian/02-contratos-api/endpoints.md`.
@@ -77,7 +96,7 @@ y `/billetes`. El contrato de auth está en `obsidian/02-contratos-api/endpoints
 
 | Módulo | Qué hace | Responsable |
 |---|---|---|
-| `auth` | Registro/login con Supabase Auth, login facial (llama a face-service) | Rubén |
+| `auth` | Registro/login con Supabase Auth, login facial (la decisión la toma Postgres) | Rubén |
 | `estaciones` | Búsqueda de estaciones sobre datos GTFS | Rubén |
 | `trenes` | Búsqueda por origen/destino/fecha, detalle, retrasos, posiciones | Rubén |
 | `reservas` | Asientos y reservas simulados | Rubén |
