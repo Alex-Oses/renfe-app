@@ -31,9 +31,10 @@ feat/…         ●●    ●         ●●                ← tu trabajo, squ
 | Reglas de ramas | `scripts/ramas.mjs` | Única definición de tipos/áreas, la usan hooks, scripts y CI |
 | Pruebas de esas reglas | `scripts/ramas.test.mjs` | `pnpm test:ramas`: comprueba que el patrón acepta las ramas del equipo y las de Dependabot |
 | Workflow `PR` | `.github/workflows/pr.yml` | Valida nombre de rama, destino (a `main` solo desde develop/hotfix) y título del PR; etiqueta por carpeta |
+| Título del PR | `commitlint.pr.config.mjs` | Conventional Commits flexible: el tipo no distingue mayúsculas, el ámbito es libre y el título puede tener hasta 120 caracteres |
 | Workflow `CI` | `.github/workflows/ci.yml` | En cada push y PR: `install`, `lint`, `test`, `test:ramas`, e2e de la API y `build` de todo el monorepo; check único `CI / ok` |
 | Revisores | `.github/CODEOWNERS` | Pide revisión al responsable de cada carpeta |
-| Dependencias | `.github/dependabot.yml` | PRs semanales de actualización contra `develop`. Sus ramas (`dependabot/*`) no cumplen el patrón del equipo y están exentas de esa comprobación |
+| Dependencias | `.github/dependabot.yml` | Actualizaciones de versión desactivadas (`open-pull-requests-limit: 0`): no se abren PRs de dependencias. Los avisos/PRs de seguridad se activan aparte en Settings > Code security |
 | Config de GitHub | `scripts/configurar-github.sh` | Protección de ramas, tipos de merge, labels y milestones (una vez) |
 | Agentes de IA | `AGENTS.md`, `/rama`, `/pr` | Las IAs siguen el mismo flujo |
 
@@ -84,7 +85,7 @@ Si después de `pnpm sync` la rama ya estaba subida: `git push --force-with-leas
 ## Pull requests
 
 - Contra `develop`, plantilla rellena, `Closes #N`.
-- Título = commit final (squash): `feat(mobile): pantalla de búsqueda de trenes`.
+- Título = commit final (squash): `feat(mobile): pantalla de búsqueda de trenes`. El check del título es flexible (tipo sin distinguir mayúsculas, cualquier ámbito y hasta 120 caracteres); los commits siguen las reglas estrictas de `commitlint.config.mjs`.
 - 1 aprobación de CODEOWNERS + `CI / ok` + `PR / reglas` + conversaciones resueltas.
 - Quien abre el PR lo mergea tras la aprobación ("Squash and merge"). La rama se borra sola.
 - PRs pequeños: mejor 3 PRs de 150 líneas que uno de 450.
