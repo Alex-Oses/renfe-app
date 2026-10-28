@@ -1,0 +1,55 @@
+import "@/polyfills"; // antes que @renfe/shared: usa localStorage y crypto
+import {
+  InstrumentSans_400Regular,
+  InstrumentSans_500Medium,
+  InstrumentSans_600SemiBold,
+  InstrumentSans_700Bold,
+  useFonts,
+} from "@expo-google-fonts/instrument-sans";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { configurarApi } from "@renfe/shared/api/cliente";
+import { colores, fuentes } from "@/tema";
+
+export { ErrorBoundary } from "expo-router";
+
+// Sin EXPO_PUBLIC_API_URL, datos simulados; el mapa tira de la API de Render por defecto.
+configurarApi({
+  api: process.env.EXPO_PUBLIC_API_URL,
+  posiciones: process.env.EXPO_PUBLIC_POSICIONES_URL || "https://renfe-api.onrender.com",
+});
+
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const [cargadas, error] = useFonts({
+    InstrumentSans_400Regular,
+    InstrumentSans_500Medium,
+    InstrumentSans_600SemiBold,
+    InstrumentSans_700Bold,
+  });
+  useEffect(() => {
+    if (cargadas || error) SplashScreen.hideAsync();
+  }, [cargadas, error]);
+  if (!cargadas && !error) return null;
+
+  return (
+    <>
+      <StatusBar style="dark" />
+      <Stack
+        screenOptions={{
+          headerTintColor: colores.marca,
+          headerTitleStyle: { fontFamily: fuentes.seminegrita, color: colores.titulo },
+          contentStyle: { backgroundColor: colores.fondo },
+          headerBackTitle: "Atrás",
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="pasajero" options={{ title: "Datos del pasajero" }} />
+        <Stack.Screen name="billete/[id]" options={{ title: "Billete", presentation: "modal" }} />
+      </Stack>
+    </>
+  );
+}
