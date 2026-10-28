@@ -1439,7 +1439,7 @@ a.boton {
    saturación, borde especular, reflejo interior arriba y sombra suave. */
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .cabecera.cristal,
-  .pestanas.cristal {
+  .barra-pestanas.cristal {
     background:
       linear-gradient(180deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0) 55%) padding-box,
       linear-gradient(var(--cristal-liquido), var(--cristal-liquido)) padding-box,
@@ -1457,7 +1457,7 @@ a.boton {
 }
 
 /* Barra inferior flotante tipo tab bar (solo móvil) */
-.pestanas {
+.barra-pestanas {
   display: none;
 }
 
@@ -1470,7 +1470,7 @@ a.boton {
     scroll-padding-bottom: calc(var(--alto-barra) + var(--esp-6) + env(safe-area-inset-bottom));
   }
 
-  .pestanas {
+  .barra-pestanas {
     position: fixed;
     left: var(--esp-3);
     right: var(--esp-3);
@@ -1483,7 +1483,7 @@ a.boton {
     border-radius: var(--radio-pildora);
   }
 
-  .pestana {
+  .barra-pestana {
     display: grid;
     justify-items: center;
     align-content: center;
@@ -1500,12 +1500,12 @@ a.boton {
     transition: background var(--dur-corta) ease, color var(--dur-corta) ease;
   }
 
-  .pestana.active {
+  .barra-pestana.active {
     color: var(--morado);
     background: rgb(129 0 94 / 0.12);
   }
 
-  .pestana:active {
+  .barra-pestana:active {
     transform: scale(0.94);
   }
 
@@ -1517,7 +1517,7 @@ a.boton {
 
 @media (prefers-reduced-transparency: reduce) {
   .cabecera.cristal,
-  .pestanas.cristal {
+  .barra-pestanas.cristal {
     background: var(--blanco);
     border-color: var(--linea);
     -webkit-backdrop-filter: none;

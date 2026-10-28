@@ -332,9 +332,9 @@ export function Cabecera() {
           {idiomas}
         </div>
       </header>
-      <nav aria-label="Accesos rápidos" className="pestanas cristal cristal--fuerte">
+      <nav aria-label="Accesos rápidos" className="barra-pestanas cristal cristal--fuerte">
         {[...PESTANAS, { a: sesion ? "/cuenta" : "/acceder", texto: "Cuenta", d: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" }].map((p) => (
-          <NavLink key={p.texto} to={p.a} end className="pestana">
+          <NavLink key={p.texto} to={p.a} end className="barra-pestana">
             <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d={p.d} />
             </svg>
