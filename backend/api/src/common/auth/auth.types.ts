@@ -1,4 +1,4 @@
-export type Rol = 'viajero' | 'revisor';
+export type Rol = 'viajero' | 'revisor' | 'admin';
 
 export interface UsuarioAutenticado {
   id: string;

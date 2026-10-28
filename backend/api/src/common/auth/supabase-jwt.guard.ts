@@ -44,7 +44,9 @@ export class SupabaseJwtGuard implements CanActivate {
 // El rol vive en app_metadata (lo pone el backend, no el usuario).
 function leerRol(payload: JWTPayload): Rol {
   const appMetadata = payload.app_metadata as { rol?: unknown } | undefined;
-  return appMetadata?.rol === 'revisor' ? 'revisor' : 'viajero';
+  return appMetadata?.rol === 'revisor' || appMetadata?.rol === 'admin'
+    ? appMetadata.rol
+    : 'viajero';
 }
 
 // shortcut: solo HS256 (secreto JWT de Supabase). Si el proyecto usa claves

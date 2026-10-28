@@ -89,8 +89,12 @@ La API no decide nada: llama a las funciones de Postgres y traduce el `SQLSTATE`
 se expone al cliente** (es un oráculo para reconstruir la plantilla); todos los fallos se responden con
 el mismo `401`.
 
-Todavía no hay endpoints privados: los guards están listos para cuando lleguen `/auth`, `/reservas`
-y `/billetes`. El contrato de auth está en `obsidian/02-contratos-api/endpoints.md`.
+Código en `src/modules/auth/`: `POST /auth/cara/registrar` y `POST /auth/cara/reset` piden el `Bearer`
+del login con contraseña; `POST /auth/cara/verificar` es público. El contrato está en
+`obsidian/02-contratos-api/endpoints.md`.
+
+`/auth/registro` y `/auth/login` con contraseña todavía no existen (los emite Supabase Auth), y
+`/reservas` y `/billetes` llegarán después.
 
 ## Módulos previstos
 
