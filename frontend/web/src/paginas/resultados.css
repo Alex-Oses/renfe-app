@@ -43,6 +43,7 @@
   margin: 0 0 var(--esp-4);
   padding: 0 0 var(--esp-1);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .calendario-precios a {

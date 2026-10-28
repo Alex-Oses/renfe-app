@@ -129,7 +129,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 10;
+  z-index: var(--z-panel);
   padding: 0.75rem 1rem;
   background: var(--blanco, #fff);
   border-top: 1px solid var(--linea, #d9dfe5);
@@ -200,6 +200,7 @@
   display: flex;
   gap: 0.4rem;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   padding-bottom: 0.25rem;
 }
 
@@ -617,6 +618,18 @@
 @media (max-width: 899px) {
   .resumen {
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Con la barra de pestañas visible, el resumen flota justo encima de ella */
+@media (max-width: 47.99rem) {
+  .resumen {
+    bottom: calc(var(--alto-barra) + var(--esp-4) + env(safe-area-inset-bottom));
+    left: var(--esp-3);
+    right: var(--esp-3);
+    padding-bottom: 0.75rem;
+    border: 1px solid var(--linea, #d9dfe5);
+    border-radius: var(--radio-grande, 20px);
   }
 }
 
