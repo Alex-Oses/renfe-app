@@ -21,7 +21,17 @@ tags: [handoff]
 - Decisiones de la app en [[ADR-005-app-movil-expo]] (contesta D1–D9 de [[2026-10-27-ruben-plan-app-movil]]). [[sprint-actual]] actualizado.
 - Vercel también despliega cuando cambia `frontend/shared` (`ignoreCommand`).
 
+### Segunda tanda (revisión de Alex)
+- **Cristal líquido** muy marcado en la cabecera y menús más difuminados. Por debajo de 48rem, barra inferior de pestañas como en la futura app. `prefers-reduced-transparency` deja todo opaco.
+- **Responsive** medido con CDP de 320 a 1280 px en 9 rutas, sin desbordes. Scrolls con `overscroll-behavior: contain`, `scroll-padding` y z-index de una sola escala.
+- **Imágenes**: 97 fotos de Wikimedia Commons (CC, con crédito) en destinos, rutas, estaciones, Cercanías y portada (`shared/contenido/imagenes.ts`, `componentes/Foto.tsx`). Donde no hay foto, relleno ilustrado.
+- **Abonos** (`/abonos`, «Mis abonos» en la cuenta): mensual AVE/LD, Avant, Cercanías y bono de 10, con QR firmado `RNA1` y la preferencia «Usar mi cara para validar». Endpoints **propuestos** en [[endpoints]].
+- **Tornos faciales**: sección «Próximamente» y [[ADR-006-tornos-faciales-futuro]].
+
 ## Qué queda
+- **Rubén:** revisar la propuesta `GET/POST /abonos` y `GET /abonos/:id` en [[endpoints]].
+- El revisor todavía no lee QR `RNA1` (abonos).
+- Precios de abonos fijos por tipo (shortcut).
 - Alex revisa la web y da la lista de mejoras.
 - Crear la app Expo en `frontend/mobile` cuando haya BD (Marina) y facial (Rubén).
 - La detección de estaciones desconocidas en `/trenes` solo funciona con datos simulados (shortcut comentado). Con la API real habrá que usar `GET /estaciones`.
