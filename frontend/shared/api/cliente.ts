@@ -93,6 +93,18 @@ const PRODUCTOS: [RegExp, TipoTren][] = [
 export const tipoDeFeed = (feed: string, nombre?: string | null): TipoTren =>
   feed === "cercanias" ? "Cercanías" : (PRODUCTOS.find(([r]) => r.test(nombre ?? ""))?.[1] ?? "Larga Distancia");
 
+// Renfe publica un mismo vehículo con varios viajes encadenados (tripId distinto, misma posición):
+// se deja uno por vehículo para que la lista y el mapa no lo repitan.
+export const unoPorVehiculo = (lista: PosicionApi[]): PosicionApi[] => {
+  const vistos = new Set<string>();
+  return lista.filter((p) => {
+    const clave = `${p.feed}:${p.vehicleId ?? p.tripId}`;
+    if (vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
+  });
+};
+
 const aPosicion = (p: PosicionApi): PosicionTren => ({
   trenId: `${p.feed}:${p.tripId}`,
   tipo: tipoDeFeed(p.feed, p.nombre),
@@ -122,7 +134,7 @@ async function posicionesVercel(): Promise<PosicionTren[]> {
   const r = await fetch(URL_TIEMPO_REAL!);
   if (!r.ok) throw new Error(`Tiempo real no disponible (${r.status})`);
   const { datos: lista } = (await r.json()) as Lista<PosicionApi>;
-  return lista.map(aPosicion);
+  return unoPorVehiculo(lista).map(aPosicion);
 }
 
 // Simula la latencia de red para que los estados de carga se vean igual que con la API real.
@@ -193,7 +205,7 @@ export async function posicionesTrenes(): Promise<PosicionTren[]> {
     const r = await fetch(`${BASE_POSICIONES}/posiciones`);
     if (!r.ok) throw new Error(`La API respondió ${r.status} en /posiciones`);
     posicionesReales = true;
-    return ((await r.json()) as Lista<PosicionApi>).datos.map(aPosicion);
+    return unoPorVehiculo(((await r.json()) as Lista<PosicionApi>).datos).map(aPosicion);
   }
   if (URL_TIEMPO_REAL) {
     try {
