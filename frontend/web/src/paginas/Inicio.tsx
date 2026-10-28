@@ -1,16 +1,18 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { nucleosCercanias } from "@renfe/shared/contenido/navegacion";
+import { fotos } from "@renfe/shared/contenido/imagenes";
+import { Foto } from "../componentes/Foto";
 import { EntradaTren } from "./inicio/EntradaTren";
 import "./inicio/inicio.css";
 
 const DESTINOS = [
-  { origen: "60000", destino: "71801", de: "Madrid", a: "Barcelona", duracion: "2 h 30 min", desde: 19 },
-  { origen: "60000", destino: "51003", de: "Madrid", a: "Sevilla", duracion: "2 h 35 min", desde: 19 },
-  { origen: "60000", destino: "65000", de: "Madrid", a: "València", duracion: "1 h 50 min", desde: 19 },
-  { origen: "60000", destino: "54413", de: "Madrid", a: "Málaga", duracion: "2 h 40 min", desde: 25 },
-  { origen: "71801", destino: "04040", de: "Barcelona", a: "Zaragoza", duracion: "1 h 25 min", desde: 19 },
-  { origen: "17000", destino: "37606", de: "Madrid", a: "León", duracion: "2 h 10 min", desde: 32 },
+  { origen: "60000", destino: "71801", de: "Madrid", a: "Barcelona", f: "barcelona", duracion: "2 h 30 min", desde: 19 },
+  { origen: "60000", destino: "51003", de: "Madrid", a: "Sevilla", f: "sevilla", duracion: "2 h 35 min", desde: 19 },
+  { origen: "60000", destino: "65000", de: "Madrid", a: "València", f: "valencia", duracion: "1 h 50 min", desde: 19 },
+  { origen: "60000", destino: "54413", de: "Madrid", a: "Málaga", f: "malaga", duracion: "2 h 40 min", desde: 25 },
+  { origen: "71801", destino: "04040", de: "Barcelona", a: "Zaragoza", f: "zaragoza", duracion: "1 h 25 min", desde: 19 },
+  { origen: "17000", destino: "37606", de: "Madrid", a: "León", f: "leon", duracion: "2 h 10 min", desde: 32 },
 ];
 
 const icono = (d: string) => (
@@ -42,10 +44,10 @@ const PROMOS = [
 ];
 
 const RUTAS = [
-  { t: "Norte verde", d: "Bilbao, Santander y Oviedo entre montaña y costa.", a: "/inspirate/rutas/norte-verde" },
-  { t: "Mediterráneo", d: "De Barcelona a Alicante pegados al mar.", a: "/inspirate/rutas/mediterraneo" },
-  { t: "Andalucía en tren", d: "Sevilla, Córdoba, Granada y Málaga sin coche.", a: "/inspirate/rutas/andalucia" },
-  { t: "Ciudades Patrimonio", d: "Toledo, Segovia, Salamanca y Ávila en escapadas cortas.", a: "/inspirate/rutas/ciudades-patrimonio" },
+  { t: "Norte verde", f: "santander", d: "Bilbao, Santander y Oviedo entre montaña y costa.", a: "/inspirate/rutas/norte-verde" },
+  { t: "Mediterráneo", f: "valencia", d: "De Barcelona a Alicante pegados al mar.", a: "/inspirate/rutas/mediterraneo" },
+  { t: "Andalucía en tren", f: "sevilla", d: "Sevilla, Córdoba, Granada y Málaga sin coche.", a: "/inspirate/rutas/andalucia" },
+  { t: "Ciudades Patrimonio", f: "toledo", d: "Toledo, Segovia, Salamanca y Ávila en escapadas cortas.", a: "/inspirate/rutas/ciudades-patrimonio" },
 ];
 
 const GESTIONA = [
@@ -122,6 +124,7 @@ export function Inicio() {
           {RUTAS.map((r, i) => (
             <li key={r.a}>
               <Link className={`ruta ruta--${i}`} to={r.a}>
+                <Foto foto={fotos[r.f]} alt="" categoria="inspirate" clase="ruta__foto" />
                 <h3>{r.t}</h3>
                 <p>{r.d}</p>
               </Link>
@@ -174,6 +177,7 @@ export function Inicio() {
           {DESTINOS.map((d) => (
             <li key={d.origen + d.destino}>
               <Link className="destino" to={`/trenes?${new URLSearchParams({ origen: d.origen, destino: d.destino, fecha: manana })}`}>
+                <Foto foto={fotos[d.f]} alt={`Vista de ${d.a}`} categoria="inspirate" clase="destino__foto" />
                 <span className="destino__ruta">
                   {d.de} <span aria-hidden="true">→</span>
                   <span className="sr"> a </span> {d.a}

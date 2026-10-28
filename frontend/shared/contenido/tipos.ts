@@ -1,7 +1,10 @@
 // Contrato de las páginas de contenido (secciones informativas tipo renfe.com).
 // Cada sección exporta `paginas: Pagina[]`; PaginaContenido las pinta por bloques.
 
-export type Tarjeta = { titulo: string; texto: string; enlace?: string; etiqueta?: string };
+/** Foto opcional: archivo de Wikimedia Commons (o URL) y crédito "autor, licencia". */
+export type ConImagen = { imagen?: string; autor?: string };
+
+export type Tarjeta = { titulo: string; texto: string; enlace?: string; etiqueta?: string } & ConImagen;
 
 export type Bloque =
   | { tipo: "texto"; titulo?: string; parrafos: string[] }
@@ -24,4 +27,4 @@ export type Pagina = {
   /** Primer segmento de la ruta: viajar, inspirate, cercanias, gestiona, ayuda, mas-renfe, legal */
   seccion: string;
   bloques: Bloque[];
-};
+} & ConImagen;
