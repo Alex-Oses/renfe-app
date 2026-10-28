@@ -1,11 +1,13 @@
 ---
 fecha: 2026-10-26
-estado: propuesto
+estado: obsoleto
 autor: Alex
 tags: [adr]
 ---
 
 # ADR-004 — Web primero (React en Vercel), API en Render y facial en el navegador
+
+> **Obsoleto en parte (28/10):** el Android con Capacitor y el facial en el navegador los sustituye [[ADR-005-app-movil-expo]]. Siguen vigentes la web en Vercel y la API en Render.
 
 Sustituye partes de [[ADR-001-stack-tecnologico]]: frontend, despliegue y servicio facial. El resto sigue igual.
 
