@@ -800,3 +800,22 @@ a.nav-grupo__paso:hover {
   display: grid;
   gap: 1.25rem;
 }
+
+/* Retraso en directo del tren: colores de los avisos (morado normal, frambuesa retraso) */
+.retraso-vivo {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  border-left: 4px solid var(--morado);
+  background: var(--blanco);
+  color: var(--morado-oscuro);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.retraso-vivo--tarde {
+  border-left-color: var(--frambuesa);
+  color: var(--frambuesa);
+}
