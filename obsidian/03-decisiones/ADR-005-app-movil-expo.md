@@ -21,7 +21,7 @@ Responde a la incidencia [[2026-10-27-ruben-plan-app-movil]] (D1–D9). Sustituy
 - **D4:** la app va en `frontend/mobile`.
 - **D5:** iOS y Android.
 - **D6:** Android como APK con EAS Build (perfil `preview`). En iOS, Expo Go para la demo. Para instalarla como app propia (TestFlight) hace falta una cuenta de Apple Developer.
-- **D7:** el facial vuelve a un servidor Python (Rubén). La app captura la imagen con `expo-camera` y la envía al servidor. Se guardan solo embeddings, nunca fotos. El contrato lo publica Rubén en [[endpoints]].
+- **D7:** el facial vuelve a un servidor propio (Rubén). **Actualizado el 28/10 (Alex): Rubén puede elegir la tecnología, no tiene que ser Python** (por ejemplo, Node/TypeScript dentro de la API). Condiciones: que funcione en el plan gratuito, que la app solo envíe la imagen o el embedding y que el contrato esté en [[endpoints]]. La app captura la imagen con `expo-camera` y la envía al servidor. Se guardan solo embeddings, nunca fotos. El contrato lo publica Rubén en [[endpoints]].
 - **D8:** ADR-004 queda **obsoleto** en Capacitor y en el facial en el navegador. Sigue vigente en la web en Vercel y la API en Render.
 - **D9:** se reescribe [[sprint-actual]] con la app dentro del alcance.
 
