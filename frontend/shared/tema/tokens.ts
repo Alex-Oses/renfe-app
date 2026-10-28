@@ -85,6 +85,7 @@ export const radios = {
 export const capas = {
   panel: 20,
   cabecera: 40,
+  barra: 50, // barra inferior móvil
   modal: 60,
   saltar: 100,
 } as const;
@@ -111,13 +112,15 @@ export const cristal = {
   fondo: {
     1: "rgba(255,255,255,0.74)",
     2: "rgba(255,255,255,0.84)",
-    3: "rgba(255,255,255,0.97)", // casi opaco para leerse sobre el mapa
+    3: "rgba(255,255,255,0.86)", // menús: menos opaco y más difuminado
   },
   borde: "rgba(255,255,255,0.75)",
-  // backdrop-filter: blur(18px) saturate(150%) / blur(28px) saturate(170%).
+  // backdrop-filter: blur(18px) saturate(150%) / blur(40px) saturate(170%).
   // RN no tiene backdrop-filter: con expo-blur, intensity no es px; habrá que calibrarlo.
   // La saturación no tiene equivalente.
-  desenfoque: { normal: 18, fuerte: 28 },
+  desenfoque: { normal: 18, fuerte: 40 },
+  // Cabecera y barra inferior: --cristal-liquido (0.72) y blur(24px) saturate(220%).
+  liquido: { fondo: "rgba(255,255,255,0.72)", desenfoque: 24 },
   // Brillo interior (inset 0 1px 0 blanco 0.9): en RN, un borde superior de 1px.
   brillo: "rgba(255,255,255,0.9)",
   // --cristal-luz es un degradado de borde (150deg); en RN necesita expo-linear-gradient.

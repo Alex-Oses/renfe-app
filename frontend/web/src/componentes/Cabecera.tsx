@@ -27,6 +27,14 @@ const MENUS: Menu[] = [
 
 const IDIOMAS = ["ES", "CA", "EN", "FR"];
 
+// Barra inferior en móvil (como la tab bar de la app). Trazos 24x24.
+const PESTANAS = [
+  { a: "/", texto: "Comprar", d: "M4 9V6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v3a2 2 0 0 0 0 4v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a2 2 0 0 0 0-4zM14 5v12" },
+  { a: "/mapa", texto: "En directo", d: "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" },
+  { a: "/billetes", texto: "Billetes", d: "M7 3h10a1 1 0 0 1 1 1v16l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1zM9 8h6M9 12h6" },
+  { a: "/lineas", texto: "Líneas", d: "M6 4v16M18 4v16M6 8h12M6 16h12" },
+];
+
 const Flecha = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="mega__flecha">
     <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -108,6 +116,13 @@ export function Cabecera() {
     setMenu(false);
     setMega(null);
   }, [pathname]);
+
+  // Con el cajón abierto la página de debajo no se desplaza.
+  useEffect(() => {
+    if (!menu) return;
+    document.documentElement.classList.add("sin-scroll");
+    return () => document.documentElement.classList.remove("sin-scroll");
+  }, [menu]);
 
   useEffect(() => {
     if (menu) panel.current?.querySelector<HTMLElement>("a, summary")?.focus();
@@ -317,6 +332,16 @@ export function Cabecera() {
           {idiomas}
         </div>
       </header>
+      <nav aria-label="Accesos rápidos" className="pestanas cristal cristal--fuerte">
+        {[...PESTANAS, { a: sesion ? "/cuenta" : "/acceder", texto: "Cuenta", d: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" }].map((p) => (
+          <NavLink key={p.texto} to={p.a} end className="pestana">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d={p.d} />
+            </svg>
+            {p.texto}
+          </NavLink>
+        ))}
+      </nav>
     </>
   );
 }
