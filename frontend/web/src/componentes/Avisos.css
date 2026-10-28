@@ -54,7 +54,7 @@
   min-width: 44px;
   min-height: 44px;
 }
-.emergente__cerrar { min-width: 32px; min-height: 32px; margin: -0.35rem -0.35rem 0 0; }
+.emergente__cerrar { margin: -0.6rem -0.6rem 0 0; }
 .emergente__cerrar:hover,
 .campana__boton:hover { background: rgb(129 0 94 / 0.08); }
 
@@ -142,5 +142,5 @@
 @media (prefers-reduced-motion: reduce) {
   .emergente,
   .emergente--saliendo,
-  .campana__panel { animation: none; }
+  .campana__panel { animation: fundido 150ms ease-out both !important; }
 }

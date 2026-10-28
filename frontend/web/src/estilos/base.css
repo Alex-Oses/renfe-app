@@ -4,7 +4,7 @@
   --frambuesa: #d62d61;
   --niebla: #eff3f6;
   --grafito: #464646;
-  --gris: #6b6b6b;
+  --gris: #5c5c5c;
   --linea: #d9dfe5;
   --blanco: #ffffff;
   --radio: 12px;
@@ -12,10 +12,10 @@
   --radio-pildora: 999px;
 
   /* Cristal: blanco translúcido sobre el fondo con manchas de color.
-     Opacidad mínima 0.72 para que --gris (#6b6b6b) siga por encima de 4.5:1. */
+     Opacidad mínima 0.72 para que --gris (#5c5c5c) siga por encima de 4.5:1. */
   /* Tres niveles de superficie: 1 tarjetas, 2 paneles/cabecera, 3 menús flotantes.
      Contraste medido en el peor caso (mancha morada al máximo bajo el cristal):
-     --gris sobre nivel 1 = 4.7:1, sobre nivel 2 = 4.9:1; --grafito y --morado > 8:1. */
+     --gris sobre nivel 1 = 5.6:1, sobre nivel 2 = 5.9:1; --grafito y --morado > 8:1. */
   --cristal-1: rgb(255 255 255 / 0.74);
   --cristal-2: rgb(255 255 255 / 0.84);
   --cristal-3: rgb(255 255 255 / 0.97); /* menús flotantes: casi opacos para leerse sobre el mapa */
@@ -50,7 +50,7 @@
   --dur-media: 280ms;
   --dur-larga: 520ms;
   --curva-salida: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --curva-muelle: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --curva-muelle: cubic-bezier(0.16, 1, 0.3, 1); /* ease-out-expo, sin rebote */
 
   /* Espaciado (base 4px) */
   --esp-1: 0.25rem;
@@ -97,6 +97,7 @@ body {
   background-attachment: fixed;
   min-height: 100vh;
   isolation: isolate;
+  text-wrap: pretty;
   display: flex;
   flex-direction: column;
 }
@@ -147,6 +148,7 @@ h1,
 h2 {
   color: var(--morado-oscuro);
   line-height: 1.15;
+  text-wrap: balance;
   margin: 0 0 0.5em;
 }
 
@@ -447,8 +449,8 @@ a.mega__titulo:hover {
 }
 
 .idioma__opcion {
-  min-width: 34px;
-  min-height: 34px;
+  min-width: 44px;
+  min-height: 44px;
   border: 0;
   border-radius: var(--radio-pildora);
   background: transparent;
@@ -669,7 +671,7 @@ a.mega__titulo:hover {
 }
 
 .parada__campo::placeholder {
-  color: #a3a3a3;
+  color: var(--gris);
   font-weight: 500;
 }
 
@@ -1383,17 +1385,31 @@ a.boton {
   *,
   *::before,
   *::after {
+    /* Sin desplazamientos ni escalas; los colores y opacidades siguen transicionando */
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     animation-delay: 0ms !important;
-    transition-duration: 0.01ms !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
     transition-delay: 0ms !important;
     scroll-behavior: auto !important;
+  }
+  :active {
+    transform: none !important;
   }
   .cabecera--oculta {
     transform: none;
   }
+  /* Las entradas se sustituyen por un fundido corto en vez de aparecer de golpe */
+  .aparece-escalonado {
+    animation: fundido 150ms ease-out both !important;
+  }
   body::before {
     animation: none;
+  }
+}
+
+@keyframes fundido {
+  from {
+    opacity: 0;
   }
 }
