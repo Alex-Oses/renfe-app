@@ -26,7 +26,7 @@ tags: [handoff]
 ## Bloqueos / preguntas para otros
 
 - **Kevin:** la protección de `develop`/`main` ya está aplicada con 3 aprobaciones y admins incluidos. Revisa la política, el script y dime si ves algún problema para la entrega.
-- Cualquier PR nuevo (incluido #75) ya exige 3 aprobaciones; si alguien no está disponible, el merge espera.
+- Cualquier PR nuevo (por ejemplo, los de Marina) ya exige 3 aprobaciones; si alguien no está disponible, el merge espera.
 - El check `PR / reglas` de este PR usa la versión nueva del workflow (misma rama), así que valida el título flexible desde el primer momento.
 
 ## Cambios en contratos
