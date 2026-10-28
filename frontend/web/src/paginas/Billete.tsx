@@ -5,6 +5,7 @@ import { misBilletes, obtenerBillete } from "@renfe/shared/api/cliente";
 import type { Billete as TBillete } from "@renfe/shared/api/tipos";
 import { fecha, hora } from "./reserva/formato";
 import Cartera from "./billetes/Cartera";
+import RetrasoVivo from "./billetes/RetrasoVivo";
 import "./billetes.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
 
@@ -82,6 +83,7 @@ export default function Billete() {
             {b.tren.tipo} {b.tren.numero}
           </span>
           <EstadoViaje salida={b.tren.salida} llegada={b.tren.llegada} />
+          <RetrasoVivo tren={b.tren} />
         </header>
         <div className="pase__ruta">
           <div>

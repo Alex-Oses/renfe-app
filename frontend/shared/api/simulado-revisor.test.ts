@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { crearQr } from "./qr-billete";
+import { crearQr, firmarQr } from "./qr-billete";
+import { PREFIJO_QR_ABONO } from "./simulado-abonos";
 import { _olvidarValidaciones, validarBillete } from "./simulado-revisor";
 import type { Billete } from "./tipos";
 
@@ -39,5 +40,28 @@ describe("validarBillete (sin API)", () => {
     const r = await validarBillete("RNF1.e30.AAAA", ahora);
     expect(r.estado).toBe("falso");
     expect(r.billete).toBeUndefined();
+  });
+});
+
+describe("validarBillete con abonos (RNA1)", () => {
+  const datos = (o: Partial<{ vr: number | null; ini: string; fin: string }> = {}) => ({
+    v: 1, id: `AB-${JSON.stringify(o)}`, t: "bono-10", o: "Madrid", d: "Toledo", ini: "2026-11-01", fin: "2026-12-30", vr: 2, p: "Lucía Pérez Gómez", ...o,
+  });
+
+  it("bono válido: enseña titular enmascarado y descuenta un viaje en cada lectura", async () => {
+    const qr = await firmarQr(PREFIJO_QR_ABONO, datos());
+    const r1 = await validarBillete(qr, ahora);
+    expect(r1).toMatchObject({ estado: "valido", abono: { nombre: "Bono 10 viajes", titular: "Lucía P. G.", origen: "Madrid", viajesRestantes: 1 } });
+    expect((await validarBillete(qr, ahora)).abono?.viajesRestantes).toBe(0);
+    expect((await validarBillete(qr, ahora)).estado).toBe("agotado");
+  });
+
+  it("abono sin límite no descuenta; caducado, pendiente y sin viajes se rechazan", async () => {
+    const r = await validarBillete(await firmarQr(PREFIJO_QR_ABONO, { ...datos({ vr: null }), t: "avant-mensual" }), ahora);
+    expect(r).toMatchObject({ estado: "valido", abono: { viajesRestantes: null } });
+    expect((await validarBillete(await firmarQr(PREFIJO_QR_ABONO, datos({ fin: "2026-11-01" })), ahora)).estado).toBe("caducado");
+    expect((await validarBillete(await firmarQr(PREFIJO_QR_ABONO, datos({ ini: "2026-11-10" })), ahora)).estado).toBe("otro_dia");
+    expect((await validarBillete(await firmarQr(PREFIJO_QR_ABONO, datos({ vr: 0 })), ahora)).estado).toBe("agotado");
+    expect((await validarBillete("RNA1.e30.AAAA", ahora)).estado).toBe("falso");
   });
 });

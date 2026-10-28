@@ -403,6 +403,8 @@ y las horas**. Propuesta: añadir a cada elemento de `datos` estos campos, **tod
 
 ## POST /billetes/validar — propuesto (Alex, 2026-10-27) · para Rubén
 
+> **Ampliado (Alex, 2026-10-28):** también acepta QR de abonos (prefijo `RNA1.`). Estados nuevos: `agotado` (bono sin viajes) y `otro_dia` (abono aún no vigente). Con un abono válido la respuesta trae `abono` (tipo, titular enmascarado, trayecto, validez y viajes restantes) y, si es un bono, se descuenta un viaje.
+
 Descripción: el revisor escanea el QR; la API comprueba firma, existencia, estado de la reserva y
 fechas, y **apunta la validación** (la primera vez).
 Auth: **sí**, rol `revisor` o `admin` (`403` si no).
