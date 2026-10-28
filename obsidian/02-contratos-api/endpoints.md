@@ -7,7 +7,7 @@ tags: [contrato, api]
 # 🔌 Endpoints de la API
 
 > **Fuente de verdad** entre frontend y backend. Se actualiza ANTES de implementar.
-> Base URL local: `http://localhost:3000` · Auth: `Authorization: Bearer <jwt de Supabase>`
+> Base URL local: `http://localhost:3000` · Auth: `Authorization: Bearer <jwt>`
 > **El contrato lo manda la API**: el frontend se adapta a estos shapes, no al revés.
 
 ## Convenciones
@@ -30,10 +30,19 @@ insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
 
 ## Autenticación
 
-- El token lo emite **Supabase Auth**; la API solo lo verifica (HS256 con `SUPABASE_JWT_SECRET`).
-- Identidad: `sub` (uuid de usuario) y `email`.
-- Rol: claim `app_metadata.rol` → `"viajero"` (por defecto), `"revisor"` o `"admin"` (propuesto, Alex 2026-10-27; `admin` también puede validar).
+- Dos formas de entrar, **un solo formato de token** (HS256 con `SUPABASE_JWT_SECRET`):
+  - **Contraseña**: el token lo emite **Supabase Auth**; la API solo lo verifica. Trae
+    `access_token` + `refresh_token`.
+  - **Cara**: la API firma el token cuando `verificar_cara` dice que coincide. Ver
+    [[ADR-005-reconocimiento-facial]]. **Sin `refresh_token`**: dura 12 h y después hay que volver a
+    mirar a la cámara.
+- Claims del token: `sub` (uuid), `email`, `app_metadata.rol` (`viajero` \| `revisor` \| `admin`),
+  `iat` y `exp`. El facial los rellena igual que Supabase para que el guard no distinga cómo se entró.
+- Rol `admin` (propuesto por Alex, 2026-10-27): además de `revisor`, puede validar billetes.
 - Los endpoints públicos no llevan token. Los privados exigen `Authorization: Bearer <jwt>`.
+- **Aviso para Marina**: si el proyecto nuevo firma con claves asimétricas (ES256/JWKS) en vez del
+  secreto compartido, el guard actual (`algorithms: ['HS256']`) rechaza también los tokens de la
+  contraseña. Hay que mirarlo al crear el proyecto.
 
 
 ## Plantilla por endpoint
@@ -61,8 +70,9 @@ Estado: propuesto | implementado | cambiado (fecha)
 | GET | `/health` | Estado del servicio (infra) | implementado |
 | POST | `/auth/registro` | Alta de usuario | propuesto |
 | POST | `/auth/login` | Login email/contraseña | propuesto |
-| POST | `/auth/cara/registrar` | Guardar embedding facial | propuesto |
-| POST | `/auth/cara/verificar` | Login facial | propuesto |
+| POST | `/auth/cara/registrar` | Guardar embedding facial (una sola vez) | propuesto · **detallado** |
+| POST | `/auth/cara/verificar` | Login facial | propuesto · **detallado** |
+| POST | `/auth/cara/reset` | Admin borra la plantilla de un usuario | propuesto · **detallado** |
 | GET | `/trenes/:feed/:tripId/asientos?fecha=` | Asientos disponibles (simulado) | propuesto |
 | POST | `/reservas` | Crear reserva | propuesto |
 | POST | `/pagos/intent` | PaymentIntent Stripe test | propuesto |
@@ -549,14 +559,112 @@ y `p` (nombre del titular). El revisor y los tornos tendrán que aceptar `RNA1` 
 Sin endpoint de momento: la web solo la guarda en el navegador y solo se puede activar si el
 usuario tiene la cara registrada. Cuando haya tornos faciales hará falta guardarla en la API.
 
+## POST /auth/cara/registrar
+
+Descripción: guarda la plantilla facial del usuario autenticado. **Una sola vez**: si ya existe, no se
+puede cambiar (el `reset` lo hace un `admin`). El vector lo calcula el dispositivo; la imagen nunca
+sale de él.
+Auth: **sí** (token del login con contraseña)
+
+Request:
+
+```json
+{
+  "embedding": [0.031, -0.118, 0.204],
+  "modelo": "arcface/buffalo_l"
+}
+```
+
+`embedding`: exactamente **512** floats (ArcFace). `modelo` tiene que ser el de `config_cara`.
+
+Response 204: sin cuerpo.
+
+Errores: `400` embedding de otra dimensión, vector vacío o modelo distinto · `401` token ausente o
+inválido · `404` el usuario no existe · `409` la cara ya estaba registrada · `503` BD caída.
+
+Notas:
+
+- La API solo llama a `registrar_cara(...)` en Postgres, que valida dimensión, modelo, normaliza
+  (L2 = 1) y hace el alta. La tabla no tiene políticas RLS: ni `anon` ni `authenticated` pueden leerla.
+- Cada fallo de la función trae su **SQLSTATE**, así que la API no compara textos:
+  `RF001` modelo distinto → 400 · `RF002` dimensión → 400 · `RF003` vector vacío → 400 ·
+  `RF004` ya registrada → 409 · `RF005` usuario inexistente → 404 · `RF006` no autorizado → 403.
+- Si el registro sale mal (foto borrosa), solo un `admin` puede borrarlo con `/auth/cara/reset`.
+
+## POST /auth/cara/reset
+
+Descripción: borra la plantilla facial de un usuario para que pueda volver a registrarse. Es la única
+forma de rehacer un registro malo, porque la cara no se puede cambiar.
+Auth: **sí**, y el token tiene que ser de un `admin`.
+
+Request:
+
+```json
+{ "usuarioId": "6f1c…" }
+```
+
+Response 204: sin cuerpo.
+
+Errores: `400` falta `usuarioId` · `401` token ausente o inválido · `403` el que llama no es `admin` ·
+`503` BD caída.
+
+Notas: la API pasa su propio `sub` y el `usuarioId` a `resetear_cara(...)`, y **Postgres** comprueba el
+rol contra `app_metadata`; la API no decide nada. Si el usuario no tenía plantilla, no hace nada.
+
+## POST /auth/cara/verificar
+
+Descripción: login facial. Compara el vector con la plantilla del email y, si coincide, devuelve una
+sesión.
+Auth: **no** (es el propio login)
+
+Request:
+
+```json
+{
+  "email": "ana@ejemplo.es",
+  "embedding": [0.031, -0.118, 0.204]
+}
+```
+
+Response 200: mismo shape que `/auth/login`.
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "usuario": {
+    "id": "6f1c…",
+    "nombre": "Ana",
+    "email": "ana@ejemplo.es",
+    "rol": "viajero",
+    "caraRegistrada": true
+  }
+}
+```
+
+Errores: `400` embedding inválido · `401` **siempre el mismo mensaje**, sea «no hay plantilla», «no
+coincide» o «modelo distinto» · `503` BD caída.
+
+Notas:
+
+- La decisión es de Postgres (`verificar_cara`): umbral de `config_cara` y similitud coseno de pgvector.
+- **No se devuelve la similitud.** Un número de similitud por intento es un oráculo que permite
+  reconstruir la plantilla probando vectores; se mide con SQL cuando toque ajustar el umbral.
+- El token es el mismo formato que el de la contraseña (HS256 con el secreto compartido), así que hay
+  un solo guard. Ver [[ADR-005-reconocimiento-facial]].
+- No hay límite de intentos todavía (fase F7): el facial es alternativa a la contraseña, nunca el
+  único factor.
+
 ## Pendientes de detallar
 
-`/auth/*`, `/trenes/:feed/:tripId/asientos`, `/reservas`, `/pagos/*`, `/billetes*` y `/chatbot/mensaje`
-no dependen de GTFS. Se detallan en el sprint que los implemente, siempre aquí antes del código.
+`/auth/registro`, `/auth/login`, `/trenes/:feed/:tripId/asientos`, `/reservas`, `/pagos/*`,
+`/billetes*` y `/chatbot/mensaje` no dependen de GTFS. Se detallan en el sprint que los implemente,
+siempre aquí antes del código.
 
 ## Historial
 
 - 2026-10-28 — Propuestas por la web `GET/POST /abonos` y `GET /abonos/:id` (Alex).
+- 2026-10-28 — Detallados `/auth/cara/registrar`, `/auth/cara/verificar` y `/auth/cara/reset`
+  (ADR-005: ArcFace 512, lógica en Postgres, JWT propio).
 - 2026-10-26 — Añadidas y detalladas las 6 rutas de datos (estaciones, viajes, posiciones, incidencias).
   Renombradas a `/trenes/:feed/:tripId` para evitar ids compuestos en la URL.
 - 2026-10-26 — Creado el catálogo inicial con 17 rutas propuestas.

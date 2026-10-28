@@ -39,7 +39,7 @@ tags: [contrato, base-datos]
 ```mermaid
 erDiagram
   auth_users ||--|| perfiles : "1:1"
-  perfiles ||--o| embeddings_faciales : "1:1"
+  auth_users ||--o| embeddings_faciales : "1:1"
   perfiles ||--o{ reservas : "hace"
   perfiles ||--o{ billetes : "tiene"
   perfiles ||--o{ validaciones : "revisa"
@@ -76,7 +76,7 @@ Extiende `auth.users` (que gestiona Supabase Auth y no se toca).
 | columna | tipo | null | notas |
 |---|---|---|---|
 | `id` | `uuid` | no | PK, `references auth.users(id) on delete cascade` |
-| `rol` | `text` | no | `viajero` \| `revisor`, default `viajero` |
+| `rol` | `text` | no | `viajero` \| `revisor` \| `admin`, default `viajero` |
 | `nombre` | `text` | no | para saludar y para el revisor |
 | `creado_en` | `timestamptz` | no | default `now()` |
 | `actualizado_en` | `timestamptz` | no | default `now()` |
@@ -86,28 +86,46 @@ Un trigger mágico esconde el flujo y complica los tests; así la API lo hace en
 transacción lógica que el alta.
 **`rol` no lo puede cambiar el usuario:** solo lo toca la API con `service_role`.
 
-**RLS:** `select`/`update` del propio perfil. El `update` no puede tocar `rol`
-(política con `using (id = auth.uid())` y `with check` que compara `rol` con el actual).
+**RLS:** `select`/`update` del propio perfil. **`rol` no lo puede cambiar el usuario**: a
+`authenticated` solo se le concede `update (nombre)` a nivel de columna, así que `rol` es inmutable
+para él sin necesidad de trigger. El resto de columnas las toca la API con `service_role`.
 
-**Índices:** PK basta. Índice parcial `(rol) where rol = 'revisor'` para el panel del revisor.
+**Índices:** PK basta. Índice parcial `(rol) where rol <> 'viajero'` para el panel del revisor y el
+del admin.
 
 ### 3.2 `embeddings_faciales`
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `usuario_id` | `uuid` | no | PK, FK a `perfiles` `on delete cascade` |
+| `usuario_id` | `uuid` | no | PK, FK a `auth.users` `on delete cascade` |
 | `embedding` | `vector(512)` | no | InsightFace, normalizado (L2 = 1) |
-| `modelo` | `text` | no | p. ej. `insightface/buffalo_l`; permite invalidar al cambiar de modelo |
+| `modelo` | `text` | no | p. ej. `arcface/buffalo_l`; permite invalidar al cambiar de modelo |
 | `creado_en` | `timestamptz` | no | default `now()` |
 
-**Diseño:** 1:1 con el perfil (verificación 1:1: la app dice quién es y se compara). Si algún día
+**Diseño:** 1:1 con el usuario (verificación 1:1: la app dice quién es y se compara). Si algún día
 se quiere 1:N («¿quién es esta cara?») se cambia la PK a `(usuario_id, modelo)` y se añade
 índice; hoy no hace falta. **Nunca se guarda la foto**, solo el vector.
 
+La FK va a `auth.users` y **no a `perfiles`** a propósito: el facial es de Rubén y `perfiles` es de
+Marina, así que la migración del facial
+(`20261028120000_reconocimiento_facial.sql`) no toca ninguna tabla de ella y se puede aplicar en
+cualquier orden. El rol `admin` del reset se lee de `app_metadata`, igual que en `SupabaseJwtGuard`.
+
 **RLS:** **ninguna política** para `anon` ni `authenticated` → nadie lee el embedding desde la app.
-Solo `service_role` (la API). La comparación la hace la API o el face-service, nunca el móvil.
+Solo `service_role` (la API). La comparación la hace Postgres en `verificar_cara`, nunca el móvil.
 
 **Índices:** PK. Índice HNSW (`vector_cosine_ops`) solo si en el futuro se hace búsqueda 1:N.
+
+**Reglas, todas en funciones `security definer`** (ver [[ADR-005-reconocimiento-facial]]):
+
+- `registrar_cara(usuario, embedding, modelo)`: valida modelo y dimensión, normaliza y hace el alta.
+  Falla con `cara_ya_registrada` si ya existe: **la cara se registra una sola vez**.
+- `verificar_cara(email, embedding)`: similitud coseno contra `config_cara.umbral`; devuelve
+  `coincide`, `similitud` y `motivo` (`ok` \| `sin_plantilla` \| `modelo_distinto` \| `no_coincide`).
+- `resetear_cara(admin, usuario)`: borra la plantilla; lee el rol de `app_metadata` dentro de Postgres
+  y solo deja pasar a `admin`.
+- `config_cara` (una fila): `modelo` y `umbral`. El umbral es **dato, no código**, y se mide con ~10
+  intentos propios y ~10 ajenos.
 
 ## 4. Catálogo GTFS (datos reales de Renfe)
 
