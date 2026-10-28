@@ -104,6 +104,7 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
           <span className="ticket__relleno" aria-hidden="true" />
         )}
         {hoy && !pasado && <span className="ticket__hoy">Sale hoy</span>}
+        {pasado && <span className="ticket__hoy ticket__hoy--hecho">Realizado</span>}
       </div>
 
       <div className="ticket__cuerpo">
