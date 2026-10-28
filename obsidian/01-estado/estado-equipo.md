@@ -12,7 +12,7 @@ tags: [estado]
 |---|---|---|---|---|---|
 | Alex | PO + Frontend | 🟢 | Lógica común en `@renfe/shared` (web + futura app), mejora de la UI de la web y decisiones de la app en [[ADR-005-app-movil-expo]] | Para la app: BD (Marina) y facial (Rubén) | 2026-10-28 |
 | Rubén | Backend + chatbot | 🟢 | #47 abierto (retrasos reales, `paradaActual` y login facial), esperando 1 aprobación. Hecho: ADR-007 (ArcFace 512, sin servidor Python, decide Postgres), la migración `20261028120300_reconocimiento_facial.sql` (adaptada a `perfiles` de Marina) y las **3 rutas `/auth/cara/*` con tests**. Siguiente: migración mínima `gtfs_*` si Marina no vuelve antes del 29 | Necesita las migraciones de Marina (su rama no tiene PR) para validar el SQL; sin BD el facial no se puede probar | 2026-10-28 |
-| Marina | SM + Base de datos | 🟢 | Contrato [[modelo-datos]] v2 revisado contra los feeds reales y plan de ingesta en [[plan-ingesta-gtfs]]. Siguiente: migración del catálogo | — | 2026-10-28 |
+| Marina | SM + Base de datos | 🟢 | **Catálogo AV/LD cerrado en local**: migración validada en la VM, carga completa (1 035 estaciones / 663 rutas / 8 729 viajes / 69 670 horarios), integridad y consulta de la API en verde e **idempotencia demostrada**. Siguiente hito: Supabase Cloud + Render ([[supabase-nube]]) | Pendiente mergear 3 ramas (contrato v2 → migración → importador): necesita aprobación de Alex y CI verde | 2026-10-28 |
 | Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
 
 ## Bloqueos globales
