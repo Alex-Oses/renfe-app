@@ -3,9 +3,11 @@ responsable: Kevin
 tags: [area]
 ---
 
-# 🐳 Área DevOps y Stripe
+# 🐳 Área DevOps y despliegue
 
-**Código:** `docker-compose.yml`, `.github/` · **Estado:** placeholders
+**Código:** `docker-compose.yml`, `.github/`, `render.yaml` · **Estado:** CI y Render en marcha; Docker pendiente
+
+> **Cambio del 28/10:** el facial ya no es de esta área. [[ADR-007-reconocimiento-facial]] lo resuelve **sin servidor Python** (el vector lo calcula el dispositivo y decide Postgres), así que `backend/face-service` ha desaparecido. Mi lista queda: CI, despliegue (Render + Vercel) y **D10 (qué se dockeriza)**, que es lo único que me queda abierto además de las variables de Render.
 
 ## Hecho (sprint final, por Alex para descargar a Kevin)
 - CI real: `.github/workflows/ci.yml` ejecuta `pnpm install`, `pnpm lint`, `pnpm test`, `pnpm test:ramas`, los e2e de la API (`pnpm --filter @renfe/api test:e2e`) y `pnpm build` (job `ok`).
@@ -13,7 +15,7 @@ tags: [area]
 - Protección de ramas `main` y `develop`: GitHub las marca como protegidas (comprobado el 28/10).
 
 ## Revisión del 28/10 (Kevin)
-- **CI en verde de verdad**, no solo escrita: última ejecución sobre `develop` (`bd17135`) con todos los pasos en `success`.
+- **CI en verde de verdad**, no solo escrita: última ejecución sobre `develop` (`bd17135`) con todos los pasos en `success`. Y el 28/10, tras rebasar la rama sobre `develop` (`c99627d`, con el paquete `@renfe/shared` ya dentro), todo sigue en verde en local: lint, 53+16+49 tests, 4 e2e y build.
 - **`PR / reglas` bloqueaba a Dependabot**: el patrón de `scripts/ramas.mjs` no admitía `dependabot/*` y las PRs #20-#24 se cerraron sin mergear. Arreglado en la rama `ci/infra-revision-ci-dependabot`, con pruebas nuevas (`pnpm test:ramas`, `scripts/ramas.test.mjs`).
 - **Render está desplegado y vivo**: `GET https://renfe-api.onrender.com/health` → `200` con `"baseDatos":"no configurada"`. Lo único que falta son las variables de Supabase.
 - **Ojo con el health check**: `/health` responde `200` aunque la base de datos falle, y `render.yaml` lo usa como `healthCheckPath`, así que Render puede dar por bueno un despliegue sin datos. Pendiente hablarlo con Rubén (`backend/api`).
@@ -32,8 +34,8 @@ tags: [area]
 
 ## Pendiente
 - **Kevin:** mergear la PR de `ci/infra-revision-ci-dependabot` y rellenar `DATABASE_URL` y `SUPABASE_JWT_SECRET` en Render (bloqueado por Supabase en la nube).
-- Fuera de la entrega: build Docker
-- PoC InsightFace
-- Cuenta Stripe en modo test
+- **Kevin:** **D10 de [[ADR-005-app-movil-expo]]**: decidir qué se dockeriza y dejarlo funcionando con un comando. Los `Dockerfile` de `backend/api` y `backend/gtfs-worker` siguen siendo placeholders y **no** se pueden usar tal cual (asumen un proyecto autocontenido, sin monorepo pnpm).
+- Fuera de la entrega: cuenta Stripe en modo test.
+- El facial **no** es de esta área: [[ADR-007-reconocimiento-facial]] lo mete en la API (`backend/api/src/modules/auth/cara*`), sin `backend/face-service` ni PoC de InsightFace.
 
 ## Notas técnicas
