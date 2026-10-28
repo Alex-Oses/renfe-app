@@ -72,7 +72,7 @@ Detalle completo en `docs/flujo-trabajo.md`. Resumen para agentes:
 
 ### Pull requests
 - Siempre contra `develop`, con `.github/pull_request_template.md`. Título en formato Conventional Commits (será el commit final: se mergea con **squash**).
-- Enlaza la issue (`Closes #N`). Revisor automático por `CODEOWNERS`; necesita 1 aprobación y CI verde (`CI / ok`, `PR / reglas`).
+- Enlaza la issue (`Closes #N`). Revisor automático por `CODEOWNERS`; necesita 3 aprobaciones (todo el equipo; el autor no cuenta) y CI verde (`CI / ok`, `PR / reglas`).
 - A `main` solo llegan PRs desde `develop` (fin de sprint, merge commit, lo abre Alex) o `hotfix/*`.
 - Los agentes **no aprueban ni mergean PRs**; eso lo hacen las personas.
 

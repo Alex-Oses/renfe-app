@@ -16,7 +16,7 @@ feat/…         ●●    ●         ●●                ← tu trabajo, squ
 2. Cada tarea en su rama `<tipo>/<area>-<tema>`, creada con `pnpm rama`.
 3. Commits con Conventional Commits (`feat(api): ...`).
 4. Antes del PR: `pnpm sync` (rebase sobre develop) y tests en verde.
-5. PR contra `develop`, 1 aprobación (CODEOWNERS) + CI verde → **squash merge**.
+5. PR contra `develop`, 3 aprobaciones (todo el equipo; el autor no cuenta) + CI verde → **squash merge**.
 6. Fin de sprint: PR `develop → main` (merge commit) y tag `v0.<sprint>`.
 
 ## Qué está automatizado y dónde
@@ -31,9 +31,10 @@ feat/…         ●●    ●         ●●                ← tu trabajo, squ
 | Reglas de ramas | `scripts/ramas.mjs` | Única definición de tipos/áreas, la usan hooks, scripts y CI |
 | Pruebas de esas reglas | `scripts/ramas.test.mjs` | `pnpm test:ramas`: comprueba que el patrón acepta las ramas del equipo y las de Dependabot |
 | Workflow `PR` | `.github/workflows/pr.yml` | Valida nombre de rama, destino (a `main` solo desde develop/hotfix) y título del PR; etiqueta por carpeta |
+| Título del PR | `commitlint.pr.config.mjs` | Conventional Commits flexible: el tipo no distingue mayúsculas, el ámbito es libre y el título puede tener hasta 120 caracteres |
 | Workflow `CI` | `.github/workflows/ci.yml` | En cada push y PR: `install`, `lint`, `test`, `test:ramas`, e2e de la API y `build` de todo el monorepo; check único `CI / ok` |
 | Revisores | `.github/CODEOWNERS` | Pide revisión al responsable de cada carpeta |
-| Dependencias | `.github/dependabot.yml` | PRs semanales de actualización contra `develop`. Sus ramas (`dependabot/*`) no cumplen el patrón del equipo y están exentas de esa comprobación |
+| Dependencias | `.github/dependabot.yml` | Actualizaciones de versión desactivadas (`open-pull-requests-limit: 0`): no se abren PRs de dependencias. Los avisos/PRs de seguridad se activan aparte en Settings > Code security |
 | Config de GitHub | `scripts/configurar-github.sh` | Protección de ramas, tipos de merge, labels y milestones (una vez) |
 | Agentes de IA | `AGENTS.md`, `/rama`, `/pr` | Las IAs siguen el mismo flujo |
 
@@ -84,9 +85,10 @@ Si después de `pnpm sync` la rama ya estaba subida: `git push --force-with-leas
 ## Pull requests
 
 - Contra `develop`, plantilla rellena, `Closes #N`.
-- Título = commit final (squash): `feat(mobile): pantalla de búsqueda de trenes`.
-- 1 aprobación de CODEOWNERS + `CI / ok` + `PR / reglas` + conversaciones resueltas.
-- Quien abre el PR lo mergea tras la aprobación ("Squash and merge"). La rama se borra sola.
+- Título = commit final (squash): `feat(mobile): pantalla de búsqueda de trenes`. El check del título es flexible (tipo sin distinguir mayúsculas, cualquier ámbito y hasta 120 caracteres); los commits siguen las reglas estrictas de `commitlint.config.mjs`.
+- 3 aprobaciones (todo el equipo) + `CI / ok` + `PR / reglas` + conversaciones resueltas.
+- La protección de `develop` y `main` exige las 3 aprobaciones, descarta las aprobaciones cuando se suben cambios (`dismiss_stale_reviews`), exige que la última persona que empujó no sea la única que aprueba (`require_last_push_approval`) y se aplica también a los administradores: nadie puede saltárselo. Los force pushes a esas ramas están bloqueados.
+- Quien abre el PR lo mergea tras las 3 aprobaciones ("Squash and merge"). La rama se borra sola.
 - PRs pequeños: mejor 3 PRs de 150 líneas que uno de 450.
 - **PRs solo de documentación o vault** (`docs/`, `obsidian/`, PDF, Word, imágenes en `obsidian/adjuntos/`): no tienen dueño en CODEOWNERS: basta con que los apruebe cualquier compañero. Rama `docs/vault-<tema>` o `docs/docs-<tema>`.
 - Si cambias un contrato en `obsidian/02-contratos-api/`, CODEOWNERS pide revisión a Rubén, Marina y Alex.
@@ -95,7 +97,7 @@ Si después de `pnpm sync` la rama ya estaba subida: `git push --force-with-leas
 
 ```bash
 gh pr create --base main --head develop --title "chore(release): sprint 1" --body "Entrega del Sprint 1"
-# tras aprobación: "Create a merge commit" (no squash, para conservar la historia)
+# tras las 3 aprobaciones: "Create a merge commit" (no squash, para conservar la historia)
 git fetch origin && git tag v0.1 origin/main && git push origin v0.1
 ```
 
