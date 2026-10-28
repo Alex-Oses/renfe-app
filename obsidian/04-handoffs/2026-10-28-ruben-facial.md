@@ -12,7 +12,7 @@ tags: [handoff, facial, database]
 
 ## Qué se hizo
 
-- [[ADR-005-reconocimiento-facial]]: ArcFace de 512 (el mismo en web y app), el dispositivo calcula el
+- [[ADR-007-reconocimiento-facial]]: ArcFace de 512 (el mismo en web y app), el dispositivo calcula el
   vector y **Postgres decide** (umbral, 1:1, modelo). JWT propio de 12 h. Se descarta el servicio Python
   (`backend/face-service/`).
 - Migración `backend/database/supabase/migrations/20261028120000_reconocimiento_facial.sql`:
@@ -61,7 +61,7 @@ tags: [handoff, facial, database]
 ## Ficheros tocados
 
 - `backend/database/supabase/migrations/20261028120000_reconocimiento_facial.sql` (nuevo)
-- `obsidian/03-decisiones/ADR-005-reconocimiento-facial.md` (nuevo)
+- `obsidian/03-decisiones/ADR-007-reconocimiento-facial.md` (nuevo)
 - `obsidian/02-contratos-api/endpoints.md`
 - `obsidian/02-contratos-api/modelo-datos.md`
 - `docs/arquitectura.md` (se quita `face-service` de la tabla y del flujo 5.4)

@@ -74,7 +74,7 @@ responderán `503`. Sin ORM: `bd.consultar(sql, valores)` y SQL a mano (ver ADR-
 
 Dos formas de entrar, **un solo formato de token**. Con contraseña lo emite Supabase Auth; con la cara
 lo firma la API (`HS256`, mismos claims, 12 h, sin `refresh_token`). Ver
-`obsidian/03-decisiones/ADR-005-reconocimiento-facial.md`.
+`obsidian/03-decisiones/ADR-007-reconocimiento-facial.md`.
 
 La API no decide nada: llama a las funciones de Postgres y traduce el `SQLSTATE` a HTTP.
 

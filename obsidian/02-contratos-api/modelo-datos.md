@@ -116,7 +116,7 @@ Solo `service_role` (la API). La comparación la hace Postgres en `verificar_car
 
 **Índices:** PK. Índice HNSW (`vector_cosine_ops`) solo si en el futuro se hace búsqueda 1:N.
 
-**Reglas, todas en funciones `security definer`** (ver [[ADR-005-reconocimiento-facial]]):
+**Reglas, todas en funciones `security definer`** (ver [[ADR-007-reconocimiento-facial]]):
 
 - `registrar_cara(usuario, embedding, modelo)`: valida modelo y dimensión, normaliza y hace el alta.
   Falla con `cara_ya_registrada` si ya existe: **la cara se registra una sola vez**.

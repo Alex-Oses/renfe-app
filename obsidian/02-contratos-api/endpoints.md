@@ -34,7 +34,7 @@ insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
   - **Contraseña**: el token lo emite **Supabase Auth**; la API solo lo verifica. Trae
     `access_token` + `refresh_token`.
   - **Cara**: la API firma el token cuando `verificar_cara` dice que coincide. Ver
-    [[ADR-005-reconocimiento-facial]]. **Sin `refresh_token`**: dura 12 h y después hay que volver a
+    [[ADR-007-reconocimiento-facial]]. **Sin `refresh_token`**: dura 12 h y después hay que volver a
     mirar a la cámara.
 - Claims del token: `sub` (uuid), `email`, `app_metadata.rol` (`viajero` \| `revisor` \| `admin`),
   `iat` y `exp`. El facial los rellena igual que Supabase para que el guard no distinga cómo se entró.
@@ -650,7 +650,7 @@ Notas:
 - **No se devuelve la similitud.** Un número de similitud por intento es un oráculo que permite
   reconstruir la plantilla probando vectores; se mide con SQL cuando toque ajustar el umbral.
 - El token es el mismo formato que el de la contraseña (HS256 con el secreto compartido), así que hay
-  un solo guard. Ver [[ADR-005-reconocimiento-facial]].
+  un solo guard. Ver [[ADR-007-reconocimiento-facial]].
 - No hay límite de intentos todavía (fase F7): el facial es alternativa a la contraseña, nunca el
   único factor.
 

@@ -1,14 +1,20 @@
 ---
 fecha: 2026-10-28
-estado: aceptado
+estado: propuesto
 autor: Rubén
 tags: [adr, facial, auth, seguridad]
 ---
 
-# ADR-005 — Reconocimiento facial: ArcFace 512, lógica en la base de datos y JWT propio
+# ADR-007 — Reconocimiento facial: ArcFace 512, lógica en la base de datos y JWT propio
 
 Sustituye **solo la parte de reconocimiento facial** de [[ADR-004-web-primero-vercel-render]]. El resto
 de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
+
+> ⚠️ **Choca con [[ADR-005-app-movil-expo]] (D7) y con [[ADR-006-tornos-faciales-futuro]].** Alex decidió
+> el 28/10 que el facial vuelva a un **servidor Python** que recibe la imagen desde `expo-camera`. Este
+> ADR dice lo contrario: el vector lo calcula el dispositivo y **la imagen no sale de él**. Las dos cosas
+> no pueden ser verdad a la vez; ver «Decisión pendiente» al final. Este ADR está en `propuesto` hasta
+> que Alex (PO) o Rubén lo resuelvan.
 
 ## Contexto
 
@@ -101,3 +107,26 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
 - `backend/database/supabase/migrations/20261028120000_reconocimiento_facial.sql`
 - [[endpoints]]: `POST /auth/cara/registrar`, `POST /auth/cara/verificar` y `POST /auth/cara/reset`
 - Este ADR
+
+## Decisión pendiente (2026-10-28)
+
+[[ADR-005-app-movil-expo]] (D7) y [[ADR-006-tornos-faciales-futuro]] dan por hecho un **servidor Python**
+que recibe la imagen del móvil. Este ADR dice lo contrario. Las diferencias reales:
+
+| | Servidor Python (D7) | Este ADR |
+|---|---|---|
+| Qué viaja | la foto o el recorte de la cara | 512 números (~4 KB) |
+| Dónde se calcula el vector | en el servidor | en el dispositivo |
+| Qué hay que desplegar | un servicio más, con cientos de MB de dependencias | nada nuevo |
+| RAM en Render gratis (512 MB) | no cabe; ADR-004 ya lo descartó por eso | no aplica |
+| Privacidad | la imagen sale del móvil | la imagen no sale del móvil |
+| Dónde vive la lógica | en el servicio | en Postgres |
+
+Para que la opción Python sea viable hace falta un segundo despliegue (Render gratis no lo aguanta) y
+decidir quién lo mantiene. Eso es lo que ADR-004 descartó el 27/10 y lo que D7 reabre sin decirlo.
+
+**Si manda D7**, este ADR se marca obsoleto y el trabajo pendiente pasa a ser el servicio Python. La
+migración **no se tira**: `embeddings_faciales`, `config_cara` y las funciones sirven igual, solo cambia
+quién calcula el vector.
+**Si manda este ADR**, hay que corregir la fila de Rubén de [[sprint-actual]] y el D7 de
+[[ADR-005-app-movil-expo]].
