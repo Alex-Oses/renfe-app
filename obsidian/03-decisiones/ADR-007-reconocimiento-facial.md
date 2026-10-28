@@ -39,9 +39,10 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
 4. **Toda la lógica de negocio en funciones de Postgres** (`registrar_cara`, `verificar_cara`),
    `security definer`, con `execute` solo para `service_role`. También el `reset` de la plantilla es
    una función (`resetear_cara`) que comprueba el rol `admin` dentro de Postgres.
-5. **La migración no toca las tablas de Marina.** Solo crea `embeddings_faciales` y `config_cara`, y la
-   FK va a `auth.users` (de Supabase), no a `perfiles`. Así el facial se puede aplicar antes o después
-   de su trabajo sin pisarse.
+5. **La tabla es de Marina, no mía.** `embeddings_faciales` (FK a `perfiles`) la crea ella en
+   `20261028120100_identidad.sql`; mi migración va **después** (`20261028120300_...`) y solo añade
+   `config_cara`, las tres funciones y el valor `admin` en el CHECK de `perfiles.rol`. Una sola
+   definición de cada tabla: no hay versión duplicada ni `create table` repetido.
 6. **JWT propio**, firmado por la API (HS256 con el secreto compartido de Supabase), igual que el del
    login con contraseña. Un solo formato de token y un solo guard.
 7. **La contraseña la gestiona Supabase Auth.** La app habla con la API de Auth, nunca con Postgres.
@@ -76,9 +77,10 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
   facial sea **alternativa** a la contraseña, nunca el único factor.
 - **El umbral es dato, no código**: una fila en `config_cara`. Se mide con ~10 intentos propios y ~10
   ajenos, y se pone entre el máximo ajeno y el mínimo propio, con margen.
-- **La migración no depende del esquema de Marina**: `embeddings_faciales.usuario_id` apunta a
-  `auth.users`, no a `perfiles`. El rol `admin` del `reset` se lee de `app_metadata`, que es de donde ya
-  lo lee `SupabaseJwtGuard`. [[modelo-datos]] §3.2 recoge ese cambio.
+- **La migración va después de la de Marina y depende de ella**: `embeddings_faciales` y `perfiles` las
+  crea su `20261028120100_identidad.sql`. La mía (`20261028120300_...`) añade `config_cara`, las tres
+  funciones y el valor `admin` en el CHECK de `perfiles.rol`. El rol del `reset` se lee de
+  `perfiles.rol`, que es donde vive según [[modelo-datos]] §3.1.
 - **Sin refresco de token**: el JWT facial dura 12 h y después hay que volver a mirar a la cámara. No hay
   `refresh_token` porque no lo emite Supabase Auth. Tampoco se puede revocar un token suelto.
 
@@ -90,8 +92,10 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
   línea en `CODEOWNERS`, el bloque de `dependabot.yml`, la etiqueta de `labeler.yml` y
   `FACE_SERVICE_URL` del `.env.example`. Solo queda que lo revise y que borre la etiqueta `face` en
   GitHub si quiere.
-- **Marina**: aplicar la migración en el proyecto de Supabase cuando lo cree (el facial no funciona sin
-  ella) y confirmar si el proyecto firma los JWT con HS256 o con claves asimétricas.
+- **Marina**: abrir el PR de `feat/db-migracion-catalogo-gtfs` (no tiene) y revisar el
+  `alter table perfiles` de mi migración, que amplía su `perfiles_rol_check` para admitir `admin`. Si
+  prefiere meterlo en la suya, mi línea sobra y se borra. Falta también saber si el proyecto de Supabase
+  firma los JWT con HS256 o con claves asimétricas.
 - **Rubén**: medir el umbral con una ejecución real y ajustar `config_cara`.
 - **Rubén / Alex**: **elegir el fichero ONNX concreto** de ArcFace 512. `config_cara.modelo` vale hoy
   `arcface/buffalo_l`, que es un identificador provisional: el modelo de reconocimiento de referencia
@@ -102,7 +106,7 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
 
 ## Ficheros
 
-- `backend/database/supabase/migrations/20261028120000_reconocimiento_facial.sql`
+- `backend/database/supabase/migrations/20261028120300_reconocimiento_facial.sql`
 - [[endpoints]]: `POST /auth/cara/registrar`, `POST /auth/cara/verificar` y `POST /auth/cara/reset`
 - Este ADR
 

@@ -15,9 +15,11 @@ tags: [handoff, facial, database]
 - [[ADR-007-reconocimiento-facial]]: ArcFace de 512 (el mismo en web y app), el dispositivo calcula el
   vector y **Postgres decide** (umbral, 1:1, modelo). JWT propio de 12 h. Se descarta el servicio Python
   (`backend/face-service/`). Manda sobre el D7 de [[ADR-005-app-movil-expo]].
-- Migración `backend/database/supabase/migrations/20261028120000_reconocimiento_facial.sql`:
-  `embeddings_faciales` (`vector(512)`), `config_cara` (una fila con modelo y umbral) y tres funciones
-  `security definer`: `registrar_cara`, `verificar_cara`, `resetear_cara`.
+- Migración `backend/database/supabase/migrations/20261028120300_reconocimiento_facial.sql`:
+  `config_cara` (una fila con modelo y umbral), tres funciones `security definer`
+  (`registrar_cara`, `verificar_cara`, `resetear_cara`) y el valor `admin` en `perfiles.rol`.
+  **`embeddings_faciales` no la creo yo**: es la tuya de `20261028120100_identidad.sql`, con la FK a
+  `perfiles`. Mi fichero va después del tuyo a propósito.
 - Contrato detallado en [[endpoints]]: `POST /auth/cara/registrar`, `/auth/cara/verificar` y
   `/auth/cara/reset`. En [[modelo-datos]] §3.2 está el porqué de la FK.
 - **Código en `backend/api/src/modules/auth/`**: las tres rutas implementadas con Swagger, el mapeo
@@ -33,12 +35,20 @@ tags: [handoff, facial, database]
 
 ## Bloqueos / preguntas para otros
 
-- **Marina**: la migración **no toca ninguna tabla tuya**. No crea `perfiles`; la FK de
-  `embeddings_faciales` va a `auth.users`. Se puede aplicar antes o después de tus migraciones de GTFS.
-  Si ya tienes un `perfiles` con `rol`, no hay conflicto: el facial no lo usa.
-- **Marina**: el `reset` comprueba el rol leyendo `app_metadata.rol` en `auth.users`, no `perfiles.rol`.
-  Si el rol se queda solo en `perfiles`, hay que decirme dónde vive de verdad, porque el guard ya lee
-  `app_metadata`.
+- **Marina**: tu `20261028120100_identidad.sql` crea `perfiles` y `embeddings_faciales`, y la mía
+  (`20261028120300_reconocimiento_facial.sql`) **depende de las dos**. Orden de merge: la tuya primero.
+- **Marina**: mi migración hace `alter table perfiles drop constraint if exists perfiles_rol_check` y lo
+  vuelve a crear con `('viajero', 'revisor', 'admin')`. `resetear_cara` necesita un `admin` y tu CHECK no
+  lo admite. **No he tocado tu fichero.** Si prefieres meterlo tú, borro esas dos líneas y ya está.
+- **Marina**: el rol se lee de `perfiles.rol` (no de `app_metadata`), siguiendo el contrato v2 que ya está
+  en `develop`. Consecuencia: `SupabaseJwtGuard` sigue leyendo el claim del token, así que cuando la API
+  cree un usuario tiene que escribir `perfiles.rol` **y** `app_metadata.rol` en la misma llamada, o los
+  dos se separan. Eso lo hago yo en `POST /auth/registro` cuando exista.
+- **Marina**: tu `perfiles` no la crea ningún trigger (lo dice tu comentario): la crea `POST /auth/registro`,
+  que **todavía no existe**. Mientras no exista, `registrar_cara` falla por FK → `404 usuario no existe`.
+  Es coherente, pero el facial no se puede probar de punta a punta hasta que haya registro.
+- **Marina**: **tu rama `feat/db-migracion-catalogo-gtfs` no tiene PR abierto**. Sin ese PR no hay nada
+  que revisar ni mergear, y sin migraciones aplicadas `/estaciones`, `/trenes` y el facial siguen en 503.
 - **Sin BD no hay facial.** A diferencia de `/posiciones`, que lee el feed en memoria, aquí la plantilla
   tiene que estar guardada. Si el proyecto de Supabase no existe el 3/11, el facial no entra en la demo.
 
@@ -62,11 +72,13 @@ tags: [handoff, facial, database]
 
 - [[endpoints]]: tres rutas nuevas detalladas y la sección **Autenticación** reescrita (dos formas de
   entrar, un solo formato de token, claims y caducidad).
-- [[modelo-datos]] §3.2: la FK pasa de `perfiles` a `auth.users`, y §3.1 recoge el índice de rol nuevo.
+- [[modelo-datos]] §3.2: `embeddings_faciales` es la tabla de Marina (FK a `perfiles`) y mi migración
+  va detrás; §3.1 admite `admin` en `rol`.
 
 ## Ficheros tocados
 
-- `backend/database/supabase/migrations/20261028120000_reconocimiento_facial.sql` (nuevo)
+- `backend/database/supabase/migrations/20261028120300_reconocimiento_facial.sql` (nuevo; el
+  `20261028120000_reconocimiento_facial.sql` se borró porque duplicaba la versión de Marina)
 - `backend/api/src/modules/auth/` (nuevo: `cara.controller.ts`, `cara.service.ts`, `auth.module.ts`,
   `dto/` y `cara.service.spec.ts`)
 - `backend/api/src/common/auth/` (rol `admin` en `auth.types.ts` y en el guard)

@@ -39,7 +39,7 @@ tags: [contrato, base-datos]
 ```mermaid
 erDiagram
   auth_users ||--|| perfiles : "1:1"
-  auth_users ||--o| embeddings_faciales : "1:1"
+  perfiles ||--o| embeddings_faciales : "1:1"
   perfiles ||--o{ reservas : "hace"
   perfiles ||--o{ billetes : "tiene"
   perfiles ||--o{ validaciones : "revisa"
@@ -97,8 +97,8 @@ del admin.
 
 | columna | tipo | null | notas |
 |---|---|---|---|
-| `usuario_id` | `uuid` | no | PK, FK a `auth.users` `on delete cascade` |
-| `embedding` | `vector(512)` | no | InsightFace, normalizado (L2 = 1) |
+| `usuario_id` | `uuid` | no | PK, FK a `perfiles` `on delete cascade` |
+| `embedding` | `vector(512)` | no | ArcFace, normalizado (L2 = 1) |
 | `modelo` | `text` | no | p. ej. `arcface/buffalo_l`; permite invalidar al cambiar de modelo |
 | `creado_en` | `timestamptz` | no | default `now()` |
 
@@ -106,10 +106,10 @@ del admin.
 se quiere 1:N («¿quién es esta cara?») se cambia la PK a `(usuario_id, modelo)` y se añade
 índice; hoy no hace falta. **Nunca se guarda la foto**, solo el vector.
 
-La FK va a `auth.users` y **no a `perfiles`** a propósito: el facial es de Rubén y `perfiles` es de
-Marina, así que la migración del facial
-(`20261028120000_reconocimiento_facial.sql`) no toca ninguna tabla de ella y se puede aplicar en
-cualquier orden. El rol `admin` del reset se lee de `app_metadata`, igual que en `SupabaseJwtGuard`.
+La tabla la crea Marina en `20261028120100_identidad.sql` y la FK va a `perfiles`, que también es
+suya: sin perfil no hay cara. La migración del facial
+(`20261028120300_reconocimiento_facial.sql`) **va después de la suya** y solo añade `config_cara`,
+las tres funciones y el valor `admin` en `perfiles.rol`. El rol del reset se lee de `perfiles.rol`.
 
 **RLS:** **ninguna política** para `anon` ni `authenticated` → nadie lee el embedding desde la app.
 Solo `service_role` (la API). La comparación la hace Postgres en `verificar_cara`, nunca el móvil.
@@ -122,7 +122,7 @@ Solo `service_role` (la API). La comparación la hace Postgres en `verificar_car
   Falla con `cara_ya_registrada` si ya existe: **la cara se registra una sola vez**.
 - `verificar_cara(email, embedding)`: similitud coseno contra `config_cara.umbral`; devuelve
   `coincide`, `similitud` y `motivo` (`ok` \| `sin_plantilla` \| `modelo_distinto` \| `no_coincide`).
-- `resetear_cara(admin, usuario)`: borra la plantilla; lee el rol de `app_metadata` dentro de Postgres
+- `resetear_cara(admin, usuario)`: borra la plantilla; lee el rol de `perfiles.rol` dentro de Postgres
   y solo deja pasar a `admin`.
 - `config_cara` (una fila): `modelo` y `umbral`. El umbral es **dato, no código**, y se mide con ~10
   intentos propios y ~10 ajenos.
