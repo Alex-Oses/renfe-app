@@ -9,7 +9,7 @@ export const paleta = {
   frambuesa: "#d62d61",
   niebla: "#eff3f6",
   grafito: "#464646",
-  gris: "#6b6b6b",
+  gris: "#5c5c5c",
   linea: "#d9dfe5",
   blanco: "#ffffff",
 } as const;
@@ -138,7 +138,7 @@ export const animacion = {
   duracion: { corta: 160, media: 280, larga: 520 },
   curva: {
     salida: [0.2, 0.8, 0.2, 1],
-    muelle: [0.34, 1.56, 0.64, 1],
+    muelle: [0.16, 1, 0.3, 1],
   },
 } as const;
 
