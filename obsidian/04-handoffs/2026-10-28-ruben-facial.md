@@ -8,18 +8,20 @@ pr: 47
 tags: [handoff, facial, database]
 ---
 
-# Handoff — Reconocimiento facial: ADR y migración lista para aplicar
+# Handoff — Reconocimiento facial: ADR, migración y endpoints listos
 
 ## Qué se hizo
 
 - [[ADR-007-reconocimiento-facial]]: ArcFace de 512 (el mismo en web y app), el dispositivo calcula el
   vector y **Postgres decide** (umbral, 1:1, modelo). JWT propio de 12 h. Se descarta el servicio Python
-  (`backend/face-service/`).
+  (`backend/face-service/`). Manda sobre el D7 de [[ADR-005-app-movil-expo]].
 - Migración `backend/database/supabase/migrations/20261028120000_reconocimiento_facial.sql`:
   `embeddings_faciales` (`vector(512)`), `config_cara` (una fila con modelo y umbral) y tres funciones
   `security definer`: `registrar_cara`, `verificar_cara`, `resetear_cara`.
 - Contrato detallado en [[endpoints]]: `POST /auth/cara/registrar`, `/auth/cara/verificar` y
   `/auth/cara/reset`. En [[modelo-datos]] §3.2 está el porqué de la FK.
+- **Código en `backend/api/src/modules/auth/`**: las tres rutas implementadas con Swagger, el mapeo
+  `SQLSTATE → HTTP` y 12 tests (`cara.service.spec.ts`). El rol `admin` ya existe en `Rol` y en el guard.
 
 ## Qué queda
 
@@ -61,6 +63,9 @@ tags: [handoff, facial, database]
 ## Ficheros tocados
 
 - `backend/database/supabase/migrations/20261028120000_reconocimiento_facial.sql` (nuevo)
+- `backend/api/src/modules/auth/` (nuevo: `cara.controller.ts`, `cara.service.ts`, `auth.module.ts`,
+  `dto/` y `cara.service.spec.ts`)
+- `backend/api/src/common/auth/` (rol `admin` en `auth.types.ts` y en el guard)
 - `obsidian/03-decisiones/ADR-007-reconocimiento-facial.md` (nuevo)
 - `obsidian/02-contratos-api/endpoints.md`
 - `obsidian/02-contratos-api/modelo-datos.md`

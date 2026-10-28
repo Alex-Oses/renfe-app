@@ -70,9 +70,9 @@ Estado: propuesto | implementado | cambiado (fecha)
 | GET | `/health` | Estado del servicio (infra) | implementado |
 | POST | `/auth/registro` | Alta de usuario | propuesto |
 | POST | `/auth/login` | Login email/contraseña | propuesto |
-| POST | `/auth/cara/registrar` | Guardar embedding facial (una sola vez) | propuesto · **detallado** |
-| POST | `/auth/cara/verificar` | Login facial | propuesto · **detallado** |
-| POST | `/auth/cara/reset` | Admin borra la plantilla de un usuario | propuesto · **detallado** |
+| POST | `/auth/cara/registrar` | Guardar embedding facial (una sola vez) | **implementado** · **detallado** |
+| POST | `/auth/cara/verificar` | Login facial | **implementado** · **detallado** |
+| POST | `/auth/cara/reset` | Admin borra la plantilla de un usuario | **implementado** · **detallado** |
 | GET | `/trenes/:feed/:tripId/asientos?fecha=` | Asientos disponibles (simulado) | propuesto |
 | POST | `/reservas` | Crear reserva | propuesto |
 | POST | `/pagos/intent` | PaymentIntent Stripe test | propuesto |
