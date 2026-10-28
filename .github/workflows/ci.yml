@@ -28,4 +28,4 @@ jobs:
       - run: pnpm test
       - run: pnpm --filter @renfe/api test:e2e
       - run: pnpm build
-      # Pendiente (fuera de la entrega): imágenes Docker y tests de face-service.
+      # Pendiente (fuera de la entrega): imágenes Docker.

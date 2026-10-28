@@ -48,7 +48,7 @@ Los hooks se instalan solos al hacer `pnpm install` (script `prepare` → husky)
 | `fix` | Corrección | | `api` | `backend/api` |
 | `docs` | Documentación | | `db` | `backend/database` |
 | `chore` | Mantenimiento | | `gtfs` | `backend/gtfs-worker` |
-| `refactor` | Reestructurar sin cambiar comportamiento | | `face` | `backend/face-service` |
+| `refactor` | Reestructurar sin cambiar comportamiento | | `face` | facial: dentro de `backend/api` (ADR-007) |
 | `test` | Tests | | `infra` | Docker, CI |
 | `ci` | Pipelines | | `vault` | `obsidian/` |
 | `hotfix` | Arreglo urgente sobre `main` | | `docs` | `docs/` |

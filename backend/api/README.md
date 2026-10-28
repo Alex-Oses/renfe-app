@@ -9,11 +9,12 @@ API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../
 Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger,
 `GET /health`, auth de Supabase con roles y acceso opcional a Postgres.
 
-**Endpoints de datos (fase F1): `GET /estaciones`, `GET /trenes`, `GET /trenes/:feed/:tripId` y
-`GET /posiciones`**, con SQL directo contra el modelo de datos de
-[`obsidian/02-contratos-api/modelo-datos.md`](../../obsidian/02-contratos-api/modelo-datos.md)
-(sin ORM). Sin `DATABASE_URL` responden `503`. `/posiciones` es la excepción: lee GTFS-RT de Renfe
-en memoria cada 30 s, no toca la BD y funciona sin Supabase.
+**Endpoints de datos (fase F1): `GET /estaciones`, `GET /trenes`, `GET /trenes/:feed/:tripId`,
+`GET /trenes/:feed/:tripId/posicion` y `GET /posiciones`**, con SQL directo contra el modelo de datos
+de [`obsidian/02-contratos-api/modelo-datos.md`](../../obsidian/02-contratos-api/modelo-datos.md)
+(sin ORM). Sin `DATABASE_URL` responden `503`. `/posiciones` y `/trenes/:feed/:tripId/posicion` son
+la excepción: leen GTFS-RT de Renfe en memoria cada 30 s, no tocan la BD y funcionan sin Supabase.
+`/posiciones` trae también el retraso real de `trip_updates` (puede ser negativo: tren adelantado).
 
 Lo demás sigue pendiente: `/incidencias` y compañía necesitan las migraciones de Marina
 (`backend/database/`) y el worker GTFS.
@@ -42,12 +43,13 @@ src/
   config/entorno.ts   validación de variables de entorno
   common/auth/        SupabaseJwtGuard, RolesGuard y decorador @Roles
   common/bd/          BdService: pool de Postgres opcional
-  common/gtfs/        tiempo: horas GTFS → ISO 8601 con offset de Madrid
+  common/gtfs/        tiempo (horas GTFS → ISO con offset), feeds y el SQL de calendarios
   modules/
     estaciones/       GET /estaciones (SQL sobre estaciones + estacion_feeds)
     health/           GET /health
-    posiciones/       GET /posiciones (GTFS-RT en memoria, sin BD)
-    trenes/           GET /trenes y /trenes/:feed/:tripId (precio y plazas simulados)
+    posiciones/       GET /posiciones (GTFS-RT en memoria, sin BD) y la posición por viaje
+    trenes/           GET /trenes, /trenes/:feed/:tripId y /:feed/:tripId/posicion
+                      (precio y plazas simulados)
 ```
 
 ## Base de datos
@@ -60,7 +62,7 @@ responderán `503`. Sin ORM: `bd.consultar(sql, valores)` y SQL a mano (ver ADR-
 
 `SupabaseJwtGuard` verifica el `Bearer` contra `SUPABASE_JWT_SECRET` (HS256) y deja en
 `request.usuario` → `{ id, email, rol }`. El rol sale de `app_metadata.rol` (`viajero` por defecto,
-`revisor` explícito). `RolesGuard` + `@Roles('revisor')` limitan endpoints por rol.
+`revisor` y `admin` explícitos). `RolesGuard` + `@Roles('revisor')` limitan endpoints por rol.
 
 ```ts
 @UseGuards(SupabaseJwtGuard, RolesGuard)
@@ -68,14 +70,37 @@ responderán `503`. Sin ORM: `bd.consultar(sql, valores)` y SQL a mano (ver ADR-
 @Post('billetes/validar')
 ```
 
-Todavía no hay endpoints privados: los guards están listos para cuando lleguen `/auth`, `/reservas`
-y `/billetes`. El contrato de auth está en `obsidian/02-contratos-api/endpoints.md`.
+### Login facial
+
+Dos formas de entrar, **un solo formato de token**. Con contraseña lo emite Supabase Auth; con la cara
+lo firma la API (`HS256`, mismos claims, 12 h, sin `refresh_token`). Ver
+`obsidian/03-decisiones/ADR-007-reconocimiento-facial.md`.
+
+La API no decide nada: llama a las funciones de Postgres y traduce el `SQLSTATE` a HTTP.
+
+| Función | SQLSTATE | HTTP |
+|---|---|---|
+| `registrar_cara` | `RF001` modelo distinto · `RF002` dimensión · `RF003` vector vacío | 400 |
+| `registrar_cara` | `RF004` ya registrada | 409 |
+| `registrar_cara` | `RF005` usuario inexistente | 404 |
+| `resetear_cara` | `RF006` no es admin | 403 |
+
+`verificar_cara` no lanza: devuelve `{ usuario_id, coincide, similitud, motivo }`. La `similitud` **no
+se expone al cliente** (es un oráculo para reconstruir la plantilla); todos los fallos se responden con
+el mismo `401`.
+
+Código en `src/modules/auth/`: `POST /auth/cara/registrar` y `POST /auth/cara/reset` piden el `Bearer`
+del login con contraseña; `POST /auth/cara/verificar` es público. El contrato está en
+`obsidian/02-contratos-api/endpoints.md`.
+
+`/auth/registro` y `/auth/login` con contraseña todavía no existen (los emite Supabase Auth), y
+`/reservas` y `/billetes` llegarán después.
 
 ## Módulos previstos
 
 | Módulo | Qué hace | Responsable |
 |---|---|---|
-| `auth` | Registro/login con Supabase Auth, login facial (llama a face-service) | Rubén |
+| `auth` | Registro/login con Supabase Auth, login facial (la decisión la toma Postgres) | Rubén |
 | `estaciones` | Búsqueda de estaciones sobre datos GTFS | Rubén |
 | `trenes` | Búsqueda por origen/destino/fecha, detalle, retrasos, posiciones | Rubén |
 | `reservas` | Asientos y reservas simulados | Rubén |

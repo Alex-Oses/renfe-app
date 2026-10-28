@@ -1,8 +1,0 @@
-# Dependencias previstas (sin fijar versiones todavía)
-fastapi
-uvicorn[standard]
-insightface
-onnxruntime
-numpy
-pillow
-python-multipart

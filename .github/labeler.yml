@@ -11,9 +11,6 @@ database:
 gtfs:
   - changed-files:
       - any-glob-to-any-file: backend/gtfs-worker/**
-face:
-  - changed-files:
-      - any-glob-to-any-file: backend/face-service/**
 devops:
   - changed-files:
       - any-glob-to-any-file: [docker-compose.yml, .github/**, scripts/**]

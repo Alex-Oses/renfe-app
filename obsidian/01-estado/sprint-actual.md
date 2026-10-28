@@ -16,7 +16,7 @@ tags: [sprint]
 | Persona | Qué hace |
 |---|---|
 | Alex | Frontend: mejora la web, lógica común en `@renfe/shared` y app Expo en `frontend/mobile` en cuanto haya BD y facial |
-| Rubén | Servidor Python de reconocimiento facial (`backend/face-service`) y su contrato en [[endpoints]] |
+| Rubén | Login facial **sin servidor Python**: dispositivo + Postgres, rutas `/auth/cara/*` en la API ([[ADR-007-reconocimiento-facial]]) |
 | Marina | Base de datos: migraciones `gtfs_*`, import y Supabase en la nube |
 | Kevin | Despliegue y Docker (D10 pendiente) |
 

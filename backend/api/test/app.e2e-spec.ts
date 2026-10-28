@@ -37,4 +37,8 @@ describe('API (e2e)', () => {
       .get('/trenes?origen=60000&destino=71801&fecha=02-11-2026')
       .expect(400);
   });
+
+  it('GET /trenes/:feed/:tripId/posicion con feed inválido responde 400', async () => {
+    await request(app.getHttpServer()).get('/trenes/ave/0019012026-10-27/posicion').expect(400);
+  });
 });

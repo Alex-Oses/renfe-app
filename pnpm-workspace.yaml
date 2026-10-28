@@ -1,4 +1,4 @@
-# Paquetes del monorepo. face-service es Python y no entra en pnpm.
+# Paquetes del monorepo (todo TypeScript: no hay código Python).
 packages:
   - "frontend/*"
   - "backend/api"

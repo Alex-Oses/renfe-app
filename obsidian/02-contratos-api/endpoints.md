@@ -7,7 +7,7 @@ tags: [contrato, api]
 # 🔌 Endpoints de la API
 
 > **Fuente de verdad** entre frontend y backend. Se actualiza ANTES de implementar.
-> Base URL local: `http://localhost:3000` · Auth: `Authorization: Bearer <jwt de Supabase>`
+> Base URL local: `http://localhost:3000` · Auth: `Authorization: Bearer <jwt>`
 > **El contrato lo manda la API**: el frontend se adapta a estos shapes, no al revés.
 
 ## Convenciones
@@ -30,10 +30,19 @@ insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
 
 ## Autenticación
 
-- El token lo emite **Supabase Auth**; la API solo lo verifica (HS256 con `SUPABASE_JWT_SECRET`).
-- Identidad: `sub` (uuid de usuario) y `email`.
-- Rol: claim `app_metadata.rol` → `"viajero"` (por defecto), `"revisor"` o `"admin"` (propuesto, Alex 2026-10-27; `admin` también puede validar).
+- Dos formas de entrar, **un solo formato de token** (HS256 con `SUPABASE_JWT_SECRET`):
+  - **Contraseña**: el token lo emite **Supabase Auth**; la API solo lo verifica. Trae
+    `access_token` + `refresh_token`.
+  - **Cara**: la API firma el token cuando `verificar_cara` dice que coincide. Ver
+    [[ADR-007-reconocimiento-facial]]. **Sin `refresh_token`**: dura 12 h y después hay que volver a
+    mirar a la cámara.
+- Claims del token: `sub` (uuid), `email`, `app_metadata.rol` (`viajero` \| `revisor` \| `admin`),
+  `iat` y `exp`. El facial los rellena igual que Supabase para que el guard no distinga cómo se entró.
+- Rol `admin` (propuesto por Alex, 2026-10-27): además de `revisor`, puede validar billetes.
 - Los endpoints públicos no llevan token. Los privados exigen `Authorization: Bearer <jwt>`.
+- **Aviso para Marina**: si el proyecto nuevo firma con claves asimétricas (ES256/JWKS) en vez del
+  secreto compartido, el guard actual (`algorithms: ['HS256']`) rechaza también los tokens de la
+  contraseña. Hay que mirarlo al crear el proyecto.
 
 
 ## Plantilla por endpoint
@@ -54,15 +63,16 @@ Estado: propuesto | implementado | cambiado (fecha)
 |---|---|---|---|
 | GET | `/estaciones?q=&feed=` | Autocompletar estaciones | **implementado** · **detallado** |
 | GET | `/trenes?origen=&destino=&fecha=` | Buscar viajes directos | **implementado** · **detallado** |
-| GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y retraso | **implementado** · **detallado** |
-| GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | propuesto · **detallado** |
+| GET | `/trenes/:feed/:tripId?fecha=` | Detalle de un viaje con paradas y horas | **implementado** · **detallado** |
+| GET | `/trenes/:feed/:tripId/posicion` | Última posición del tren | **implementado** · **detallado** |
 | GET | `/incidencias?feed=&linea=` | Avisos GTFS-RT | propuesto · **detallado** |
-| GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa (alternativa al Realtime) | **implementado** · **detallado** |
+| GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa en vivo (sustituye a Realtime) | **implementado** · **detallado** |
 | GET | `/health` | Estado del servicio (infra) | implementado |
 | POST | `/auth/registro` | Alta de usuario | propuesto |
 | POST | `/auth/login` | Login email/contraseña | propuesto |
-| POST | `/auth/cara/registrar` | Guardar embedding facial | propuesto |
-| POST | `/auth/cara/verificar` | Login facial | propuesto |
+| POST | `/auth/cara/registrar` | Guardar embedding facial (una sola vez) | **implementado** · **detallado** |
+| POST | `/auth/cara/verificar` | Login facial | **implementado** · **detallado** |
+| POST | `/auth/cara/reset` | Admin borra la plantilla de un usuario | **implementado** · **detallado** |
 | GET | `/trenes/:feed/:tripId/asientos?fecha=` | Asientos disponibles (simulado) | propuesto |
 | POST | `/reservas` | Crear reserva | propuesto |
 | POST | `/pagos/intent` | PaymentIntent Stripe test | propuesto |
@@ -243,36 +253,44 @@ Notas:
 
 ## GET /trenes/:feed/:tripId/posicion
 
-Descripción: última posición conocida del tren que hace ese viaje **hoy**.
+Descripción: última posición conocida del tren que hace ese viaje **ahora**.
 Auth: **no**
 
-> ⚠️ **Bloqueado (2026-10-27).** El `tripId` de GTFS-RT no coincide con el `trip_id` del GTFS
-> estático (`0029112026-10-27` vs `3097L23537C1`), así que hoy no se puede cruzar la posición con
-> el viaje. Opciones: cruzar por número de tren + fecha, o retirar este endpoint y usar solo
-> `/posiciones`. Sin decisión tomada.
+> **El `tripId` de GTFS-RT es el `trip_id` del GTFS estático.** Comprobado el 27/10 contra el
+> `trips.txt` real de AVE/LD de Renfe: `0327212026-10-26` existe tal cual. Es decir, el `tripId` que
+> devuelve `/posiciones` se puede pasar **directo** a esta ruta: el mapa puede enlazar a la ficha
+> del viaje. Confirmado solo en `avld`; en `cercanias` falta el GTFS estático para comprobarlo
+> (el `Fichero_CERCA` público da 404), aunque el formato encaja.
 
 Response 200:
 
 ```json
 {
-  "feed": "cercanias",
-  "tripId": "3097L23537C1",
-  "vehicleId": "23537",
-  "lat": 37.18487,
-  "lon": -5.79046,
-  "rumbo": 45,
-  "velocidadKmh": 78,
-  "estado": "INCOMING_AT",
-  "paradaActual": "51200",
-  "retrasoSeg": 180,
-  "actualizado": "2026-10-26T12:00:30+01:00"
+  "feed": "avld",
+  "tripId": "0327212026-10-26",
+  "vehicleId": "03272",
+  "lat": 40.399803,
+  "lon": -3.6778688,
+  "rumbo": null,
+  "velocidadKmh": null,
+  "estado": "IN_TRANSIT_TO",
+  "paradaActual": "60000",
+  "retrasoSeg": 2280,
+  "actualizado": "2026-10-27T10:27:18+01:00"
 }
 ```
 
-Errores: `404` el viaje no circula ahora o no hay dato (Renfe caída / feed sin esa posición).
+Errores: `400` `feed` no es `avld`/`cercanias` · `404` el viaje no está circulando ahora o Renfe no
+publica su posición · `503` Renfe no responde y no hay datos previos.
 
-Notas: `estado` es el enum de GTFS-RT (`INCOMING_AT`, `STOPPED_AT`, `IN_TRANSIT_TO`). Si no se
-conoce el rumbo o la velocidad, `null`.
+Notas:
+
+- `estado` es el enum de GTFS-RT (`INCOMING_AT`, `STOPPED_AT`, `IN_TRANSIT_TO`). Si no se conoce el
+  rumbo o la velocidad, `null`.
+- `paradaActual` es el **`stop_id` del feed**, no el `id` unificado de `estaciones`. Para `avld`
+  coinciden; para `cercanias` **no**: para traducirlo a una estación hay que pasar por
+  `estacion_feeds`. Hasta que exista la BD, la web solo puede mostrar el id.
+- El viaje se busca en el snapshot de `/posiciones`, así que no gasta ni una consulta más a Renfe.
 
 ## GET /incidencias
 
@@ -330,6 +348,7 @@ Response 200:
       "rumbo": 45,
       "velocidadKmh": 78,
       "estado": "INCOMING_AT",
+      "paradaActual": "60000",
       "retrasoSeg": 180,
       "actualizado": "2026-10-26T12:00:30+01:00"
     }
@@ -346,25 +365,31 @@ Notas:
 - `bbox` es siempre opcional. Hoy el feed completo son ~500 posiciones (210 AVE/LD + 298
   Cercanías), así que la regla de «obligatoria si hay más de 500» no se aplica.
 - La API **sondea Renfe cada `GTFS_RT_POLL_SECONDS` (30 s por defecto) en memoria**, sin worker y
-  sin BD: `/posiciones` funciona aunque Supabase esté caído. Las dos peticiones del intervalo se
-  agrupan en una sola descarga.
+  sin BD: `/posiciones` funciona aunque Supabase esté caído. Cada intervalo son **4 descargas**
+  (posiciones + retrasos de los dos feeds) y se comparten entre todas las peticiones simultáneas.
+- Si falla el feed de **retrasos** pero no el de posiciones, se sirve el mapa igual con `retrasoSeg`
+  a `null`: el retraso es un extra, la posición no.
 - Si Renfe falla, se sigue sirviendo el último snapshot bueno y `actualizado` deja de avanzar. Solo
   hay `503` si nunca se ha podido leer.
 - `actualizado` es el del feed **más antiguo** de los dos: es el que se queda corto.
 - `rumbo` y `velocidadKmh` son `null` **siempre** hoy: el feed JSON de Renfe no publica ni `bearing`
-  ni `speed`. `retrasoSeg` es `null` porque el retraso vive en `trip_updates`, que no se lee.
+  ni `speed`. `retrasoSeg` **sí es real**: sale de `trip_updates` (`GTFS_RT_URL_RETRASOS_*`), cruzado
+  por `tripId`, y es `null` solo si ese viaje no lo publica. **Puede ser negativo** (tren adelantado),
+  así que la web no debe tratarlo como «0 o tarde».
 - Un mismo `vehicleId` aparece varias veces con `tripId` distintos (un tren encadenando viajes): no
   se deduplica, cada fila es un viaje.
-- `tripId` es el de GTFS-RT tal cual (`0029112026-10-27`), que **no coincide** con el `trip_id` del
-  GTFS estático (`3097L23537C1`): no se puede cruzar con `viajes` por id. Para el mapa da igual;
-  para `/trenes/:feed/:tripId/posicion` es un bloqueo.
+- `tripId` es el de GTFS-RT tal cual, que **sí coincide** con el `trip_id` del GTFS estático
+  (comprobado contra el `trips.txt` real de AVE/LD). Se puede pasar directo a
+  `/trenes/:feed/:tripId` y a `/trenes/:feed/:tripId/posicion`.
+- `paradaActual` es el `stop_id` del feed, no el `id` unificado de `estaciones` (ver la nota de
+  `/trenes/:feed/:tripId/posicion`).
 
-### Campos del viaje para el mapa — propuesto (Alex, 2026-10-27) · para Rubén
+### Campos del viaje para el mapa — aceptado (Rubén, 2026-10-27) · **bloqueado por la BD**
 
 Al pulsar un tren, la web quiere enseñar **qué tren es, de dónde sale, adónde va, la próxima parada
-y las horas**. Propuesta: añadir a cada elemento de `datos` estos campos, **todos opcionales**
-(`null` si no se pueden cruzar con el GTFS estático). La web ya los lee
-(`frontend/web/src/api/cliente.ts`, `aPosicion`) y oculta los que lleguen vacíos.
+y las horas**. Alex propuso estos campos y la web ya los lee (`frontend/web/src/api/cliente.ts`,
+`aPosicion`) ocultando los que lleguen vacíos. **La forma se acepta tal cual**: añadir campos
+opcionales no rompe nada, así que se pueden ir rellenando sin tocar la web.
 
 ```json
 {
@@ -377,10 +402,31 @@ y las horas**. Propuesta: añadir a cada elemento de `datos` estos campos, **tod
 }
 ```
 
-- `nombre`: tipo y número comercial (lo que se ve en los paneles). Sustituye al `vehicleId` en la UI.
-- `linea`: solo en Cercanías (`C-1`, `R2`…); `null` en AVE/LD.
-- Las horas son las **previstas con el retraso aplicado** si se conoce; con offset, como el resto.
-- `velocidadKmh` y `rumbo` se pueden quitar: Renfe no los publica y la web ya no los usa.
+**Estado: los seis son `null` hoy.** No es que falte código: **los seis salen del GTFS estático**, que
+vive en Supabase, y Supabase no tiene migraciones todavía. `vehicle_positions` solo publica
+`tripId`, `vehicleId`, `stopId`, latitud y longitud: ni nombres de estación ni horas.
+
+De dónde sale cada uno cuando exista la BD:
+
+| Campo | Origen |
+|---|---|
+| `nombre` | `rutas.nombre_corto` del viaje (`AVE 02070`) |
+| `linea` | `rutas.nombre_corto` en `cercanias` (`C-4`); `null` en `avld` |
+| `origen` | primera parada del viaje en `horarios` + `estaciones.nombre` |
+| `destino` | última parada del viaje en `horarios` + `estaciones.nombre` |
+| `proximaParada` | primera parada con `secuencia > paradaActual.secuencia`, con su `llega` |
+| `llegadaDestino` | `llega` de la última parada |
+
+Dos avisos:
+
+- `paradaActual` (el `stopId` de GTFS-RT) es el `stop_id` **del feed**, no el `id` unificado de
+  `estaciones`. Para traducirlo hace falta `estacion_feeds`, que también es BD. Sin eso no hay ni
+  `proximaParada.nombre` ni `origen`/`destino`.
+- Las horas, cuando lleguen, van **con el retraso aplicado** si se conoce, y con offset de Madrid.
+
+**`velocidadKmh` y `rumbo` se quedan** (siempre `null`), aunque Alex propuso quitarlos: `aPosicion`
+todavía los mapea (`rumbo: p.rumbo ?? 0`) y quitarlos no arregla nada. Quedan como obsoletos; se
+pueden borrar cuando la web deje de leerlos.
 
 ## Formato del QR del billete — propuesto (Alex, 2026-10-27)
 
@@ -513,14 +559,112 @@ y `p` (nombre del titular). El revisor y los tornos tendrán que aceptar `RNA1` 
 Sin endpoint de momento: la web solo la guarda en el navegador y solo se puede activar si el
 usuario tiene la cara registrada. Cuando haya tornos faciales hará falta guardarla en la API.
 
+## POST /auth/cara/registrar
+
+Descripción: guarda la plantilla facial del usuario autenticado. **Una sola vez**: si ya existe, no se
+puede cambiar (el `reset` lo hace un `admin`). El vector lo calcula el dispositivo; la imagen nunca
+sale de él.
+Auth: **sí** (token del login con contraseña)
+
+Request:
+
+```json
+{
+  "embedding": [0.031, -0.118, 0.204],
+  "modelo": "arcface/buffalo_l"
+}
+```
+
+`embedding`: exactamente **512** floats (ArcFace). `modelo` tiene que ser el de `config_cara`.
+
+Response 204: sin cuerpo.
+
+Errores: `400` embedding de otra dimensión, vector vacío o modelo distinto · `401` token ausente o
+inválido · `404` el usuario no existe · `409` la cara ya estaba registrada · `503` BD caída.
+
+Notas:
+
+- La API solo llama a `registrar_cara(...)` en Postgres, que valida dimensión, modelo, normaliza
+  (L2 = 1) y hace el alta. La tabla no tiene políticas RLS: ni `anon` ni `authenticated` pueden leerla.
+- Cada fallo de la función trae su **SQLSTATE**, así que la API no compara textos:
+  `RF001` modelo distinto → 400 · `RF002` dimensión → 400 · `RF003` vector vacío → 400 ·
+  `RF004` ya registrada → 409 · `RF005` usuario inexistente → 404 · `RF006` no autorizado → 403.
+- Si el registro sale mal (foto borrosa), solo un `admin` puede borrarlo con `/auth/cara/reset`.
+
+## POST /auth/cara/reset
+
+Descripción: borra la plantilla facial de un usuario para que pueda volver a registrarse. Es la única
+forma de rehacer un registro malo, porque la cara no se puede cambiar.
+Auth: **sí**, y el token tiene que ser de un `admin`.
+
+Request:
+
+```json
+{ "usuarioId": "6f1c…" }
+```
+
+Response 204: sin cuerpo.
+
+Errores: `400` falta `usuarioId` · `401` token ausente o inválido · `403` el que llama no es `admin` ·
+`503` BD caída.
+
+Notas: la API pasa su propio `sub` y el `usuarioId` a `resetear_cara(...)`, y **Postgres** comprueba el
+rol contra `app_metadata`; la API no decide nada. Si el usuario no tenía plantilla, no hace nada.
+
+## POST /auth/cara/verificar
+
+Descripción: login facial. Compara el vector con la plantilla del email y, si coincide, devuelve una
+sesión.
+Auth: **no** (es el propio login)
+
+Request:
+
+```json
+{
+  "email": "ana@ejemplo.es",
+  "embedding": [0.031, -0.118, 0.204]
+}
+```
+
+Response 200: mismo shape que `/auth/login`.
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "usuario": {
+    "id": "6f1c…",
+    "nombre": "Ana",
+    "email": "ana@ejemplo.es",
+    "rol": "viajero",
+    "caraRegistrada": true
+  }
+}
+```
+
+Errores: `400` embedding inválido · `401` **siempre el mismo mensaje**, sea «no hay plantilla», «no
+coincide» o «modelo distinto» · `503` BD caída.
+
+Notas:
+
+- La decisión es de Postgres (`verificar_cara`): umbral de `config_cara` y similitud coseno de pgvector.
+- **No se devuelve la similitud.** Un número de similitud por intento es un oráculo que permite
+  reconstruir la plantilla probando vectores; se mide con SQL cuando toque ajustar el umbral.
+- El token es el mismo formato que el de la contraseña (HS256 con el secreto compartido), así que hay
+  un solo guard. Ver [[ADR-007-reconocimiento-facial]].
+- No hay límite de intentos todavía (fase F7): el facial es alternativa a la contraseña, nunca el
+  único factor.
+
 ## Pendientes de detallar
 
-`/auth/*`, `/trenes/:feed/:tripId/asientos`, `/reservas`, `/pagos/*`, `/billetes*` y `/chatbot/mensaje`
-no dependen de GTFS. Se detallan en el sprint que los implemente, siempre aquí antes del código.
+`/auth/registro`, `/auth/login`, `/trenes/:feed/:tripId/asientos`, `/reservas`, `/pagos/*`,
+`/billetes*` y `/chatbot/mensaje` no dependen de GTFS. Se detallan en el sprint que los implemente,
+siempre aquí antes del código.
 
 ## Historial
 
 - 2026-10-28 — Propuestas por la web `GET/POST /abonos` y `GET /abonos/:id` (Alex).
+- 2026-10-28 — Detallados `/auth/cara/registrar`, `/auth/cara/verificar` y `/auth/cara/reset`
+  (ADR-005: ArcFace 512, lógica en Postgres, JWT propio).
 - 2026-10-26 — Añadidas y detalladas las 6 rutas de datos (estaciones, viajes, posiciones, incidencias).
   Renombradas a `/trenes/:feed/:tripId` para evitar ids compuestos en la URL.
 - 2026-10-26 — Creado el catálogo inicial con 17 rutas propuestas.

@@ -1,7 +1,7 @@
 ---
 fecha: {{date}}
 autor:
-area: frontend | api | database | gtfs-worker | face-service | devops | general
+area: frontend | api | database | gtfs-worker | devops | general
 para: todos | Alex | Rubén | Marina | Kevin
 rama:
 pr:
