@@ -72,12 +72,22 @@ export default function Reserva() {
 
   if (error)
     return (
-      <div className="contenedor seccion" role="alert">
-        <p>{error}</p>
-        <Link to="/">Vuelve a buscar trenes</Link>
+      <div className="contenedor seccion">
+        <div className="aviso reserva__estado" role="alert">
+          <p>{error}</p>
+          <Link className="boton" to="/">
+            Vuelve a buscar trenes
+          </Link>
+        </div>
       </div>
     );
-  if (!tren || !asientos) return <p className="contenedor seccion cargando">Cargando el tren…</p>;
+  if (!tren || !asientos)
+    return (
+      <div className="contenedor seccion" aria-busy="true">
+        <p className="cargando" role="status">Cargando el tren…</p>
+        <span className="esqueleto reserva__esqueleto" aria-hidden="true" />
+      </div>
+    );
 
   const seleccion = elegidos.map((id) => asientos.find((a) => a.id === id)!);
   const desglose = calcularTotal({ precios: seleccion.map((a) => a.precio), tipos, tarifa, descuento, extras });

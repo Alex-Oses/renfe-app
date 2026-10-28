@@ -597,6 +597,29 @@
   color: var(--color-texto-suave);
 }
 
+.reserva__estado {
+  display: grid;
+  justify-items: start;
+  gap: var(--esp-3);
+}
+
+.reserva__estado p {
+  margin: 0;
+}
+
+.reserva__esqueleto {
+  display: block;
+  height: 18rem;
+  border-radius: var(--radio-grande, 20px);
+}
+
+/* Barra fija inferior en móvil: respeta la zona segura de iPhone */
+@media (max-width: 899px) {
+  .resumen {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
 .reserva__vuelta {
   margin-top: var(--esp-6);
   padding: var(--esp-4);
