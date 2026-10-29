@@ -5,9 +5,8 @@ a `develop`: crea otra nueva.
 
 ## Estado
 
-**Escritas y sin aplicar.** No se han ejecutado ni en Supabase local ni en la nube, y no se ha
-importado ningún dato. Se aplican en la **VM Linux de Azure `genai-openllm-vm`** (Docker Desktop está
-bloqueado en el portátil corporativo).
+**Aplicadas y validadas en la VM** (`genai-openllm-vm`) con el feed `avld` cargado. En Supabase
+local se aplican con `pnpm db:reset`; en la nube, con `supabase db push` (pendiente).
 
 ## Orden
 
@@ -16,8 +15,10 @@ bloqueado en el portátil corporativo).
 | 01 | `20261028120000_extensiones_y_funciones.sql` | Esquema `extensions`; extensiones `vector` y `pg_trgm`; función `set_actualizado_en()` |
 | 02 | `20261028120100_identidad.sql` | `perfiles` y `embeddings_faciales` + RLS |
 | 03 | `20261028120200_catalogo_gtfs.sql` | `estaciones`, `estacion_feeds`, `rutas`, `calendarios`, `calendario_excepciones`, `viajes`, `horarios` + RLS |
+| 04 | `20261028120300_reconocimiento_facial.sql` | `config_cara` y las funciones `registrar_cara` / `verificar_cara` / `resetear_cara` (ADR-007) |
 
-El orden importa: 02 usa la función y el esquema que crea 01, y 03 usa `pg_trgm` y la función.
+El orden importa: 02 usa la función y el esquema que crea 01, 03 usa `pg_trgm` y la función, y 04
+usa `perfiles` y `embeddings_faciales` de 02.
 
 ## Qué NO entra (segunda migración)
 
