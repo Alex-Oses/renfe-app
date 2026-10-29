@@ -40,9 +40,10 @@ export function Vigilante() {
     async function revisar() {
       const { avisar, seguimientos, favoritos, billetes } = datos.current;
       const ahora = Date.now();
-      const nuevos: AvisoClave[] = billetes.flatMap((b) => novedadesBillete(b, ahora));
+      const nuevos: AvisoClave[] = [];
       try {
-        const pos = seguimientos.length || favoritos.length ? await posicionesTrenes() : [];
+        const pos = seguimientos.length || favoritos.length || billetes.length ? await posicionesTrenes() : [];
+        nuevos.push(...billetes.flatMap((b) => novedadesBillete(b, ahora, pos)));
         nuevos.push(...reglasSeguimientos(seguimientos, pos, ahora, retrasos.current));
         const listas = await Promise.all(
           favoritos.map((f) => buscarTrenes({ origen: f.origen, destino: f.destino, fecha: hoyISO() }).catch(() => [])),

@@ -556,6 +556,7 @@ Response 200:
   "datos": [
     {
       "id": "1c4a…", "localizador": "R-7K3M9Q", "estado": "valido",
+      "feed": "avld", "viajeId": "0207012026-11-02",
       "tipo": "AVE", "numero": "02070",
       "salida": "2026-11-02T07:15:00+01:00", "llegada": "2026-11-02T09:40:00+01:00",
       "origen": { "id": "60000", "nombre": "Madrid-Puerta de Atocha" },
@@ -573,6 +574,8 @@ Response 200:
 
 Errores: `401` sin token · `503` BD caída. `estado` es el de `billetes` (`valido` | `usado` |
 `anulado` | `caducado`). `numero` puede ser `null`.
+`feed` y `viajeId` (añadidos el 29/10, Alex) identifican el viaje: la web los cruza con `/posiciones`
+para avisar del retraso real del tren del billete.
 
 ## GET /billetes/:id/qr
 
