@@ -65,6 +65,14 @@ describe('PosicionesService', () => {
         paradaActual: null,
         retrasoSeg: null,
         actualizado: ISO,
+        nombre: null,
+        linea: null,
+        origen: null,
+        destino: null,
+        proximaParada: null,
+        llegadaDestino: null,
+        retrasoFuente: null,
+        estadoHorario: 'sin_datos',
       },
     ]);
   });
