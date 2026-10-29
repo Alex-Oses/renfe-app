@@ -10,7 +10,12 @@ import { TrenesModule } from './modules/trenes/trenes.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validarEntorno }),
+    // El `.env` vive en la raíz del monorepo, pero los scripts corren en `backend/api`.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['../../.env', '.env'],
+      validate: validarEntorno,
+    }),
     BdModule,
     HealthModule,
     AuthModule,

@@ -123,14 +123,14 @@ export class CaraService {
     };
   }
 
-  /** Mismos claims que el token de Supabase, para que el guard no distinga cómo se entró. */
-  private async firmar({ id, email, rol }: UsuarioSesion): Promise<string> {
+  /** El rol no viaja en el token: el guard lo lee de `perfiles.rol`, igual entre cara y contraseña. */
+  private async firmar({ id, email }: UsuarioSesion): Promise<string> {
     const secreto = this.config.get<string>('SUPABASE_JWT_SECRET');
     if (!secreto) {
       throw new ServiceUnavailableException('La API no tiene configurado SUPABASE_JWT_SECRET');
     }
 
-    return new SignJWT({ email, app_metadata: { rol } })
+    return new SignJWT({ email })
       .setProtectedHeader({ alg: 'HS256' })
       .setSubject(id)
       .setIssuedAt()
