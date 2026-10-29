@@ -72,3 +72,20 @@ export function duracionMin(desde: string, hasta: string): number {
 
   return Math.round((aSegundos(hasta) - aSegundos(desde)) / 60);
 }
+
+/** Fecha de hoy en Madrid (`AAAA-MM-DD`): la de servicio de los billetes. */
+export function hoyMadrid(instante = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZONA,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(instante);
+}
+
+/** `2026-11-01` + 59 → `2026-12-30` (sin sustos de zona horaria). */
+export function sumarDias(fecha: string, dias: number): string {
+  const [anio, mes, dia] = fecha.split('-').map(Number);
+  const instante = Date.UTC(anio, mes - 1, dia) + dias * 86_400_000;
+  return new Date(instante).toISOString().slice(0, 10);
+}
