@@ -219,12 +219,40 @@ async function fetchConLimite(url: string, init?: RequestInit): Promise<Response
 
 function respuestaChatbotDemo(mensaje: string): RespuestaChatbot {
   const pregunta = mensaje.toLocaleLowerCase("es");
-  let respuesta =
-    "Estoy en modo demo. Puedo ayudarte con estaciones, trenes y horarios usando los datos simulados de la aplicación.";
-  if (pregunta.includes("estación") || pregunta.includes("estacion")) {
-    respuesta = "En el modo demo puedes buscar estaciones como Madrid, Barcelona, Valencia o Sevilla.";
+  const saludo = /^(hola|buenas|buenos días|buenas tardes|buenas noches|hey)\b/.test(pregunta);
+  const despedida = /\b(adiós|adios|hasta luego|nos vemos)\b/.test(pregunta);
+  const agradecimiento = /\b(gracias|muchas gracias|te lo agradezco)\b/.test(pregunta);
+  const trayecto = pregunta.match(/\bde\s+(.+?)\s+a\s+(.+?)(?:[?.!,]|$)/);
+  let respuesta = "Puedo ayudarte a buscar trenes, estaciones y horarios. ¿Qué necesitas?";
+
+  if (saludo) {
+    respuesta = "¡Hola! ¿En qué puedo ayudarte? Puedo buscarte trenes, estaciones u horarios.";
+  } else if (agradecimiento) {
+    respuesta = "¡De nada! Cuando quieras, seguimos con tu viaje.";
+  } else if (despedida) {
+    respuesta = "¡Hasta luego! Que tengas un buen viaje.";
+  } else if (/\b(cómo estás|como estas|qué tal|que tal)\b/.test(pregunta)) {
+    respuesta = "¡Muy bien, gracias! Preparado para ayudarte con tu viaje.";
+  } else if (trayecto) {
+    const origen = trenes.buscarEstaciones(trayecto[1])[0];
+    const destino = trenes.buscarEstaciones(trayecto[2])[0];
+    if (origen && destino) {
+      const lista = trenes.buscarTrenes({ origen: origen.id, destino: destino.id, fecha: hoyEnMadrid() }).slice(0, 3);
+      const horas = lista.map((tren) => {
+        const salida = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(new Date(tren.salida));
+        const llegada = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(new Date(tren.llegada));
+        return `${tren.tipo} ${tren.numero}: sale a las ${salida} y llega a las ${llegada}`;
+      });
+      respuesta = horas.length
+        ? `Para ir de ${origen.nombre} a ${destino.nombre} hoy he encontrado:\n${horas.join("\n")}`
+        : `Ahora mismo no hay trenes simulados de ${origen.nombre} a ${destino.nombre}.`;
+    } else {
+      respuesta = `No encuentro una estación simulada para ${trayecto[1]} o ${trayecto[2]}. Puedes probar con Madrid, Tarragona, Barcelona, Valencia o Sevilla.`;
+    }
+  } else if (pregunta.includes("estación") || pregunta.includes("estacion")) {
+    respuesta = "Claro. Puedes preguntarme por una estación concreta o pedirme un trayecto entre dos estaciones.";
   } else if (pregunta.includes("tren") || pregunta.includes("horario")) {
-    respuesta = "En demo hay trenes simulados para probar búsquedas de Madrid a Barcelona y otros trayectos.";
+    respuesta = "Claro. Dime el origen y el destino, por ejemplo: «¿Qué trenes hay de Madrid a Barcelona?»";
   }
   return { respuesta, conversationId: "demo", herramientas: [] };
 }
