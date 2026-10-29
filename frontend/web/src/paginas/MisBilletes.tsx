@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Link } from "react-router-dom";
-import { misBilletes } from "@renfe/shared/api/cliente";
+import { Link, Navigate, useLocation } from "react-router-dom";
+import { misBilletes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Billete } from "@renfe/shared/api/tipos";
 import { agrupar, type Viaje } from "./billetes/agrupar";
 import { fecha, hora } from "./reserva/formato";
@@ -9,14 +9,21 @@ import RetrasoVivo from "./billetes/RetrasoVivo";
 import "./billetes.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
+import { useSesion } from "../estado/sesion";
 
 export default function MisBilletes() {
+  const { sesion } = useSesion();
+  const { pathname, search } = useLocation();
   const [billetes, setBilletes] = useState<Billete[] | null>(null);
   const [error, setError] = useState("");
+  // Con la API real /billetes exige sesión (401 sin token): sin sesión no se piden datos.
+  const conSesion = usaDatosSimulados || Boolean(sesion);
   useEffect(() => {
+    if (!conSesion) return;
     misBilletes().then(setBilletes, (e: Error) => setError(e.message));
-  }, []);
+  }, [conSesion]);
 
+  if (!conSesion) return <Navigate to={`/acceder?volver=${encodeURIComponent(pathname + search)}`} replace />;
   if (error) return <p className="contenedor seccion" role="alert">{error}</p>;
   if (!billetes) return <p className="contenedor seccion cargando">Cargando tus billetes…</p>;
 

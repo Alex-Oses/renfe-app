@@ -1,7 +1,9 @@
-// Cámara para el acceso con la cara. Todo el análisis ocurre en el navegador con Human:
-// ningún fotograma sale del dispositivo, solo el embedding (una lista de números).
+// Cámara para el acceso con la cara. Todo el análisis ocurre en el navegador: Human detecta la cara,
+// su malla y si es real, y ArcFace (ONNX) calcula la huella de 512 números (ADR-007).
+// Ningún fotograma sale del dispositivo, solo esa huella.
 import { useEffect, useRef, useState } from "react";
 import type { EmbeddingFacial } from "@renfe/shared/api/tipos";
+import { cargarArcFace, huellaArcFace, normalizar, puntosDeMalla } from "./arcface";
 import "./cuenta.css";
 
 type Estado = "permiso" | "cargando" | "capturando" | "enviando" | "exito" | "error" | "sin-permiso" | "sin-camara";
@@ -69,7 +71,7 @@ export function CamaraFacial({ titulo, alCapturar, alCancelar, textoExito, texto
           mesh: { enabled: true },
           iris: { enabled: false },
           emotion: { enabled: false },
-          description: { enabled: true },
+          description: { enabled: false }, // la huella la calcula ArcFace, no Human
           antispoof: { enabled: true },
           liveness: { enabled: true },
         },
@@ -79,9 +81,9 @@ export function CamaraFacial({ titulo, alCapturar, alCancelar, textoExito, texto
         gesture: { enabled: false },
         segmentation: { enabled: false },
       }));
+      let arcface: Awaited<ReturnType<typeof cargarArcFace>>;
       try {
-        await human.load();
-        await human.warmup();
+        [arcface] = await Promise.all([cargarArcFace(), human.load().then(() => human.warmup())]);
       } catch {
         if (vivo) {
           setError("No se han podido cargar los modelos de reconocimiento. Revisa la conexión.");
@@ -109,11 +111,11 @@ export function CamaraFacial({ titulo, alCapturar, alCancelar, textoExito, texto
           else if (Math.abs(cx - 0.5) > 0.15 || Math.abs(cy - 0.5) > 0.18) aviso = "Centra tu cara";
           else if (movido) aviso = "Mantente quieto";
           else if ((cara.real ?? 0) < MIN_VIDA || (cara.live ?? 0) < MIN_VIDA) aviso = "Mira a la cámara, con buena luz";
-          else if (!cara.embedding?.length) aviso = "Mantente quieto";
+          else if ((cara.mesh?.length ?? 0) < 468) aviso = "Mantente quieto";
         }
         if (!vivo) break;
         if (aviso) embeddings.length = 0;
-        else embeddings.push(cara!.embedding!);
+        else embeddings.push(await huellaArcFace(arcface, v, puntosDeMalla(cara!.mesh)));
         setGuia(aviso || "Mantente quieto");
         setProgreso(embeddings.length / FOTOGRAMAS);
         await new Promise((ok) => setTimeout(ok, 60));
@@ -122,7 +124,8 @@ export function CamaraFacial({ titulo, alCapturar, alCancelar, textoExito, texto
 
       // La cámara ya no hace falta: se apaga antes de llamar a la API.
       stream.getTracks().forEach((t) => t.stop());
-      const media = embeddings[0].map((_, i) => embeddings.reduce((s, e) => s + e[i], 0) / embeddings.length);
+      // Media de las huellas de los fotogramas, devuelta a norma 1 (es lo que compara el coseno de la BD).
+      const media = normalizar(embeddings[0].map((_, i) => embeddings.reduce((s, e) => s + e[i], 0) / embeddings.length));
       setEstado("enviando");
       try {
         await capturar.current(media);
