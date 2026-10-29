@@ -4,6 +4,7 @@ import { CircleMarker, Marker, Polyline, Tooltip, useMapEvents } from "react-lea
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import type { PosicionTren } from "@renfe/shared/api/tipos";
 import { COLOR_TIPO } from "./CapaTrenes";
+import { extremos } from "./estado-tren";
 
 type LL = [number, number];
 
@@ -28,20 +29,53 @@ export function partirRuta(ruta: LL[], lat: number, lon: number): { hecho: LL[];
 export function RutaElegida({ tren }: { tren: PosicionTren }) {
   const c = COLOR_TIPO[tren.tipo];
   const { hecho, pendiente } = partirRuta(tren.ruta, tren.lat, tren.lon);
+  // Sin dos puntos no hay línea que pintar: Leaflet avisa si le llega una vacía.
+  const linea = (positions: LL[]) => (positions.length > 1 ? positions : undefined);
+  const { salida, llegada } = extremos(tren.paradas);
+  // Con una sola parada, salida y llegada son la misma: se pinta una vez.
+  const extremosDibujo =
+    salida && llegada && salida.estacionId === llegada.estacionId
+      ? [{ parada: salida, etiqueta: "Parada" }]
+      : [
+          ...(salida ? [{ parada: salida, etiqueta: "Sale de" }] : []),
+          ...(llegada ? [{ parada: llegada, etiqueta: "Llega a" }] : []),
+        ];
   return (
     <>
-      <Polyline positions={hecho} pathOptions={{ color: c, weight: 4, opacity: 0.35, dashArray: "6 6" }} interactive={false} />
-      <Polyline positions={pendiente} pathOptions={{ color: "#fff", weight: 9, opacity: 0.95 }} interactive={false} />
-      <Polyline positions={pendiente} pathOptions={{ color: c, weight: 5, opacity: 1 }} interactive={false} />
-      {tren.paradas.map((p) => (
+      {linea(hecho) && (
+        <Polyline positions={hecho} pathOptions={{ color: c, weight: 4, opacity: 0.35, dashArray: "6 6" }} interactive={false} />
+      )}
+      {linea(pendiente) && (
+        <>
+          <Polyline positions={pendiente} pathOptions={{ color: "#fff", weight: 9, opacity: 0.95 }} interactive={false} />
+          <Polyline positions={pendiente} pathOptions={{ color: c, weight: 5, opacity: 1 }} interactive={false} />
+        </>
+      )}
+      {tren.paradas.map((p) => {
+        // La primera y la última parada se dibujan aparte, con su etiqueta de salida y llegada.
+        if (p.estacionId === salida?.estacionId || p.estacionId === llegada?.estacionId) return null;
+        return (
+          <CircleMarker
+            key={p.estacionId}
+            center={[p.lat, p.lon]}
+            radius={6}
+            pathOptions={{ color: c, weight: 3, fillColor: p.pasada ? "#d9dde2" : "#fff", fillOpacity: 1, opacity: p.pasada ? 0.5 : 1 }}
+          >
+            <Tooltip permanent direction="right" offset={[8, 0]} className={`parada-etiqueta${p.pasada ? " parada-etiqueta--pasada" : ""}`}>
+              {p.nombre}
+            </Tooltip>
+          </CircleMarker>
+        );
+      })}
+      {extremosDibujo.map(({ parada: p, etiqueta }) => (
         <CircleMarker
-          key={p.estacionId}
+          key={`extremo-${etiqueta}-${p.estacionId}`}
           center={[p.lat, p.lon]}
-          radius={6}
-          pathOptions={{ color: c, weight: 3, fillColor: p.pasada ? "#d9dde2" : "#fff", fillOpacity: 1, opacity: p.pasada ? 0.5 : 1 }}
+          radius={8}
+          pathOptions={{ color: c, weight: 3, fillColor: c, fillOpacity: 1 }}
         >
-          <Tooltip permanent direction="right" offset={[8, 0]} className={`parada-etiqueta${p.pasada ? " parada-etiqueta--pasada" : ""}`}>
-            {p.nombre}
+          <Tooltip permanent direction="right" offset={[10, 0]} className="parada-etiqueta parada-etiqueta--extremo">
+            {etiqueta} {p.nombre}
           </Tooltip>
         </CircleMarker>
       ))}

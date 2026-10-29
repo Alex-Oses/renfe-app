@@ -110,3 +110,20 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
 - [[endpoints]]: `POST /auth/cara/registrar`, `POST /auth/cara/verificar` y `POST /auth/cara/reset`
 - Este ADR
 
+## Actualización 2026-10-29 (Alex): modelo elegido y web conectada
+
+- **Fichero ONNX:** `w600k_mbf.onnx` (MobileFaceNet entrenado con ArcFace, 512 dimensiones, 13,6 MB) del
+  paquete `buffalo_s` de la release oficial v0.7 de InsightFace. SHA-256
+  `9cc6e4a75f0e2bf0b1aed94578f144d15175f357bdc05e815e5c4a02b319eb4f`. Se sirve desde
+  `frontend/web/public/modelos/arcface-w600k-mbf.onnx` con `onnxruntime-web` (backend `wasm`).
+- **`config_cara.modelo` = `arcface/w600k_mbf`** (migración `20261029130000_modelo_cara_w600k_mbf.sql`).
+  Las plantillas guardadas con `arcface/buffalo_l` dejan de valer: hay que volver a registrar la cara.
+- **Web:** Human ya no calcula `description`; da la malla (468 puntos) y el liveness/antispoof. Los 5 puntos
+  de ArcFace salen de la malla, se alinea a 112×112 con una semejanza (Umeyama) y se pasa el ONNX
+  (`frontend/web/src/paginas/cuenta/arcface.ts`).
+- **Medido en navegador** con recortes de una foto (no con cámara): misma persona con otro encuadre,
+  coseno 0,979 y 0,998; personas distintas, entre −0,10 y 0,07. Contra la API local: misma cara → 200 con
+  token; otras → 401. **Falta medir el umbral con la cámara y fotos distintas de la misma persona.**
+- **Licencia:** los modelos de InsightFace son solo para uso no comercial/investigación. Vale para el
+  proyecto de clase; para un uso real habría que cambiarlo.
+

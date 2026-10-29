@@ -50,6 +50,7 @@ export interface TrenDetalle {
 interface FilaParada {
   feed: string;
   viaje_id: string;
+  numero: string | null;
   nombre_corto: string | null;
   nombre: string;
   tipo_servicio: string | null;
@@ -63,6 +64,7 @@ interface FilaParada {
 interface FilaTren {
   feed: string;
   viaje_id: string;
+  numero: string | null;
   nombre_corto: string | null;
   nombre: string;
   tipo_servicio: string | null;
@@ -82,6 +84,7 @@ interface FilaTren {
 const SQL_BUSCAR = `
   select v.feed,
          v.id as viaje_id,
+         v.numero,
          r.nombre_corto,
          r.nombre,
          r.tipo_servicio,
@@ -122,10 +125,25 @@ const lineaDe = (fila: { nombre_corto: string | null; nombre: string }) =>
 const tipoDe = (tipoServicio: string | null) => tipoServicio?.toUpperCase() ?? 'DESCONOCIDO';
 const numeroDe = (nombreCorto: string | null) => nombreCorto?.match(/(\d+)\s*$/)?.[1] ?? null;
 
+// El feed de Renfe publica a veces el mismo tren con dos trip_id activos el mismo día
+// (p. ej. 0307312026-10-28 y 0307322026-10-28): se queda el primero por número y salida.
+export function sinViajesDuplicados<T extends { numero: string | null; sale: string; viaje_id: string }>(
+  filas: T[],
+): T[] {
+  const vistos = new Set<string>();
+  return filas.filter((f) => {
+    const clave = `${f.numero ?? f.viaje_id}|${f.sale}`;
+    if (vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
+  });
+}
+
 // Todas las paradas del viaje, en orden. El viaje tiene que circular ese día.
 const SQL_DETALLE = `
   select v.feed,
          v.id as viaje_id,
+         v.numero,
          r.nombre_corto,
          r.nombre,
          r.tipo_servicio,
@@ -176,8 +194,9 @@ export class TrenesService {
       throw new ServiceUnavailableException('La base de datos no está disponible');
     }
 
+    const unicas = sinViajesDuplicados(filas);
     return {
-      datos: filas.map((fila) => {
+      datos: unicas.map((fila) => {
         const clave = `${fila.feed}:${fila.viaje_id}:${fecha}`;
         return {
           id: clave,
@@ -186,7 +205,7 @@ export class TrenesService {
           fecha,
           linea: lineaDe(fila),
           tipo: tipoDe(fila.tipo_servicio),
-          numero: numeroDe(fila.nombre_corto),
+          numero: fila.numero ?? numeroDe(fila.nombre_corto),
           origen: { id: fila.origen_id, nombre: fila.origen_nombre },
           destino: { id: fila.destino_id, nombre: fila.destino_nombre },
           salida: intervaloAIso(fecha, fila.sale),
@@ -198,7 +217,7 @@ export class TrenesService {
           plazasLibres: plazasSimuladas(clave),
         };
       }),
-      total: filas.length > 0 ? Number(filas[0].total) : 0,
+      total: filas.length > 0 ? Number(filas[0].total) - (filas.length - unicas.length) : 0,
     };
   }
 
@@ -223,7 +242,7 @@ export class TrenesService {
       fecha,
       linea: lineaDe(primera),
       tipo: tipoDe(primera.tipo_servicio),
-      numero: numeroDe(primera.nombre_corto),
+      numero: primera.numero ?? numeroDe(primera.nombre_corto),
       origen: { id: primera.estacion_id, nombre: primera.estacion_nombre },
       destino: { id: ultima.estacion_id, nombre: ultima.estacion_nombre },
       // GTFS exige hora de llegada o de salida en cada parada: la que falte se toma de la otra.

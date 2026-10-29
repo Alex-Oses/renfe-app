@@ -43,7 +43,12 @@ export default function EstadoTren() {
               {res.slice(0, 8).map((p) => (
                 <li key={p.trenId}>
                   <strong>{p.tipo} {p.numero}</strong> {p.origen} → {p.destino}.{" "}
-                  {p.retrasoMin > 0 ? `Retraso de ${p.retrasoMin} min` : "En hora"}. Próxima parada: {p.proximaParada}.{" "}
+                  {p.retrasoSeg === null
+                    ? "Sin datos de retraso"
+                    : p.retrasoSeg > 0
+                      ? `Retraso de ${Math.round(p.retrasoSeg / 60)} min`
+                      : "En hora"}
+                  . Próxima parada: {p.proximaParada}.{" "}
                   <Link to={`/mapa?tren=${encodeURIComponent(p.trenId)}`}>Ver en el mapa</Link>
                 </li>
               ))}
