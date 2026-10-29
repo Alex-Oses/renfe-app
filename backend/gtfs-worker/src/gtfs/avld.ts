@@ -1,6 +1,7 @@
 /**
- * Lectura y transformación del feed GTFS de **AVE/Larga Distancia/Media
- * Distancia** (`google_transit.zip`) al modelo del contrato (§4.1–§4.7).
+ * Lectura y transformación de un feed GTFS de Renfe al modelo del contrato (§4.1–§4.7).
+ * Nació para **AVE/Larga Distancia/Media Distancia** (`google_transit.zip`) y sirve igual
+ * para **Cercanías** (`fomento_transit.zip`, sin `calendar_dates.txt`).
  *
  * El feed **ya viene expandido por fecha**: un `trip_id` es un viaje de un día
  * concreto (lleva la fecha dentro, `0019012026-10-28`) y su `service_id` apunta
@@ -116,7 +117,7 @@ export function leerCatalogo(zip: Buffer, estacionesCsv: Buffer, feed: string = 
   const texto = (nombre: string): string => {
     const contenido = ficheros.get(nombre);
     if (contenido === undefined) {
-      throw new Error(`El feed no contiene «${nombre}». ¿Es el zip de AV/LD/MD?`);
+      throw new Error(`El feed no contiene «${nombre}». ¿Es un zip GTFS de Renfe?`);
     }
     return contenido.toString("utf8");
   };
@@ -224,7 +225,8 @@ export function leerCatalogo(zip: Buffer, estacionesCsv: Buffer, feed: string = 
   // --- calendar_dates.txt (opcional: Cercanías no lo publica) ---------------
   const excepciones: FilaExcepcion[] = [];
   let excepcionesHuerfanas = 0;
-  for (const excepcion of registrosCsv(texto("calendar_dates.txt"))) {
+  const fechas = ficheros.get("calendar_dates.txt")?.toString("utf8") ?? "";
+  for (const excepcion of registrosCsv(fechas)) {
     const servicioId = (excepcion["service_id"] ?? "").trim();
     if (servicioId === "") continue;
     if (!calendarioPorId.has(servicioId)) {
