@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { TipoTren, Tren } from "@renfe/shared/api/tipos";
+import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
 import { Buscador } from "../componentes/Buscador";
 import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
 import "./resultados.css";
@@ -264,7 +265,7 @@ export function Resultados() {
                   <span style={{ left: `${izquierda}%`, width: `${ancho}%` }} />
                 </div>
                 <div className="tren__info">
-                  <span className="tren__tipo">{t.tipo}</span> {t.numero}
+                  <span className="tren__tipo">{t.tipo}</span> {t.numero || t.linea}
                 </div>
                 <div className="tren__compra">
                   {completo ? (
@@ -278,7 +279,7 @@ export function Resultados() {
                         aria-expanded={abierto === t.id}
                         aria-controls={`tarifas-${i}`}
                         onClick={() => setAbierto((a) => (a === t.id ? null : t.id))}
-                        aria-label={`Ver tarifas del ${t.tipo} ${t.numero} de las ${t.salida.slice(11, 16)}`}
+                        aria-label={`Ver tarifas del ${nombreDeTren(t)} de las ${t.salida.slice(11, 16)}`}
                       >
                         {abierto === t.id ? "Cerrar" : "Elegir"}
                       </button>
@@ -286,7 +287,7 @@ export function Resultados() {
                   )}
                 </div>
                 {abierto === t.id && (
-                  <ul className="tarifas" id={`tarifas-${i}`} aria-label={`Tarifas del ${t.tipo} ${t.numero}`}>
+                  <ul className="tarifas" id={`tarifas-${i}`} aria-label={`Tarifas del ${nombreDeTren(t)}`}>
                     {TARIFAS.map((ta) => {
                       const q = new URLSearchParams({ pasajeros: String(pasajeros), tarifa: ta.id, ...Object.fromEntries(extra) });
                       return (

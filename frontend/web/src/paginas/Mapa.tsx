@@ -3,11 +3,13 @@ import "./mapa/mapa.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 import { useSearchParams } from "react-router-dom";
-import { posicionesReales, posicionesTrenes } from "@renfe/shared/api/cliente";
+import { posicionesReales, posicionesTrenes, completarRuta, posicionDeTren } from "@renfe/shared/api/cliente";
 import type { PosicionTren, TipoTren } from "@renfe/shared/api/tipos";
+import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
 import { useAvisos } from "../estado/avisos";
 import { CapaTrenes, COLOR_TIPO, SIGLA_TIPO, svgTren } from "./mapa/CapaTrenes";
 import { Estaciones, RutaElegida, RutasTodas } from "./mapa/CapasRuta";
+import { etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas } from "./mapa/estado-tren";
 
 const TIPOS = Object.keys(COLOR_TIPO) as TipoTren[];
 
@@ -71,9 +73,8 @@ const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLow
 
 const reducidoInicial = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-function Retraso({ min }: { min: number }) {
-  const nivel = min === 0 ? "ok" : min <= 15 ? "medio" : "alto";
-  return <span className={`retraso retraso--${nivel}`}>{min === 0 ? "Puntual" : `+${min} min`}</span>;
+function Retraso({ seg }: { seg: number | null | undefined }) {
+  return <span className={`retraso retraso--${nivelRetraso(seg)}`}>{etiquetaRetraso(seg)}</span>;
 }
 
 // "Madrid-Puerta de Atocha" → "Madrid"; respeta ciudades de dos palabras como "A Coruña".
@@ -99,6 +100,18 @@ export default function Mapa() {
   const [reducido, setReducido] = useState(reducidoInicial);
   const [intento, setIntento] = useState(0);
   const panel = useRef<HTMLElement>(null);
+  // Un enlace directo (/mapa?tren=avld:XXX) puede apuntar a un viaje que ya no está en el snapshot:
+  // entonces se pregunta por su última posición. `estado` permite distinguir «cargando» de «no circula».
+  const [suelto, setSuelto] = useState<{
+    trenId: string;
+    estado: "cargando" | "ok" | "vacio" | "error";
+    tren?: PosicionTren;
+    mensaje?: string;
+  } | null>(null);
+  const pedidos = useRef(new Set<string>());
+  // Rutas completadas con el GTFS estático, por tren: no se vuelven a pedir al cambiar de tren.
+  const [rutas, setRutas] = useState<Record<string, PosicionTren>>({});
+  const [falloRuta, setFalloRuta] = useState<{ trenId: string; mensaje: string } | null>(null);
 
   // Al elegir un tren, la barra sube arriba del todo, donde está su detalle.
   useEffect(() => {
@@ -157,8 +170,73 @@ export default function Mapa() {
     return trenes.filter((t) => sinTildes(`${t.numero} ${t.tipo} ${t.origen} ${t.destino} ${t.proximaParada}`).includes(q));
   }, [trenes, filtro]);
 
-  const elegido = trenes.find((t) => t.trenId === seleccion);
+  const enSnapshot = trenes.find((t) => t.trenId === seleccion);
+  const base = enSnapshot ?? (suelto?.trenId === seleccion ? suelto.tren : undefined);
+
+  // Si el viaje del enlace no está en el snapshot, se pide su posición a la API (una sola vez).
+  useEffect(() => {
+    if (!seleccion || enSnapshot || suelto?.trenId === seleccion) return;
+    let vigente = true;
+    setSuelto({ trenId: seleccion, estado: "cargando" });
+    posicionDeTren(seleccion).then(
+      (t) => vigente && setSuelto({ trenId: seleccion, estado: t ? "ok" : "vacio", tren: t ?? undefined }),
+      (e: Error) => vigente && setSuelto({ trenId: seleccion, estado: "error", mensaje: e.message }),
+    );
+    return () => {
+      vigente = false;
+    };
+  }, [seleccion, enSnapshot, suelto?.trenId]);
+
+  // El snapshot solo trae lat/lon y retraso. Para dibujar el recorrido y las paradas del tren elegido
+  // hace falta el GTFS estático; se pide una vez por tren y se guarda.
+  useEffect(() => {
+    if (!base) return;
+    const id = base.trenId;
+    // Los trenes simulados ya vienen completos.
+    if (base.ruta.length > 1 && base.paradas.length > 0) return;
+    if (pedidos.current.has(id)) return;
+    pedidos.current.add(id);
+    completarRuta(base).then(
+      (t) => {
+        if (t.paradas.length) setRutas((r) => ({ ...r, [id]: t }));
+        else setFalloRuta({ trenId: id, mensaje: "La API no publica el recorrido de este tren." });
+      },
+      (e: Error) => setFalloRuta({ trenId: id, mensaje: e.message }),
+    );
+  }, [base]);
+
+  // Se vuelve a marcar lo ya recorrido al minuto (el reloj de las paradas no necesita más).
+  const minuto = Math.floor(ahora / 60_000) * 60_000;
+  const elegido = useMemo(() => {
+    if (!base) return undefined;
+    const ruta = rutas[base.trenId];
+    if (!ruta) return base;
+    const paradas = repasarParadas(ruta.paradas, minuto);
+    return {
+      ...ruta,
+      // La posición y el retraso del tiempo real mandan; el resto viene del estático.
+      lat: base.lat,
+      lon: base.lon,
+      rumbo: base.rumbo,
+      actualizado: base.actualizado,
+      retrasoSeg: base.retrasoSeg ?? ruta.retrasoSeg,
+      progreso: progresoDe(paradas),
+      proximaParada: proximaDe(paradas)?.nombre ?? "",
+      llegadaProxima: proximaDe(paradas)?.llegada,
+      paradas,
+    };
+  }, [base, rutas, minuto]);
+
+  const buscandoTren =
+    !!seleccion && !elegido && (cargando || !suelto || suelto.trenId !== seleccion || suelto.estado === "cargando");
+  const falloDelElegido = falloRuta && seleccion === falloRuta.trenId ? falloRuta.mensaje : undefined;
   const hace = ultima === null ? null : Math.max(0, Math.round((ahora - ultima) / 1000));
+
+  // Con un enlace directo el tren puede no estar en el snapshot: se añade para verlo en el mapa.
+  const marcadores = useMemo(
+    () => (elegido && !trenes.some((t) => t.trenId === elegido.trenId) ? [...trenes, elegido] : trenes),
+    [trenes, elegido],
+  );
 
   return (
     <div className="mapa-pagina">
@@ -171,7 +249,7 @@ export default function Mapa() {
           />
           {elegido ? <RutaElegida tren={elegido} /> : <RutasTodas trenes={trenes} />}
           <Estaciones etiquetas={!elegido} />
-          <CapaTrenes trenes={trenes} seleccion={seleccion} siguiendo={siguiendo} reducido={reducido} alElegir={elegir} />
+          <CapaTrenes trenes={marcadores} seleccion={seleccion} siguiendo={siguiendo} reducido={reducido} alElegir={elegir} />
         </MapContainer>
         {cargando && <p className="mapa-aviso cristal">Cargando posiciones…</p>}
         <Leyenda />
@@ -205,8 +283,10 @@ export default function Mapa() {
             {elegido ? (
               <>
                 <h2 id="detalle-titulo">
-                  {elegido.tipo} {elegido.numero}
-                  {elegido.linea && <span className="mapa-detalle__linea"> · Línea {elegido.linea}</span>}
+                  {nombreDeTren(elegido)}
+                  {elegido.linea && !nombreDeTren(elegido).includes(elegido.linea) && (
+                    <span className="mapa-detalle__linea"> · Línea {elegido.linea}</span>
+                  )}
                 </h2>
                 {elegido.progreso > 0 && (
                 <div
@@ -224,7 +304,10 @@ export default function Mapa() {
                   {elegido.origen && (
                     <div>
                       <dt>Sale de</dt>
-                      <dd>{elegido.origen}</dd>
+                      <dd>
+                        {elegido.origen}
+                        {elegido.salida && <> · a las {horaCorta(elegido.salida)}</>}
+                      </dd>
                     </div>
                   )}
                   {elegido.destino && (
@@ -248,17 +331,24 @@ export default function Mapa() {
                   <div>
                     <dt>Retraso</dt>
                     <dd>
-                      <Retraso min={elegido.retrasoMin} />
+                      <Retraso seg={elegido.retrasoSeg} />
                     </dd>
                   </div>
                 </dl>
                 {!elegido.origen && (
                   <p className="mapa-detalle__nota">Renfe todavía no publica el origen y el destino de este tren en tiempo real.</p>
                 )}
+                {falloDelElegido && (
+                  <p className="mapa-detalle__nota" role="status">
+                    No se ha podido cargar el recorrido: {falloDelElegido}
+                  </p>
+                )}
                 <Paradas tren={elegido} ahora={ahora} />
               </>
             ) : (
-              <h2 id="detalle-titulo">{cargando ? "Buscando el tren…" : "Este tren ya no está circulando."}</h2>
+              <h2 id="detalle-titulo">
+                {buscandoTren ? "Buscando el tren…" : suelto?.estado === "error" ? "No se ha podido consultar este tren." : "Este tren ya no está circulando."}
+              </h2>
             )}
             <div className="mapa-detalle__acciones">
               {elegido && (
@@ -286,7 +376,7 @@ export default function Mapa() {
                 </span>
                 <span className="mapa-tren__info">
                   <strong>
-                    {t.origen ? `${t.numero} · ${ciudadCorta(t.origen)} → ${ciudadCorta(t.destino)}` : `${t.tipo} ${t.numero}`}
+                    {t.origen ? `${nombreDeTren(t)} · ${ciudadCorta(t.origen)} → ${ciudadCorta(t.destino)}` : nombreDeTren(t)}
                   </strong>
                   {t.proximaParada && (
                     <span>
@@ -295,7 +385,7 @@ export default function Mapa() {
                     </span>
                   )}
                 </span>
-                <Retraso min={t.retrasoMin} />
+                <Retraso seg={t.retrasoSeg} />
               </button>
             </li>
           ))}
