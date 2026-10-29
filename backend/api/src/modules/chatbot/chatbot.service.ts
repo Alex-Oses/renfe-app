@@ -15,9 +15,8 @@ import type { MensajeChatbotDto } from './dto/mensaje-chatbot.dto.js';
 
 const MAX_ITERACIONES = 5;
 
-const TOOLS: GeminiTool[] = [{
-  functionDeclarations: [
-    {
+const TOOLS: GeminiTool[] = [
+  {
       name: 'buscar_estaciones',
       description: 'Busca estaciones por nombre. Usa esta herramienta antes de buscar trenes si solo tienes nombres.',
       parameters: {
@@ -29,8 +28,8 @@ const TOOLS: GeminiTool[] = [{
       },
       required: ['q'],
       },
-    },
-    {
+  },
+  {
       name: 'buscar_trenes',
       description: 'Busca trenes directos entre dos estaciones para una fecha AAAA-MM-DD.',
       parameters: {
@@ -43,8 +42,8 @@ const TOOLS: GeminiTool[] = [{
       },
       required: ['origen', 'destino', 'fecha'],
       },
-    },
-    {
+  },
+  {
       name: 'detalle_tren',
       description: 'Obtiene las paradas y horas de un viaje identificado por feed, tripId y fecha.',
       parameters: {
@@ -56,8 +55,8 @@ const TOOLS: GeminiTool[] = [{
       },
       required: ['feed', 'tripId', 'fecha'],
       },
-    },
-    {
+  },
+  {
       name: 'consultar_posiciones',
       description: 'Consulta las posiciones actuales publicadas por Renfe, opcionalmente filtradas por feed.',
       parameters: {
@@ -66,9 +65,8 @@ const TOOLS: GeminiTool[] = [{
         feed: { type: 'string', enum: ['cercanias', 'avld'] },
       },
       },
-    },
-  ],
-}];
+  },
+];
 
 @Injectable()
 export class ChatbotService {
@@ -98,7 +96,11 @@ export class ChatbotService {
           .join('')
           .trim();
         if (!texto) throw new ServiceUnavailableException('El chatbot no generó una respuesta');
-        return { respuesta: comprobarRespuesta(texto), conversationId: id, herramientas: [...herramientas] };
+        return {
+          respuesta: comprobarRespuesta(texto, herramientas.size > 0),
+          conversationId: id,
+          herramientas: [...herramientas],
+        };
       }
 
       mensajes.push(contenido);

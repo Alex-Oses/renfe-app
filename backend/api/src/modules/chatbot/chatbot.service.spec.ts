@@ -107,7 +107,13 @@ describe('ChatbotService', () => {
   });
 
   it('bloquea secretos en la respuesta del modelo', () => {
-    expect(() => comprobarRespuesta('La API key es secreta')).toThrow(
+    expect(() => comprobarRespuesta('La API key es secreta', true)).toThrow(
+      'respuesta no válida',
+    );
+  });
+
+  it('no permite datos operativos concretos sin consultar una herramienta', () => {
+    expect(() => comprobarRespuesta('El tren sale a las 08:30', false)).toThrow(
       'respuesta no válida',
     );
   });
