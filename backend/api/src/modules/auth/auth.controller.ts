@@ -19,7 +19,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('registro')
-  @ApiOperation({ summary: 'Alta con email y contraseña (Supabase Auth) y perfil en la app' })
+  @ApiOperation({ summary: 'Alta con email y contraseña y perfil en la app' })
   @ApiCreatedResponse({ description: 'Sesión iniciada: `{ token, refreshToken, usuario }`' })
   @ApiBadRequestResponse({ description: 'Email, nombre o contraseña inválidos' })
   @ApiConflictResponse({ description: 'Ese email ya está registrado' })
@@ -30,7 +30,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login con email y contraseña (token de Supabase Auth)' })
+  @ApiOperation({ summary: 'Login con email y contraseña (JWT propio de la API)' })
   @ApiOkResponse({ description: 'Mismo shape que `/auth/cara/verificar`: `{ token, usuario }`' })
   @ApiBadRequestResponse({ description: 'Email o contraseña mal formados' })
   @ApiUnauthorizedResponse({ description: 'Email o contraseña incorrectos' })

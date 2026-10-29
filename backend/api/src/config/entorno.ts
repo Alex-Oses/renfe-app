@@ -31,7 +31,12 @@ export function validarEntorno(
 
   const secreto = config.SUPABASE_JWT_SECRET;
   if (typeof secreto === 'string' && secreto.length > 0 && secreto.length < 32) {
-    throw new Error('SUPABASE_JWT_SECRET parece demasiado corto (secreto JWT de Supabase)');
+    throw new Error('SUPABASE_JWT_SECRET parece demasiado corto');
+  }
+
+  const jwtSecret = config.JWT_SECRET;
+  if (typeof jwtSecret !== 'string' || jwtSecret.length < 32) {
+    throw new Error('JWT_SECRET es obligatorio y debe tener al menos 32 caracteres');
   }
 
   const firmaQr = config.QR_SIGNING_SECRET;

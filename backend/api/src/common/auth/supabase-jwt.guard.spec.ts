@@ -1,6 +1,6 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { exportJWK, generateKeyPair, SignJWT } from 'jose';
+import { SignJWT } from 'jose';
 import type { Rol } from './auth.types.js';
 import { SupabaseJwtGuard } from './supabase-jwt.guard.js';
 
@@ -62,27 +62,4 @@ describe('SupabaseJwtGuard', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('acepta los tokens ES256 de Supabase verificándolos con su JWKS', async () => {
-    const { publicKey, privateKey } = await generateKeyPair('ES256');
-    const jwk = { ...(await exportJWK(publicKey)), kid: 'k1', alg: 'ES256' };
-    const original = globalThis.fetch;
-    globalThis.fetch = (async () => new Response(JSON.stringify({ keys: [jwk] }))) as typeof fetch;
-    try {
-      const token = await new SignJWT({ email: 'ana@renfe.test' })
-        .setProtectedHeader({ alg: 'ES256', kid: 'k1' })
-        .setSubject('uuid-ana')
-        .setExpirationTime('5m')
-        .sign(privateKey);
-      const config = { get: (k: string) => (k === 'SUPABASE_URL' ? 'http://supabase.test' : SECRETO) };
-      const guard = new SupabaseJwtGuard(config as unknown as ConfigService);
-      const peticion: { headers: Record<string, string>; usuario?: unknown } = {
-        headers: { authorization: `Bearer ${token}` },
-      };
-      const ctx = { switchToHttp: () => ({ getRequest: () => peticion }) } as unknown as ExecutionContext;
-      await expect(guard.canActivate(ctx)).resolves.toBe(true);
-      expect(peticion.usuario).toMatchObject({ id: 'uuid-ana', rol: 'viajero' });
-    } finally {
-      globalThis.fetch = original;
-    }
-  });
 });

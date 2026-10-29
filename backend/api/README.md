@@ -7,7 +7,7 @@ API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../
 ## Estado
 
 Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger,
-`GET /health`, auth de Supabase con roles y acceso opcional a Postgres.
+autenticación propia con roles y acceso opcional a Postgres.
 
 **Endpoints de datos (fase F1): `GET /estaciones`, `GET /trenes`, `GET /trenes/:feed/:tripId`,
 `GET /trenes/:feed/:tripId/posicion` y `GET /posiciones`**, con SQL directo contra el modelo de datos
@@ -80,7 +80,7 @@ responderán `503`. Sin ORM: `bd.consultar(sql, valores)` y SQL a mano (ver ADR-
 
 ## Auth
 
-`SupabaseJwtGuard` verifica el `Bearer` contra `SUPABASE_JWT_SECRET` (HS256) y deja en
+`SupabaseJwtGuard` verifica el `Bearer` contra `JWT_SECRET` (HS256) y deja en
 `request.usuario` → `{ id, email, rol }`. El rol sale de `app_metadata.rol` (`viajero` por defecto,
 `revisor` y `admin` explícitos). `RolesGuard` + `@Roles('revisor')` limitan endpoints por rol.
 
@@ -92,8 +92,9 @@ responderán `503`. Sin ORM: `bd.consultar(sql, valores)` y SQL a mano (ver ADR-
 
 ### Login facial
 
-Dos formas de entrar, **un solo formato de token**. Con contraseña lo emite Supabase Auth; con la cara
-lo firma la API (`HS256`, mismos claims, 12 h, sin `refresh_token`). Ver
+Dos formas de entrar, **un solo formato de token propio de la API**. Supabase Auth solo valida las
+credenciales internamente; tanto con contraseña como con la cara lo firma la API (`HS256`, mismos
+claims, 12 h, sin `refresh_token`). Ver
 `obsidian/03-decisiones/ADR-007-reconocimiento-facial.md`.
 
 La API no decide nada: llama a las funciones de Postgres y traduce el `SQLSTATE` a HTTP.
@@ -113,7 +114,7 @@ el mismo `401`.
 
 `POST /auth/registro` y `POST /auth/login` usan **Supabase Auth con `service_role`**
 (`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`): la API crea el usuario y su fila en `perfiles`, y
-devuelve el `access_token` de Supabase más el perfil (`nombre`, `rol` y `caraRegistrada`). El alta
+devuelve un JWT propio firmado con `JWT_SECRET` más el perfil (`nombre`, `rol` y `caraRegistrada`). El alta
 siempre nace con rol `viajero`; el rol no se puede tocar desde el cliente.
 
 Código en `src/modules/auth/`. El contrato está en `obsidian/02-contratos-api/endpoints.md`.

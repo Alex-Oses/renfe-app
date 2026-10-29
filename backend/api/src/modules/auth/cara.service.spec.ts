@@ -91,7 +91,7 @@ describe('CaraService.verificar', () => {
 
   const peticion = { email: 'ana@ejemplo.es', embedding: EMBEDDING } as never;
 
-  it('firma un token con los claims de Supabase y devuelve la sesión', async () => {
+  it('firma un JWT propio con 12 horas de caducidad y devuelve la sesión', async () => {
     const servicio = servicioVerificar(
       { usuario_id: USUARIO_ID, coincide: true },
       { email: 'ana@ejemplo.es', nombre: 'Ana', rol: 'revisor' },
