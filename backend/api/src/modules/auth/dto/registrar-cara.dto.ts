@@ -5,7 +5,7 @@ import { EmbeddingDto } from './embedding.dto.js';
 export class RegistrarCaraDto extends EmbeddingDto {
   @ApiProperty({
     description: 'Modelo que calculó el vector; tiene que ser el de `config_cara`',
-    example: 'arcface/buffalo_l',
+    example: 'arcface/w600k_mbf',
   })
   @IsString()
   @IsNotEmpty()

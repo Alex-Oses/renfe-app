@@ -3,15 +3,15 @@
 import type { EmbeddingFacial } from "./tipos";
 
 // Tiene que ser el de `config_cara` en la base de datos; si cambia, todo el mundo se registra otra vez.
-export const MODELO_CARA = "arcface/buffalo_l";
+export const MODELO_CARA = "arcface/w600k_mbf"; // igual que config_cara.modelo
 export const DIMENSIONES_CARA = 512;
 
 // La API rechaza cualquier vector que no sea de 512 floats. Se comprueba antes de salir a la red
-// para que el error diga qué pasa (hoy Human da 1024: falta cambiar su `description` por ArcFace).
+// para que el error diga qué pasa en vez de un 400 genérico.
 export function validarEmbedding(embedding: EmbeddingFacial): void {
   if (embedding.length !== DIMENSIONES_CARA)
     throw new Error(
-      `La cámara ha calculado una huella de ${embedding.length} números y la API necesita ${DIMENSIONES_CARA} (ArcFace). No se envía nada: falta cambiar el modelo del navegador.`,
+      `La cámara ha calculado una huella de ${embedding.length} números y la API necesita ${DIMENSIONES_CARA} (ArcFace). No se envía nada.`,
     );
   if (embedding.some((n) => !Number.isFinite(n)))
     throw new Error("La huella de tu cara tiene valores inválidos. Vuelve a intentarlo con más luz.");
