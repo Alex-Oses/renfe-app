@@ -299,6 +299,15 @@ Notas:
   `calendarios` + `calendario_excepciones`.
 - `tipo` y `numero` siguen la misma regla que en `/trenes` (`numero` puede ser `null`).
 
+
+### `recorrido` — añadido (Alex, 2026-10-29)
+
+Campo nuevo, opcional y aditivo: `"recorrido": [[40.4065, -3.6895], [40.41, -3.68], …]` (lat, lon), el
+trazado real del tren para el mapa. Sale de `formas` (el `shapes.txt` de Cercanías) o, si el viaje no
+tiene forma (AV/LD/MD), de `tramos_via`: el camino por las vías de OpenStreetMap entre cada par de
+paradas seguidas (`pnpm gtfs:vias`). Donde falte un tramo, ese trozo va en línea recta entre las dos
+paradas. `null` si no hay ninguna geometría: la web y la app dibujan entonces parada a parada.
+
 ## GET /trenes/:feed/:tripId/posicion
 
 Descripción: última posición conocida del tren que hace ese viaje **ahora**.
