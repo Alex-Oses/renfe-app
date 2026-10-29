@@ -32,3 +32,11 @@ Las 5 migraciones aplicadas en orden en PGlite (Postgres 17 en WASM) y la API re
 - Facial: registro con un vector de 512 y `verificar` da token con la misma cara y 401 con otra.
 - **Sin probar:** `/auth/registro` y `/auth/login` (necesitan Supabase Auth de verdad).
 - **Rubén:** `/trenes` devuelve `numero: null` aunque `viajes.numero` tenga valor: `numeroDe()` lo saca de `rutas.nombre_corto` (`trenes.service.ts:123`). Los billetes sí lo llevan.
+
+## Prueba contra Supabase Cloud de Marina (29/10)
+API local (`node dist/main.js`) contra `hqwwucagvlhnlqrspwvh` por el session pooler, y web en local con `VITE_API_URL`:
+- `/health` → `baseDatos: ok`; `/estaciones?q=atocha` y `/trenes` Madrid → Barcelona (29 trenes) con datos reales.
+- `/trenes/:feed/:tripId/posicion`: el AVE 03301 salía junto a Sants con **6 min de retraso**; la web lo pinta en el mapa con la ruta, las paradas, «Sale de / Llega a» y la etiqueta de retraso.
+- **Arreglado** (`8081399`): `numero` sale de `viajes.numero` y se quitan los trenes duplicados del feed (mismo número y hora con dos `trip_id`, p. ej. `0307312026-10-28` y `0307322026-10-28`).
+- **Pendiente:** `/trenes` y el detalle siguen con `retrasoSeg: null` (el retraso real solo llega en `/posicion` y `/posiciones`; lo cubre la #47 de Rubén).
+- **No probado en la nube:** reservas, billetes y abonos (falta aplicar `20261029120000_billetes_y_abonos.sql`, Marina) y registro/login (falta Supabase Auth en la API: `SUPABASE_URL` y claves).
