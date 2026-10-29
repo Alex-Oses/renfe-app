@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { obtenerAsientos, obtenerTren } from "@renfe/shared/api/cliente";
+import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { obtenerAsientos, obtenerTren, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
 import { DESCUENTOS, TARIFAS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import { PasoAsientos } from "./PasoAsientos";
@@ -10,6 +10,7 @@ import { PasoListo } from "./PasoListo";
 import { euros, hora } from "./formato";
 import "./reserva.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
+import { useSesion } from "../../estado/sesion";
 
 const PASOS = [
   { id: "asientos", nombre: "Asientos" },
@@ -20,6 +21,8 @@ const PASOS = [
 type IdPaso = (typeof PASOS)[number]["id"];
 
 export default function Reserva() {
+  const { sesion } = useSesion();
+  const { pathname, search } = useLocation();
   const { trenId = "" } = useParams();
   const [params, setParams] = useSearchParams();
   const n = Math.min(Math.max(Number(params.get("pasajeros")) || 1, 1), 8);
@@ -38,14 +41,18 @@ export default function Reserva() {
   const [pasajeros, setPasajeros] = useState<Pasajero[]>([]);
   const [reserva, setReserva] = useState<TReserva | null>(null);
 
+  // Con la API real la reserva exige sesión (401 sin token): sin sesión no se piden datos.
+  const conSesion = usaDatosSimulados || Boolean(sesion);
+
   useEffect(() => {
-    Promise.all([obtenerTren(trenId), obtenerAsientos(trenId)])
-      .then(([t, a]) => {
+    if (!conSesion) return;
+    obtenerTren(trenId)
+      .then(async (t) => {
         setTren(t);
-        setAsientos(a);
+        setAsientos(await obtenerAsientos(t));
       })
       .catch((e: Error) => setError(e.message));
-  }, [trenId]);
+  }, [trenId, conSesion]);
 
   // El paso va en la URL; si alguien llega a un paso sin los datos previos, vuelve al último posible.
   const pedido = (params.get("paso") as IdPaso) || "asientos";
@@ -70,6 +77,7 @@ export default function Reserva() {
     window.scrollTo({ top: 0 });
   };
 
+  if (!conSesion) return <Navigate to={`/acceder?volver=${encodeURIComponent(pathname + search)}`} replace />;
   if (error)
     return (
       <div className="contenedor seccion">
@@ -150,7 +158,7 @@ export default function Reserva() {
           )}
           {paso === "pago" && (
             <PasoPago
-              trenId={tren.id}
+              tren={tren}
               asientos={elegidos}
               pasajeros={pasajeros}
               total={total}
@@ -165,7 +173,7 @@ export default function Reserva() {
               }}
               onAsientoOcupado={() => {
                 setElegidos([]);
-                obtenerAsientos(trenId).then(setAsientos);
+                obtenerAsientos(tren).then(setAsientos);
                 ir("asientos");
               }}
             />
