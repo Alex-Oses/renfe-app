@@ -33,11 +33,19 @@ const ejecutar = (comando, args, { opcional = false } = {}) => {
 };
 
 // `pnpm` no siempre está en el PATH (corepack). Dentro de un script de pnpm, npm_execpath
-// apunta a su binario: lo usamos con Node para que funcione igual en Windows y en Linux.
-const ejecutarPnpm = (args, opcional = false) =>
-  process.env.npm_execpath
-    ? ejecutar(process.execPath, [process.env.npm_execpath, ...args], { opcional })
-    : ejecutar("pnpm", args, { opcional });
+// apunta a su binario; si se lanza con `node` a pelo, se usa corepack. Así funciona igual
+// desde el lanzador del escritorio que desde `pnpm entorno`.
+const ejecutarPnpm = (args, opcional = false) => {
+  if (process.env.npm_execpath) {
+    return ejecutar(process.execPath, [process.env.npm_execpath, ...args], { opcional });
+  }
+  if (process.platform === "win32") {
+    return ejecutar(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `corepack pnpm ${args.join(" ")}`], {
+      opcional,
+    });
+  }
+  return ejecutar("corepack", ["pnpm", ...args], { opcional });
+};
 
 const dockerVivo = () => spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
 
