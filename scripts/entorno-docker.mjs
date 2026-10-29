@@ -10,6 +10,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { networkInterfaces } from "node:os";
 
 const SUPABASE = ["exec", "supabase"];
 const WORKDIR = ["--workdir", "backend/database"];
@@ -53,6 +54,23 @@ const exigirEnv = () => {
       "de `pnpm db:status` y vuelve a lanzar `pnpm entorno arrancar`.",
   );
   process.exit(1);
+};
+
+// IP de la LAN para que el móvil alcance la API: en el teléfono, "localhost" es el teléfono.
+// Se saltan las interfaces virtuales (VirtualBox, WSL, Docker…), que no llegan al móvil.
+const VIRTUAL = /virtualbox|vmware|hyper-v|vethernet|loopback|docker|wsl|tailscale|vpn/i;
+const HOST_ONLY = /^192\.168\.(56|99)\./;
+const ipLocal = () => {
+  const candidatas = Object.entries(networkInterfaces())
+    .filter(([nombre]) => !VIRTUAL.test(nombre))
+    .flatMap(([nombre, lista]) => (lista ?? []).map((d) => ({ nombre, ...d })))
+    .filter((d) => d.family === "IPv4" && !d.internal && !HOST_ONLY.test(d.address));
+  const wifi = candidatas.find((d) => /wi-?fi|wlan|wireless/i.test(d.nombre));
+  return (
+    wifi ??
+    candidatas.find((d) => d.address.startsWith("192.168.")) ??
+    candidatas[0]
+  )?.address ?? null;
 };
 
 const esperarApi = async (intentos = 30) => {
@@ -105,9 +123,22 @@ if (accion === "arrancar") {
   console.log("  API        http://localhost:3000/health");
   console.log(`             base de datos: ${salud.baseDatos ?? "sin dato"}`);
   console.log("  Supabase   http://127.0.0.1:54321 · Postgres 54322 · Studio 54323");
-  console.log("\nWeb: VITE_API_URL=http://localhost:3000 pnpm dev:web");
-  console.log("App: pnpm dev:mobile (Expo Go, fuera de Docker)");
-  console.log("Parar todo: pnpm entorno parar");
+  console.log("\nWeb en local: VITE_API_URL=http://localhost:3000 pnpm dev:web");
+
+  const ip = ipLocal();
+  console.log("\nApp en el móvil (Expo Go, misma Wi-Fi que este PC):");
+  if (ip) {
+    console.log(`  añade a .env:  EXPO_PUBLIC_API_URL=http://${ip}:3000`);
+    console.log(`                 EXPO_PUBLIC_POSICIONES_URL=http://${ip}:3000`);
+    console.log("  y arranca:     pnpm dev:mobile   (reinicia Expo si ya estaba abierto)");
+    console.log("  Si no conecta, permite el puerto 3000 en el firewall de Windows.");
+  } else {
+    console.log("  no encuentro la IP de la LAN: sácala con `ipconfig` y ponla en las dos variables.");
+  }
+
+  console.log("\nVercel: para que la web desplegada use esta API, expón el puerto 3000 con un túnel y pon");
+  console.log("        esa URL en VITE_API_URL y su origen en CORS_ORIGINS (docs/levantar-en-local.md).");
+  console.log("\nParar todo: pnpm entorno parar");
 } else if (accion === "parar") {
   exigirDocker();
 
