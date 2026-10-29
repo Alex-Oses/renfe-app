@@ -90,6 +90,7 @@ export interface TrenDetalleApi {
   llegada: string;
   retrasoSeg: number | null;
   paradas: ParadaApi[];
+  recorrido?: [number, number][] | null; // trazado real [lat, lon] (shapes o vías de OSM)
 }
 
 // Parada ya adaptada. El detalle solo da id y nombre de la estación: las coordenadas se piden a
@@ -105,7 +106,7 @@ export interface ParadaViaje {
   lon?: number;
 }
 
-export type TrenDetalle = Tren & { paradas: ParadaViaje[] };
+export type TrenDetalle = Tren & { paradas: ParadaViaje[]; recorrido?: [number, number][] | null };
 
 // --- Reservas y billetes (simulado: Renfe no publica asientos ni precios) ---
 

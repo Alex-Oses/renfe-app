@@ -376,7 +376,8 @@ export async function completarRuta(p: PosicionTren): Promise<PosicionTren> {
     proximaParada: proxima?.nombre ?? "",
     llegadaProxima: proxima?.llegada,
     progreso: dibujables.filter((x) => x.pasada).length / dibujables.length,
-    ruta: dibujables.map((x): [number, number] => [x.lat, x.lon]),
+    // El trazado real (vías u shapes) si la API lo da; si no, parada a parada en línea recta.
+    ruta: detalle.recorrido?.length ? detalle.recorrido : dibujables.map((x): [number, number] => [x.lat, x.lon]),
     paradas: dibujables,
   };
 }

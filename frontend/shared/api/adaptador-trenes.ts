@@ -102,6 +102,7 @@ export function aDetalleTren(d: TrenDetalleApi): TrenDetalle {
     precioDesde: 0,
     plazasLibres: 0,
     paradas: d.paradas.map(aParada),
+    recorrido: d.recorrido ?? null,
   };
 }
 
