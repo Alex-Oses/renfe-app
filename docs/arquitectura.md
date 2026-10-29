@@ -176,8 +176,8 @@ Login facial   dispositivo: Human (detección, antispoof, malla) + ArcFace → v
                → similitud coseno ≥ umbral de config_cara → JWT de la API
                (la foto no sale del dispositivo y no se guarda nunca; ver ADR-005)
 
-Chatbot        POST /chatbot/mensaje → API → Claude API (tool use)
-               → Claude pide /trenes y /billetes → respuesta en lenguaje natural
+Chatbot        POST /chatbot/mensaje → API → Gemini API (function calling)
+               → Gemini consulta herramientas internas → respuesta en lenguaje natural
 ```
 
 ## 6. Reglas de arquitectura (no negociables)

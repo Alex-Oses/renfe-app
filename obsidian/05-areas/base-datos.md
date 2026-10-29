@@ -5,9 +5,10 @@ tags: [area]
 
 # 🗄️ Área Base de datos y datos Renfe
 
-**Código:** `backend/database`, `backend/gtfs-worker` · **Estado:** **Supabase Cloud validada** (esquema + catálogo AV/LD cargados y verificados); lo único pendiente es conectar Render ([[supabase-nube]])
+**Código:** `backend/database`, `backend/gtfs-worker` · **Estado:** **Supabase Cloud validada como transición** (esquema + catálogo AV/LD cargados y verificados); objetivo final: Supabase self-hosted en Docker en el servidor ([[ADR-009-supabase-self-hosted-en-servidor]])
 
 ## Pendiente
+- **Servidor Docker:** preparar Supabase self-hosted, almacenamiento persistente, backups y migración cuando el administrador abra los puertos y autorice proxy/TLS
 - **Render**: poner `DATABASE_URL` (session pooler) y `SUPABASE_JWT_SECRET` → `/health` con
   `"baseDatos":"ok"` y `/estaciones` / `/trenes` con datos reales. Lo hacen Kevin/Alex con los
   valores de [[supabase-nube]]

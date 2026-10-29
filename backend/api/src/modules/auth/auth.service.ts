@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SignJWT } from 'jose';
 import type { QueryResultRow } from 'pg';
 import type { Rol } from '../../common/auth/auth.types.js';
 import { BdService } from '../../common/bd/bd.service.js';
@@ -19,7 +20,7 @@ export interface UsuarioSesion {
   caraRegistrada: boolean;
 }
 
-/** Mismo shape que `/auth/cara/verificar`, más el `refreshToken` de Supabase. */
+/** Token propio de la API; Supabase Auth se usa internamente para validar credenciales. */
 export interface SesionAutenticada {
   token: string;
   refreshToken: string | null;
@@ -122,21 +123,26 @@ export class AuthService {
       throw new ServiceUnavailableException('Supabase Auth no responde');
     }
 
-    const { access_token: token, refresh_token: refreshToken, user } =
+    const { user } =
       (await respuesta.json()) as RespuestaToken;
-    if (!token || !user?.id) {
+    if (!user?.id) {
       throw new ServiceUnavailableException('Supabase Auth no devolvió la sesión');
     }
 
     const perfil = await this.perfil(user.id);
+    const rol = aRol(perfil?.rol);
     return {
-      token,
-      refreshToken: refreshToken ?? null,
+      token: await this.firmar({
+        id: user.id,
+        email: user.email ?? email,
+        rol,
+      }),
+      refreshToken: null,
       usuario: {
         id: user.id,
         nombre: perfil?.nombre ?? user.email ?? email,
         email: user.email ?? email,
-        rol: aRol(perfil?.rol),
+        rol,
         caraRegistrada: perfil?.cara_registrada ?? false,
       },
     };
@@ -157,6 +163,20 @@ export class AuthService {
       throw new ServiceUnavailableException(`La API no tiene configurado ${nombre}`);
     }
     return clave;
+  }
+
+  private async firmar({ id, email, rol }: Omit<UsuarioSesion, 'nombre' | 'caraRegistrada'>) {
+    const secreto = this.config.get<string>('JWT_SECRET');
+    if (!secreto) {
+      throw new ServiceUnavailableException('La API no tiene configurado JWT_SECRET');
+    }
+
+    return new SignJWT({ email, app_metadata: { rol } })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(id)
+      .setIssuedAt()
+      .setExpirationTime('12h')
+      .sign(new TextEncoder().encode(secreto));
   }
 
   private async pedir(

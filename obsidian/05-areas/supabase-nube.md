@@ -8,12 +8,18 @@ para: [Marina, Alex, Kevin]
 
 # ☁️ Supabase en la nube y conexión con Render
 
-Runbook para pasar el catálogo de **local (VM) a Supabase Cloud** y conectar la API de Render.
+Runbook para usar Supabase Cloud como entorno transitorio y conectar la API de Render mientras se
+prepara el entorno final self-hosted en Docker sobre el servidor asignado
+([[ADR-009-supabase-self-hosted-en-servidor]]).
 
-> **Estado 29/10: la nube está lista.** Proyecto creado, `link` hecho, `db push` con las
+> **Estado 29/10: la nube está lista como entorno transitorio.** Proyecto creado, `link` hecho, `db push` con las
 > **4 migraciones** aplicado, catálogo AV/LD cargado y `pnpm gtfs:verificar` **en verde**.
 > Lo único que falta es poner `DATABASE_URL` en Render (Kevin/Alex): hoy `/health` sigue
 > devolviendo `"baseDatos":"no configurada"` y `/estaciones` da 503.
+
+La base de datos definitiva no será este proyecto Cloud: se migrará a Supabase self-hosted en
+Docker en el servidor cuando el administrador abra el acceso y autorice la configuración de red,
+proxy y TLS. Hasta entonces, Cloud es la referencia compartida para desbloquear la API.
 
 ## Estado actual de la nube
 

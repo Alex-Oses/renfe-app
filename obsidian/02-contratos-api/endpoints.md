@@ -28,6 +28,38 @@ tags: [contrato, api]
 Códigos de error habituales: `400` parámetros inválidos · `401` token ausente o inválido · `403` rol
 insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
 
+## POST /chatbot/mensaje
+
+Consulta conversacional pública sobre los datos de Renfe disponibles en la API. El chatbot usa Gemini
+con herramientas internas de solo lectura para buscar estaciones, consultar trenes, obtener el detalle
+de un viaje y consultar posiciones en tiempo real. No acepta SQL, URLs ni nombres de herramientas del
+cliente. El modelo no puede crear reservas, consultar billetes/abonos privados ni ejecutar acciones.
+
+Auth: **no**. La ruta requiere `GEMINI_API_KEY` y usa el modelo `gemini-3.5-flash-lite`; si no está
+configurada o el proveedor no responde,
+devuelve `503`.
+
+Request:
+
+```json
+{ "mensaje": "¿Qué trenes hay de Madrid a Barcelona mañana?" }
+```
+
+`mensaje` debe tener entre 1 y 2000 caracteres. `conversationId` es opcional y opaco; el servidor no
+persiste conversaciones y solo lo devuelve para que el cliente pueda correlacionar la respuesta.
+
+Response 200:
+
+```json
+{
+  "respuesta": "He encontrado 3 trenes...",
+  "conversationId": "c-...",
+  "herramientas": ["buscar_trenes"]
+}
+```
+
+Errores: `400` mensaje inválido · `503` proveedor de IA o datos no disponibles.
+
 ## Autenticación
 
 - Dos formas de entrar, **un solo formato de token** (HS256 con `SUPABASE_JWT_SECRET`):
@@ -40,9 +72,8 @@ insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
   `iat` y `exp`. El facial los rellena igual que Supabase para que el guard no distinga cómo se entró.
 - Rol `admin` (propuesto por Alex, 2026-10-27): además de `revisor`, puede validar billetes.
 - Los endpoints públicos no llevan token. Los privados exigen `Authorization: Bearer <jwt>`.
-- **Aviso para Marina**: si el proyecto nuevo firma con claves asimétricas (ES256/JWKS) en vez del
-  secreto compartido, el guard actual (`algorithms: ['HS256']`) rechaza también los tokens de la
-  contraseña. Hay que mirarlo al crear el proyecto.
+- La API usa un JWT propio firmado con `JWT_SECRET`; Supabase Auth solo valida internamente las
+  credenciales y nunca se entrega al cliente un token de Supabase.
 
 ## POST /auth/registro
 
@@ -62,7 +93,7 @@ Response 201: mismo shape que `/auth/login`.
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "v1.MRj...",
+  "refreshToken": null,
   "usuario": {
     "id": "6f1c…", "nombre": "Ana", "email": "ana@ejemplo.es",
     "rol": "viajero", "caraRegistrada": false
@@ -78,8 +109,8 @@ del perfil, la API borra el usuario de Supabase para no dejar cuentas a medias.
 
 ## POST /auth/login
 
-Descripción: login con email y contraseña. El token lo emite Supabase Auth y la API añade el perfil
-(nombre, rol y si tiene la cara registrada).
+Descripción: login con email y contraseña. Supabase Auth valida las credenciales y la API emite su
+propio JWT, añadiendo el perfil (nombre, rol y si tiene la cara registrada).
 Auth: **no**
 
 Request: `{ "email": "ana@ejemplo.es", "password": "contrasena-larga" }`
@@ -89,8 +120,8 @@ Response 200: `{ "token", "refreshToken", "usuario": { "id", "nombre", "email", 
 Errores: `400` email o contraseña mal formados · `401` credenciales incorrectas · `503` Supabase Auth
 o la BD no responden.
 
-Notas: `rol` se lee de `perfiles.rol` (igual que `/auth/cara/verificar`); el guard sigue leyendo
-`app_metadata.rol` del token, que se fija al crear el usuario.
+Notas: `rol` se lee de `perfiles.rol` y se firma en `app_metadata.rol` dentro del JWT propio. El
+token es HS256, dura 12 horas y no incluye `refreshToken`.
 
 
 ## Plantilla por endpoint

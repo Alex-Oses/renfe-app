@@ -63,7 +63,7 @@ Comprueba que `.github/CODEOWNERS` tiene los usuarios correctos.
 
 ## 6. Secretos de GitHub Actions (más adelante, Kevin)
 
-Settings → Secrets and variables → Actions: `SUPABASE_*`, `STRIPE_SECRET_KEY` (test), `ANTHROPIC_API_KEY`. Nunca en el código ni en el vault.
+Settings → Secrets and variables → Actions: `SUPABASE_*`, `STRIPE_SECRET_KEY` (test), `GEMINI_API_KEY`. Nunca en el código ni en el vault.
 
 ## 7. Cada miembro del equipo
 
