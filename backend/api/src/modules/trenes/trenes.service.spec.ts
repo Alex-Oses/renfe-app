@@ -1,6 +1,6 @@
 import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { BdService } from '../../common/bd/bd.service.js';
-import { TrenesService } from './trenes.service.js';
+import { sinViajesDuplicados, TrenesService } from './trenes.service.js';
 
 const fila = {
   feed: 'avld',
@@ -208,5 +208,17 @@ describe('TrenesService.detalle', () => {
     await expect(
       servicio.detalle('avld', '3097L23537C1', '2026-11-02'),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+});
+
+describe('sinViajesDuplicados', () => {
+  it('quita el mismo tren publicado con dos trip_id', () => {
+    const filas = [
+      { viaje_id: 'A1', numero: '03073', sale: '07:27:00' },
+      { viaje_id: 'A2', numero: '03073', sale: '07:27:00' },
+      { viaje_id: 'B1', numero: '03081', sale: '07:57:00' },
+      { viaje_id: 'C1', numero: null, sale: '07:57:00' },
+    ];
+    expect(sinViajesDuplicados(filas).map((f) => f.viaje_id)).toEqual(['A1', 'B1', 'C1']);
   });
 });
