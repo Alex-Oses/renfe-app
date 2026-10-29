@@ -1,7 +1,7 @@
 ---
 responsable: Marina
 estado: borrador
-actualizado: 2026-10-28
+actualizado: 2026-10-29
 tags: [contrato, base-datos]
 ---
 
@@ -42,6 +42,7 @@ erDiagram
   perfiles ||--o| embeddings_faciales : "1:1"
   perfiles ||--o{ reservas : "hace"
   perfiles ||--o{ billetes : "tiene"
+  perfiles ||--o{ abonos : "compra"
   perfiles ||--o{ validaciones : "revisa"
 
   estaciones ||--o{ estacion_feeds : "se publica en"
@@ -58,6 +59,7 @@ erDiagram
   reservas ||--o{ billetes : "emite"
   asientos ||--o| billetes : "1 butaca = 1 billete"
   billetes ||--o{ validaciones : "se valida"
+  abonos ||--o{ validaciones : "se valida"
 
   viajes ||--o| posiciones_trenes : "última posición (Realtime)"
 ```
@@ -359,7 +361,7 @@ where o.estacion_id = $1 and d.estacion_id = $2
 **Índices:** PK `(feed, viaje_id, secuencia)`; `(estacion_id, feed, viaje_id)` para el join de arriba.
 Es la tabla más grande del catálogo.
 
-## 5. Reserva, pago, billete
+## 5. Reserva, pago, billete y abonos
 
 ### 5.1 `asientos` (simulado)
 
@@ -410,16 +412,17 @@ Es la tabla más grande del catálogo.
 | columna | tipo | null | notas |
 |---|---|---|---|
 | `id` | `uuid` | no | PK |
-| `usuario_id` | `uuid` | no | FK a `perfiles` |
+| `usuario_id` | `uuid` | sí | FK a `perfiles` `on delete set null`; nulo solo si la cuenta se borró (§8) |
 | `feed` | `text` | no | FK a `viajes (feed, id)` `on delete restrict` |
 | `viaje_id` | `text` | no | **una reserva = un viaje de un día** |
 | `fecha_servicio` | `date` | no | **añadida (Rubén, 26/10)**: sin ella no hay caducidad de QR ni «mis viajes» |
-| `referencia` | `text` | no | `UNIQUE`, código corto legible (`R-7K3M9Q`) |
+| `origen_id` / `destino_id` | `text` | no | FK a `estaciones` `on delete restrict`; el **trayecto** vendido, distinto entre sí |
+| `referencia` | `text` | no | `UNIQUE`, código corto legible (`R-7K3M9Q`); es el `localizador` de la API |
 | `estado` | `text` | no | `pendiente` \| `pagada` \| `cancelada` \| `caducada`, default `pendiente` |
 | `importe_centimos` | `integer` | no | `CHECK (>= 0)`; precio simulado |
 | `creada_en` | `timestamptz` | no | default `now()` |
 | `expira_en` | `timestamptz` | no | `CHECK (expira_en > creada_en)`; retención de butacas **+15 min** (aprobado por Alex, 26/10) |
-| `actualizada_en` | `timestamptz` | no | |
+| `actualizado_en` | `timestamptz` | no | trigger `set_actualizado_en()` |
 
 **Diseño:** el estado `pendiente` es la **retención**: reserva creada, butacas bloqueadas,
 **15 minutos** para pagar (decidido: Alex, 26/10). Si no se paga, la API la pasa a `caducada` y
@@ -429,9 +432,22 @@ arrastrar floats con dinero; `centimos` explícito en el nombre.
 ese día). Una reserva puede tener **varias butacas del mismo viaje y fecha** (familia): la relación
 es `asientos.reserva_id`.
 
+**Dos matices añadidos al escribir la migración `20261029120000_billetes_y_abonos.sql` (29/10):**
+
+- **`origen_id`/`destino_id`** no estaban en §5.2 y son imprescindibles: un billete se vende **por
+  trayecto**, y el viaje sigue más allá del destino del viajero (Atocha → Zaragoza en un tren que
+  acaba en Barcelona). Sin el trayecto, el QR (`o`, `d`) y el revisor enseñarían el destino del tren,
+  no el del usuario. `CHECK (origen_id <> destino_id)`, como el `400` de `POST /abonos`.
+- **`usuario_id` pasa a nullable con `on delete set null`**: §8 dice que al borrar la cuenta las
+  reservas y los billetes **no** se borran (son historial). Con `not null ... on delete restrict` la
+  cuenta no se podría borrar nunca; la API las anonimiza dejando `usuario_id` a null.
+- La columna del trigger se llama **`actualizado_en`** (no `actualizada_en`): `set_actualizado_en()`
+  escribe `new.actualizado_en` y, con otro nombre, el trigger falla.
+
 **RLS:** el dueño lee sus reservas; nunca escribe. Escritura solo `service_role`.
 **Índices:** `(usuario_id, fecha_servicio)` («mis viajes»); `(usuario_id, creada_en desc)`;
-`UNIQUE (referencia)`; parcial `(expira_en) where estado = 'pendiente'` para el barrido.
+`UNIQUE (referencia)`; parcial `(expira_en) where estado = 'pendiente'` para el barrido;
+`(feed, viaje_id)` para el `on delete restrict` de la purga del catálogo.
 
 ### 5.3 `pagos`
 
@@ -482,14 +498,20 @@ El barrido que caduca reservas y el webhook escriben las mismas filas: la transa
 | columna | tipo | null | notas |
 |---|---|---|---|
 | `id` | `uuid` | no | PK; **es el `jti` que va firmado dentro del QR** |
-| `reserva_id` | `uuid` | no | FK a `reservas` |
-| `asiento_id` | `uuid` | no | `UNIQUE`, FK a `asientos` |
-| `usuario_id` | `uuid` | no | FK a `perfiles` (desnormalizado para RLS y consultas) |
-| `feed` / `viaje_id` | `text` | no | FK a `viajes (feed, id)`; desnormalizado para el revisor |
+| `reserva_id` | `uuid` | no | FK a `reservas` `on delete restrict` |
+| `asiento_id` | `uuid` | no | `UNIQUE`, FK a `asientos` `on delete restrict` |
+| `usuario_id` | `uuid` | sí | FK a `perfiles` `on delete set null` (desnormalizado para RLS y consultas) |
+| `feed` / `viaje_id` | `text` | no | FK a `viajes (feed, id)` `on delete restrict`; desnormalizado para el revisor |
+| `fecha_servicio` | `date` | no | **añadida el 29/10**: es la base de `expira_en` y de las horas del QR |
+| `origen_id` / `destino_id` | `text` | no | FK a `estaciones`; el **trayecto vendido**, copiado de la reserva |
+| `coche` / `asiento` / `clase` | `smallint` / `text` / `text` | no | copia de la butaca al emitir (`3`, `12A`, `turista`); el QR usa `co`, `as`, `cl` |
+| `precio_centimos` | `integer` | no | precio simulado del billete, copiado de la reserva |
 | `estado` | `text` | no | `valido` \| `usado` \| `anulado` \| `caducado` |
+| `qr` | `text` | no | token firmado `RNF1.<datos>.<firma>` (ver §5.4.1) |
 | `emitido_en` | `timestamptz` | no | |
 | `expira_en` | `timestamptz` | no | **`fecha_servicio + 26 h`** = 02:00 del día siguiente (Europe/Madrid) |
-| `usado_en` | `timestamptz` | sí | |
+| `usado_en` | `timestamptz` | sí | obligatorio si `estado = 'usado'` |
+| `actualizado_en` | `timestamptz` | no | trigger `set_actualizado_en()` |
 
 **Diseño:** **1 billete = 1 butaca = 1 viajero** (decidido: Alex, 26/10). Una reserva de 3 plazas
 genera 3 billetes con 3 QR distintos; es lo que espera un revisor y lo que permite anular uno sin
@@ -498,37 +520,108 @@ tocar los demás.
 02:00 del día siguiente; cubre los viajes `24:xx`/`25:xx` y un retraso normal. Se calcula al emitir
 (en la transacción del webhook) y **la misma marca va en el `exp` del QR**. Un barrido pasa a
 `caducado` los billetes con `estado = 'valido'` y `expira_en < now()`.
-`billetes` **no** lleva `fecha_servicio` (Rubén): hereda la caducidad de `expira_en`, que ya la
-codifica.
-El contenido del QR (`{billete_id, feed, viaje_id, usuario_id, exp}` firmado con Ed25519) **no se
-guarda**: solo la clave privada firma y la firma se verifica con la pública. Lo que manda es
-`estado` en BD: firma válida + estado `valido` = billete bueno.
-`usuario_id`, `feed` y `viaje_id` están duplicados a propósito (evitan joins en la validación y
-simplifican la política RLS); se rellenan siempre desde la reserva.
+`billetes` **lleva** `fecha_servicio` (cambio del 29/10, al escribir la migración): §5.4 decía que no
+hacía falta porque `expira_en` ya la codifica, pero sin ella `otro_dia` y las horas `sal`/`lle` del QR
+obligan a un join a `reservas` en cada escaneo del revisor. `expira_en` se sigue calculando igual
+(`fecha_servicio + 26 h`, decisión 6).
+El QR se **guarda** en `billetes.qr` (cambio del 29/10): §5.4 decía que no hacía falta porque la firma
+se verifica con la clave pública, pero `GET /billetes/:id/qr` y el objeto `Abono` devuelven el QR ya
+firmado; guardarlo lo hace idempotente (misma petición, mismo token) y permite distinguir `no_existe`
+(firma buena, id que no está en la BD) de `falso`. Lo que manda sigue siendo `estado` en BD: firma
+válida + estado `valido` = billete bueno.
+`usuario_id`, `feed`, `viaje_id`, el trayecto y los datos de la butaca están duplicados a propósito
+(evitan joins en la validación y simplifican la política RLS); se rellenan siempre desde la reserva.
+
+#### 5.4.1 Formato del QR
+
+Contrato completo en [[endpoints]] («Formato del QR del billete» y «QR del abono»):
+
+| Prefijo | Qué firma | Claves de `datos` |
+|---|---|---|
+| `RNF1.` | billete: `RNF1.<datos>.<firma>`, base64url, Ed25519 | `v`, `id`, `rid`, `loc`, `tipo`, `num`, `sal`, `lle`, `o`, `d`, `co`, `as`, `cl`, `p`, `doc` |
+| `RNA1.` | abono: `RNA1.<datos>.<firma>`, mismo esquema | `v`, `id`, `t`, `o`/`d`, `ini`, `fin`, `vr`, `p` |
+
+La clave privada (`QR_SIGNING_PRIVATE_KEY`) **no está en la base de datos**: la firma la API. En la BD
+solo se guarda el token resultante, para poder devolverlo tal cual.
 
 **RLS:** el dueño lee sus billetes; nunca escribe (no puede marcar `usado`). Escritura solo
 `service_role`. El revisor **no** lee la tabla directamente: llama a `POST /billetes/validar`.
 **Índices:** `UNIQUE (asiento_id)`; `(usuario_id, emitido_en desc)`; `(feed, viaje_id, estado)`;
-`(expira_en) where estado = 'valido'` para el barrido.
+`(expira_en) where estado = 'valido'` para el barrido; `(reserva_id)`. El índice de `asiento_id` lo
+aporta el `UNIQUE`.
 
 ### 5.5 `validaciones`
 
 | columna | tipo | null | notas |
 |---|---|---|---|
 | `id` | `uuid` | no | PK |
-| `billete_id` | `uuid` | no | FK a `billetes` |
-| `revisor_id` | `uuid` | no | FK a `perfiles` (rol `revisor`) |
-| `resultado` | `text` | no | `valido` \| `ya_usado` \| `caducado` \| `firma_invalida` \| `no_encontrado` |
+| `billete_id` | `uuid` | sí | FK a `billetes` `on delete restrict`; nulo en abonos y en QR no encontrados |
+| `abono_id` | `uuid` | sí | FK a `abonos` `on delete restrict`; nulo en billetes (como mucho uno de los dos) |
+| `revisor_id` | `uuid` | sí | FK a `perfiles` `on delete set null` (rol `revisor` o `admin`) |
+| `resultado` | `text` | no | `valido` \| `ya_validado` \| `otro_dia` \| `caducado` \| `anulado` \| `falso` \| `no_existe` \| `agotado` |
 | `motivo` | `text` | sí | texto libre del revisor |
-| `validado_en` | `timestamptz` | no | default `now()` |
+| `validado_en` | `timestamptz` | no | default `now()`; la primera es `primeraValidacion` |
 
 **Diseño:** tabla **append-only**, incluida la auditoría de los intentos fallidos: si un revisor
 dice «este QR no vale», queda registrado con el motivo. Nunca se actualiza ni se borra.
 `billetes.estado` es el estado actual; `validaciones` es el histórico.
 
+**Ajustado el 29/10 a `POST /billetes/validar` de [[endpoints]]**: los literales de `resultado` son
+los de la respuesta del endpoint, que sustituyen a los del primer borrador —
+`ya_usado` → `ya_validado`, `firma_invalida` → `falso`, `no_encontrado` → `no_existe`, y aparecen
+`otro_dia`, `anulado` y `agotado` (bono sin viajes)—. Además:
+- `billete_id` y `abono_id` son **nulos** porque el endpoint también valida QR de abono (`RNA1`) y
+  apunta los `falso`/`no_existe`, que no tienen fila detrás. `CHECK (billete_id is null or abono_id is
+  null)`: como mucho uno de los dos.
+- `revisor_id` es nullable solo por el borrado de cuenta (§8): la validación se queda como historial.
+- Validar un bono **descuenta** un viaje (`abonos.viajes_restantes`); `validaciones` guarda el rastro.
+
 **RLS:** el revisor lee sus propias validaciones; el viajero no lee nada de aquí.
 Escritura solo `service_role`.
-**Índices:** `(billete_id, validado_en desc)`; `(revisor_id, validado_en desc)`.
+**Índices:** `(billete_id, validado_en desc)`; `(revisor_id, validado_en desc)`;
+`(abono_id, validado_en desc)`.
+
+### 5.6 `abonos` y bonos
+
+**Nuevo el 29/10** (contrato de [[endpoints]], «Abonos y bonos», propuesto por la web el 28/10).
+Productos **simulados** como los billetes; no hay tarifas reales ni validez fuera de la app.
+
+| columna | tipo | null | notas |
+|---|---|---|---|
+| `id` | `uuid` | no | PK interna (`gen_random_uuid()`) |
+| `referencia` | `text` | no | `UNIQUE`; **id público** `AB-7K2M9Q`, el que devuelve la API y va en el QR |
+| `usuario_id` | `uuid` | sí | FK a `perfiles` `on delete set null` (mismo criterio que `reservas`, §8) |
+| `tipo` | `text` | no | `ave-ld-mensual` \| `avant-mensual` \| `cercanias-recurrente` \| `bono-10` |
+| `nombre` | `text` | no | comercial («Bono 10 viajes»); evita una tabla de tarifas para 4 productos |
+| `origen_id` / `destino_id` | `text` | sí | FK a `estaciones`; **null solo en `cercanias-recurrente`**, obligatorios y distintos en el resto |
+| `inicio` | `date` | no | primer día válido |
+| `fin` | `date` | no | **último día válido, inclusive**; `CHECK (fin >= inicio)` |
+| `viajes_totales` / `viajes_restantes` | `smallint` | sí | 10 y 10 en `bono-10`; **null = ilimitado** en los abonos; `CHECK (restantes <= totales)` |
+| `precio_centimos` | `integer` | no | precio simulado; la API lo calcula según el tipo |
+| `estado` | `text` | no | `pendiente` \| `activo` \| `anulado` \| `caducado`, default `pendiente` |
+| `qr` | `text` | sí | `RNA1.<datos>.<firma>`; nulo mientras está pendiente de pago |
+| `creado_en` / `actualizado_en` | `timestamptz` | no | el segundo, con `set_actualizado_en()` |
+
+**Diseño:**
+
+- **Dos ids, como en `reservas`**: `id` uuid opaco (principio 1 de §1) y `referencia` legible, que es
+  el `id` del objeto `Abono` en el contrato. La API nunca enseña el uuid.
+- **`POST /abonos` crea el abono `pendiente` de pago** y lo activa el webhook, igual que una reserva
+  (`POST /pagos/intent` con `{ abonoId }`). Sin API, la web lo da por pagado al momento. Por eso el
+  QR es nullable: se publica al activar.
+- **Los checks replican la tabla del contrato**: `cercanias-recurrente` no lleva trayecto y solo
+  `bono-10` lleva viajes. Eso deja los `400` de la API como última defensa y no como única.
+- **`fin` lo calcula la API** (`inicio + 30` días o `+ 60` en `bono-10`); no se derivan aquí para no
+  duplicar la regla en SQL y en TypeScript.
+- **Validar un bono descuenta un viaje**: `POST /billetes/validar` baja `viajes_restantes` y apunta la
+  fila en `validaciones`; a 0, el veredicto es `agotado`. Los abonos ilimitados no lo tocan (`null`).
+- **Pendiente de Kevin**: `pagos` (§5.3) necesitará un `abono_id` o una referencia polimórfica cuando
+  se implemente el webhook; hoy `pagos` no existe en la BD.
+
+**RLS:** el dueño lee y nunca escribe (`404` si el id es de otro, como en el contrato).
+Escritura solo `service_role`.
+**Índices:** `UNIQUE (referencia)`; `(usuario_id, creado_en desc)` para `GET /abonos`;
+`(fin) where estado = 'activo'` para el barrido de caducados.
 
 ## 6. Tiempo real
 
@@ -635,7 +728,7 @@ nada que no toque.
 | `estaciones`, `estacion_feeds`, `rutas`, `calendarios`, `calendario_excepciones`, `viajes`, `horarios` | lectura | lectura | todo |
 | `incidencias`, `posiciones_trenes` | lectura | lectura | todo |
 | `asientos` | — | lectura | todo |
-| `reservas`, `pagos`, `billetes` | — | lee los suyos | todo |
+| `reservas`, `pagos`, `billetes`, `abonos` | — | lee los suyos | todo |
 | `validaciones` | — | el revisor, las suyas | todo |
 
 ## 8. Volumen, importación y retención
@@ -649,6 +742,7 @@ nada que no toque.
 | `horarios` | **1 990 209** | 1 918 539 + 69 670; **la tabla grande**; se reemplaza en cada importación |
 | `asientos` | bajo demanda | solo viajes + fechas consultados |
 | `reservas`, `pagos`, `billetes` | crecimiento de la app | historial, no se borra |
+| `abonos` | crecimiento de la app | historial; `viajes_restantes` baja con cada validación de bono |
 | `posiciones_trenes` | ≈ nº de trenes en circulación (~650) | upsert por viaje **y fecha**; se purga por `actualizado_en` |
 | `incidencias` | decenas (69 hoy) | upsert + borrado de las que ya no vienen |
 
@@ -716,7 +810,9 @@ nada que no toque.
    `posiciones_trenes` **no** entran: son GTFS-RT y van en la segunda.
 3. Carga real mínima con [[plan-ingesta-gtfs]]: estaciones, rutas, calendarios, viajes y horarios.
    En el Sprint final, **solo el feed `avld`** (Cercanías queda fuera de alcance).
-4. **Segunda migración**: tiempo real (§6) + reserva/pago/billete (§5).
+4. **Cuarta migración** (`20261029120000_billetes_y_abonos.sql`, escrita el 29/10): reserva, asiento,
+   billete, abono y validación (§5.1, §5.2, §5.4, §5.5 y §5.6). **Pendiente**: `pagos` (§5.3, con el
+   webhook de Stripe, Kevin) y el tiempo real (§6).
 5. Tipos compartidos del frontend contra nombres definitivos.
 6. Kevin cierra §10.2 antes del webhook de Stripe.
 
@@ -725,6 +821,13 @@ nada que no toque.
 > escribe código y documentación.
 
 ## 12. Historial de cambios
+
+- **2026-10-29 — Migración `20261029120000_billetes_y_abonos.sql`.** Tablas nuevas: `reservas`,
+  `asientos`, `billetes`, `validaciones` y `abonos` (§5 y §5.6). Correcciones al contrato al pasarlo a
+  SQL: `reservas.origen_id`/`destino_id` (el billete se vende por trayecto), `usuario_id` nullable con
+  `on delete set null` (borrado de cuenta, §8), `actualizado_en` en vez de `actualizada_en` (el trigger
+  genérico escribe ese nombre), `billetes` con `fecha_servicio`, trayecto, butaca, precio y `qr`
+  guardado, y `validaciones.resultado` con los literales de `POST /billetes/validar` más `abono_id`.
 
 - **2026-10-28 — Contrato revisado contra los ficheros reales de Renfe.** Cambios: `viajes` con
   horizonte (`fecha_inicio`/`fecha_fin`), columnas resumen (`origen_id`, `destino_id`, `salida`,
