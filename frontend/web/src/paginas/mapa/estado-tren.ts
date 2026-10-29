@@ -53,11 +53,8 @@ export const extremos = (paradas: ParadaRuta[]): { salida?: ParadaRuta; llegada?
   llegada: paradas[paradas.length - 1],
 });
 
-// "Madrid-Puerta de Atocha" → "Madrid"; deja enteras las ciudades compuestas ("San Sebastián", "La Robla").
-// Solo recorta a la primera palabra si lo que queda antes del guion es muy largo.
+// "Madrid-Puerta de Atocha" → "Madrid": quita el nombre de la estación (tras el guion) y deja la
+// ciudad entera, sea cual sea su largo ("San Sebastián", "Jardines de Hércules"); la lista la parte en líneas.
 export function ciudadCorta(estacion: string): string {
-  const base = estacion.split("-")[0].trim();
-  if (base.length <= 18) return base;
-  const [primera, segunda] = base.split(" ");
-  return primera.length > 3 || !segunda ? primera : `${primera} ${segunda}`;
+  return estacion.split("-")[0]!.trim() || estacion;
 }
