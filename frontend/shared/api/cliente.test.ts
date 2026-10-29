@@ -99,7 +99,7 @@ describe("con VITE_API_URL", () => {
     expect(llamadas[0].url).toBe("http://api/auth/cara/registrar");
     expect(llamadas[0].init?.method).toBe("POST");
     const cuerpo = JSON.parse(String(llamadas[0].init?.body));
-    expect(cuerpo.modelo).toBe("arcface/buffalo_l");
+    expect(cuerpo.modelo).toBe("arcface/w600k_mbf");
     expect(cuerpo.embedding).toHaveLength(512);
   });
 
