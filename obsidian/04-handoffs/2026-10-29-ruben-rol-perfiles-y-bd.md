@@ -4,7 +4,7 @@ autor: Rubén
 area: api
 para: todos
 rama: feat/api-cara-perfiles
-pr: (pendiente)
+pr: 82
 tags: [handoff]
 ---
 
