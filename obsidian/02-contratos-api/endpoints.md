@@ -30,12 +30,13 @@ insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
 
 ## POST /chatbot/mensaje
 
-Consulta conversacional pública sobre los datos de Renfe disponibles en la API. El chatbot usa Claude
+Consulta conversacional pública sobre los datos de Renfe disponibles en la API. El chatbot usa Gemini
 con herramientas internas de solo lectura para buscar estaciones, consultar trenes, obtener el detalle
 de un viaje y consultar posiciones en tiempo real. No acepta SQL, URLs ni nombres de herramientas del
 cliente. El modelo no puede crear reservas, consultar billetes/abonos privados ni ejecutar acciones.
 
-Auth: **no**. La ruta requiere `ANTHROPIC_API_KEY`; si no está configurada o el proveedor no responde,
+Auth: **no**. La ruta requiere `GEMINI_API_KEY` y usa el modelo `gemini-3.5-flash-lite`; si no está
+configurada o el proveedor no responde,
 devuelve `503`.
 
 Request:
