@@ -1,10 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FEEDS, type Feed } from '../../common/gtfs/feeds.js';
 import { instanteAIso } from '../../common/gtfs/tiempo.js';
+import { BdService } from '../../common/bd/bd.service.js';
 import type { PosicionesDto } from './dto/posiciones.dto.js';
+import { enriquecer, type Enriquecida } from './enriquecer.js';
 
-export interface Posicion {
+export interface PosicionRt {
   feed: Feed;
   vehicleId: string | null;
   tripId: string;
@@ -17,6 +25,8 @@ export interface Posicion {
   retrasoSeg: number | null;
   actualizado: string;
 }
+
+export type Posicion = Enriquecida<PosicionRt>;
 
 interface FeedRtJson {
   header?: { timestamp?: string | number };
@@ -64,7 +74,10 @@ export class PosicionesService {
   private instantanea: Instantanea | null = null;
   private enCurso: Promise<Instantanea> | null = null;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    @Optional() private readonly bd?: BdService,
+  ) {}
 
   async obtener({ bbox, feed }: PosicionesDto): Promise<{ datos: Posicion[]; actualizado: string }> {
     const { datos, actualizado } = await this.instantaneaActual();
@@ -111,7 +124,10 @@ export class PosicionesService {
   private async refrescar(): Promise<Instantanea> {
     try {
       const feeds = await Promise.all(this.fuentes().map((fuente) => this.descargar(fuente)));
-      const datos = feeds.flatMap((feed) => feed.datos);
+      const datos = await enriquecer(
+        feeds.flatMap((feed) => feed.datos),
+        this.bd,
+      );
       // El `actualizado` del conjunto es el del feed más antiguo: es el que se queda corto.
       const actualizado = feeds.map((feed) => feed.actualizado).sort()[0]!;
 
@@ -128,7 +144,7 @@ export class PosicionesService {
     }
   }
 
-  private async descargar(fuente: Fuente): Promise<{ datos: Posicion[]; actualizado: string }> {
+  private async descargar(fuente: Fuente): Promise<{ datos: PosicionRt[]; actualizado: string }> {
     const [cuerpo, retrasos] = await Promise.all([
       this.leer<FeedRtJson>(fuente.feed, fuente.posiciones),
       this.retrasos(fuente),
@@ -138,7 +154,7 @@ export class PosicionesService {
       new Date(Number(cuerpo.header?.timestamp ?? Date.now() / 1000) * 1000),
     );
 
-    const datos: Posicion[] = [];
+    const datos: PosicionRt[] = [];
     for (const { vehicle } of cuerpo.entity ?? []) {
       const posicion = vehicle?.position;
       // Hay vehículos sin posición publicada; no se inventan coordenadas.

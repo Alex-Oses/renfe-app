@@ -17,4 +17,6 @@ export function emparejarTren(t: TrenBillete, posiciones: PosicionTren[]): Posic
   return iguales.length === 1 ? iguales[0] : null;
 }
 
-export const textoRetraso = (p: PosicionTren) => (p.retrasoMin > 0 ? `+${p.retrasoMin} min` : "Puntual");
+// "Sin datos" cuando GTFS-RT no publica el retraso: decir "Puntual" sin saberlo sería mentir.
+export const textoRetraso = (p: Pick<PosicionTren, "retrasoMin" | "retrasoSeg">): string =>
+  p.retrasoSeg === null || p.retrasoSeg === undefined ? "Sin datos" : p.retrasoMin > 0 ? `+${p.retrasoMin} min` : "Puntual";

@@ -23,10 +23,13 @@ interface Props {
   etiqueta: string;
   texto: string;
   onTexto: (t: string) => void;
+  // Se avisa de la estación elegida en la lista: con la API real, el nombre no basta para buscar
+  // y el id evita tener que volver a resolverlo al enviar el formulario.
+  onElegir?: (e: Estacion) => void;
   placeholder?: string;
 }
 
-export function Desplegable({ etiqueta, texto, onTexto, placeholder }: Props) {
+export function Desplegable({ etiqueta, texto, onTexto, onElegir, placeholder }: Props) {
   const id = useId();
   const [abierto, setAbierto] = useState(false);
   const [opciones, setOpciones] = useState<Estacion[]>([]);
@@ -53,6 +56,7 @@ export function Desplegable({ etiqueta, texto, onTexto, placeholder }: Props) {
 
   function elegir(e: Estacion) {
     onTexto(e.nombre);
+    onElegir?.(e);
     setAbierto(false);
   }
 
