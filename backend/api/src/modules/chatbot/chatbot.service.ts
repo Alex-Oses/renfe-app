@@ -4,21 +4,23 @@ import { EstacionesService } from '../estaciones/estaciones.service.js';
 import { PosicionesService } from '../posiciones/posiciones.service.js';
 import { TrenesService } from '../trenes/trenes.service.js';
 import {
-  ClaudeProvider,
-  type ClaudeContentBlock,
-  type ClaudeMessage,
-  type ClaudeTool,
-  type ClaudeToolUseBlock,
-} from './claude.provider.js';
+  GeminiProvider,
+  type GeminiContent,
+  type GeminiFunctionCallPart,
+  type GeminiPart,
+  type GeminiTool,
+} from './gemini.provider.js';
+import { comprobarEntrada, comprobarRespuesta } from './guardrails.js';
 import type { MensajeChatbotDto } from './dto/mensaje-chatbot.dto.js';
 
 const MAX_ITERACIONES = 5;
 
-const TOOLS: ClaudeTool[] = [
-  {
-    name: 'buscar_estaciones',
-    description: 'Busca estaciones por nombre. Usa esta herramienta antes de buscar trenes si solo tienes nombres.',
-    input_schema: {
+const TOOLS: GeminiTool[] = [{
+  functionDeclarations: [
+    {
+      name: 'buscar_estaciones',
+      description: 'Busca estaciones por nombre. Usa esta herramienta antes de buscar trenes si solo tienes nombres.',
+      parameters: {
       type: 'object',
       properties: {
         q: { type: 'string', description: 'Nombre parcial de la estación' },
@@ -26,12 +28,12 @@ const TOOLS: ClaudeTool[] = [
         limit: { type: 'integer', minimum: 1, maximum: 10 },
       },
       required: ['q'],
+      },
     },
-  },
-  {
-    name: 'buscar_trenes',
-    description: 'Busca trenes directos entre dos estaciones para una fecha AAAA-MM-DD.',
-    input_schema: {
+    {
+      name: 'buscar_trenes',
+      description: 'Busca trenes directos entre dos estaciones para una fecha AAAA-MM-DD.',
+      parameters: {
       type: 'object',
       properties: {
         origen: { type: 'string', description: 'ID de estación' },
@@ -40,12 +42,12 @@ const TOOLS: ClaudeTool[] = [
         limit: { type: 'integer', minimum: 1, maximum: 10 },
       },
       required: ['origen', 'destino', 'fecha'],
+      },
     },
-  },
-  {
-    name: 'detalle_tren',
-    description: 'Obtiene las paradas y horas de un viaje identificado por feed, tripId y fecha.',
-    input_schema: {
+    {
+      name: 'detalle_tren',
+      description: 'Obtiene las paradas y horas de un viaje identificado por feed, tripId y fecha.',
+      parameters: {
       type: 'object',
       properties: {
         feed: { type: 'string', enum: ['cercanias', 'avld'] },
@@ -53,60 +55,63 @@ const TOOLS: ClaudeTool[] = [
         fecha: { type: 'string', description: 'Fecha local AAAA-MM-DD' },
       },
       required: ['feed', 'tripId', 'fecha'],
+      },
     },
-  },
-  {
-    name: 'consultar_posiciones',
-    description: 'Consulta las posiciones actuales publicadas por Renfe, opcionalmente filtradas por feed.',
-    input_schema: {
+    {
+      name: 'consultar_posiciones',
+      description: 'Consulta las posiciones actuales publicadas por Renfe, opcionalmente filtradas por feed.',
+      parameters: {
       type: 'object',
       properties: {
         feed: { type: 'string', enum: ['cercanias', 'avld'] },
       },
+      },
     },
-  },
-];
+  ],
+}];
 
 @Injectable()
 export class ChatbotService {
   constructor(
-    private readonly claude: ClaudeProvider,
+    private readonly gemini: GeminiProvider,
     private readonly estaciones: EstacionesService,
     private readonly trenes: TrenesService,
     private readonly posiciones: PosicionesService,
   ) {}
 
   async responder({ mensaje, conversationId }: MensajeChatbotDto) {
+    comprobarEntrada(mensaje);
     const id = conversationId ?? randomUUID();
-    const mensajes: ClaudeMessage[] = [{ role: 'user', content: mensaje.trim() }];
+    const mensajes: GeminiContent[] = [{ role: 'user', parts: [{ text: mensaje.trim() }] }];
     const herramientas = new Set<string>();
 
     for (let iteracion = 0; iteracion < MAX_ITERACIONES; iteracion += 1) {
-      const respuesta = await this.claude.completar(mensajes, TOOLS);
-      const usos = respuesta.content.filter(
-        (bloque): bloque is ClaudeToolUseBlock => bloque.type === 'tool_use',
-      );
+      const respuesta = await this.gemini.completar(mensajes, TOOLS);
+      const contenido = respuesta.candidates?.[0]?.content;
+      if (!contenido) throw new ServiceUnavailableException('El chatbot no generó una respuesta');
+      const usos = contenido.parts.filter(esLlamada);
 
       if (usos.length === 0) {
-        const texto = respuesta.content
-          .filter((bloque): bloque is Extract<ClaudeContentBlock, { type: 'text' }> => bloque.type === 'text')
-          .map((bloque) => bloque.text)
+        const texto = contenido.parts
+          .filter((parte): parte is { text: string } => 'text' in parte)
+          .map((parte) => parte.text)
           .join('')
           .trim();
         if (!texto) throw new ServiceUnavailableException('El chatbot no generó una respuesta');
-        return { respuesta: texto, conversationId: id, herramientas: [...herramientas] };
+        return { respuesta: comprobarRespuesta(texto), conversationId: id, herramientas: [...herramientas] };
       }
 
-      mensajes.push({ role: 'assistant', content: respuesta.content });
+      mensajes.push(contenido);
       mensajes.push({
         role: 'user',
-        content: await Promise.all(
+        parts: await Promise.all(
           usos.map(async (uso) => {
-            herramientas.add(uso.name);
+            herramientas.add(uso.functionCall.name);
             return {
-              type: 'tool_result',
-              tool_use_id: uso.id,
-              content: JSON.stringify(await this.ejecutarHerramienta(uso)),
+              functionResponse: {
+                name: uso.functionCall.name,
+                response: { resultado: await this.ejecutarHerramienta(uso.functionCall.name, uso.functionCall.args ?? {}) },
+              },
             };
           }),
         ),
@@ -116,33 +121,37 @@ export class ChatbotService {
     throw new ServiceUnavailableException('El chatbot ha superado el límite de consultas encadenadas');
   }
 
-  private ejecutarHerramienta(uso: ClaudeToolUseBlock): Promise<unknown> {
-    switch (uso.name) {
+  private ejecutarHerramienta(nombre: string, input: Record<string, unknown>): Promise<unknown> {
+    switch (nombre) {
       case 'buscar_estaciones':
         return this.estaciones.buscar({
-          q: texto(uso.input.q, 'q'),
-          feed: feedOpcional(uso.input.feed),
-          limit: limite(uso.input.limit),
+          q: texto(input.q, 'q'),
+          feed: feedOpcional(input.feed),
+          limit: limite(input.limit),
         });
       case 'buscar_trenes':
         return this.trenes.buscar({
-          origen: texto(uso.input.origen, 'origen'),
-          destino: texto(uso.input.destino, 'destino'),
-          fecha: fecha(uso.input.fecha),
-          limit: limite(uso.input.limit),
+          origen: texto(input.origen, 'origen'),
+          destino: texto(input.destino, 'destino'),
+          fecha: fecha(input.fecha),
+          limit: limite(input.limit),
         });
       case 'detalle_tren':
         return this.trenes.detalle(
-          feed(uso.input.feed),
-          texto(uso.input.tripId, 'tripId'),
-          fecha(uso.input.fecha),
+          feed(input.feed),
+          texto(input.tripId, 'tripId'),
+          fecha(input.fecha),
         );
       case 'consultar_posiciones':
-        return this.posiciones.obtener({ feed: feedOpcional(uso.input.feed) });
+        return this.posiciones.obtener({ feed: feedOpcional(input.feed) });
       default:
         throw new ServiceUnavailableException('El chatbot solicitó una herramienta no permitida');
     }
   }
+}
+
+function esLlamada(parte: GeminiPart): parte is GeminiFunctionCallPart {
+  return 'functionCall' in parte && typeof parte.functionCall?.name === 'string';
 }
 
 function texto(valor: unknown, campo: string): string {

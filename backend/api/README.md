@@ -24,8 +24,9 @@ simulado: crea la reserva pagada y emite un billete con QR por pasajero), **`GET
 [`obsidian/02-contratos-api/endpoints.md`](../../obsidian/02-contratos-api/endpoints.md).
 
 `POST /chatbot/mensaje` ofrece consultas conversacionales sobre estaciones, trenes y posiciones en
-tiempo real. Usa Claude con herramientas internas de solo lectura: el modelo no recibe acceso a SQL,
-URLs arbitrarias ni a los datos privados de otro usuario. Requiere `ANTHROPIC_API_KEY`; sin esa
+tiempo real. Usa Gemini con herramientas internas de solo lectura y un contexto/guardrails que impiden
+prompt injection, acceso a SQL, URLs arbitrarias ni a los datos privados de otro usuario. Requiere
+`GEMINI_API_KEY`; sin esa
 variable responde `503`, pero la API puede arrancar y servir el resto de rutas.
 
 Lo demás sigue pendiente: `/incidencias` y compañía necesitan las migraciones de Marina
@@ -62,7 +63,7 @@ src/
     abonos/           GET/POST /abonos y GET /abonos/:id (QR RNA1)
     auth/             /auth/registro, /auth/login (Supabase Auth) y /auth/cara/*
     billetes/         GET /billetes, /billetes/:id/qr y POST /billetes/validar
-    chatbot/          POST /chatbot/mensaje (Claude + tools de consultas públicas)
+    chatbot/          POST /chatbot/mensaje (Gemini + tools de consultas públicas)
     estaciones/       GET /estaciones (SQL sobre estaciones + estacion_feeds)
     health/           GET /health
     posiciones/       GET /posiciones (GTFS-RT en memoria, sin BD) y la posición por viaje
@@ -134,7 +135,7 @@ prevé Ed25519 con `QR_SIGNING_PRIVATE_KEY`; cambiar la firma no toca los servic
 | `pagos` | PaymentIntent de Stripe test + webhook (pendiente) | Kevin |
 | `billetes` | Mis billetes, QR firmado y validación para el revisor | Rubén |
 | `abonos` | Abonos y bonos simulados con QR propio | Rubén |
-| `chatbot` | Claude API con tool use (pendiente) | Rubén |
+| `chatbot` | Gemini API con function calling y guardrails | Rubén |
 
 ## Reglas
 
