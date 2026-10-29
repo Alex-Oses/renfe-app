@@ -147,8 +147,8 @@ export function billeteDeApi(api: BilleteApi): Billete {
     reservaId: api.localizador,
     localizador: api.localizador,
     tren: {
-      // /billetes no dice feed ni tripId: sin ellos el billete no enlaza al mapa.
-      id: "",
+      // Mismo id que el mapa (`feed:tripId`): así el aviso de retraso sale de la posición real.
+      id: api.feed && api.viajeId ? `${api.feed}:${api.viajeId}` : "",
       tipo: tipoDeServicio(api.tipo),
       numero: numeroDeServicio(api.numero),
       origen: api.origen,

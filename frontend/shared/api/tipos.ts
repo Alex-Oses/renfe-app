@@ -406,6 +406,8 @@ export interface ReservaApi {
 export interface BilleteApi {
   id: string;
   localizador: string;
+  feed?: string; // viaje del billete (para cruzarlo con /posiciones)
+  viajeId?: string;
   estado: string; // valido | usado | anulado | caducado
   tipo: string; // AVE, ALVIA… en mayúsculas
   numero: string | null;
