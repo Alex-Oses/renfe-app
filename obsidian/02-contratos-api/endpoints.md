@@ -44,6 +44,54 @@ insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
   secreto compartido, el guard actual (`algorithms: ['HS256']`) rechaza también los tokens de la
   contraseña. Hay que mirarlo al crear el proyecto.
 
+## POST /auth/registro
+
+Descripción: alta con email y contraseña. La API crea el usuario en **Supabase Auth** con
+`service_role` (`email_confirm: true`), inserta su fila en `perfiles` y devuelve una sesión ya
+iniciada. El rol de un alta siempre es `viajero`: nadie puede autoasignarse `revisor`.
+Auth: **no**
+
+Request:
+
+```json
+{ "nombre": "Ana", "email": "ana@ejemplo.es", "password": "contrasena-larga" }
+```
+
+Response 201: mismo shape que `/auth/login`.
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "v1.MRj...",
+  "usuario": {
+    "id": "6f1c…", "nombre": "Ana", "email": "ana@ejemplo.es",
+    "rol": "viajero", "caraRegistrada": false
+  }
+}
+```
+
+Errores: `400` nombre, email o contraseña inválidos · `409` email ya registrado · `503` Supabase
+Auth o la BD no responden.
+
+Notas: el rol va en `perfiles.rol` y en `app_metadata.rol` del usuario de Supabase. Si falla el alta
+del perfil, la API borra el usuario de Supabase para no dejar cuentas a medias.
+
+## POST /auth/login
+
+Descripción: login con email y contraseña. El token lo emite Supabase Auth y la API añade el perfil
+(nombre, rol y si tiene la cara registrada).
+Auth: **no**
+
+Request: `{ "email": "ana@ejemplo.es", "password": "contrasena-larga" }`
+
+Response 200: `{ "token", "refreshToken", "usuario": { "id", "nombre", "email", "rol", "caraRegistrada" } }`.
+
+Errores: `400` email o contraseña mal formados · `401` credenciales incorrectas · `503` Supabase Auth
+o la BD no responden.
+
+Notas: `rol` se lee de `perfiles.rol` (igual que `/auth/cara/verificar`); el guard sigue leyendo
+`app_metadata.rol` del token, que se fija al crear el usuario.
+
 
 ## Plantilla por endpoint
 
@@ -68,23 +116,23 @@ Estado: propuesto | implementado | cambiado (fecha)
 | GET | `/incidencias?feed=&linea=` | Avisos GTFS-RT | propuesto · **detallado** |
 | GET | `/posiciones?bbox=&feed=` | Posiciones para el mapa en vivo (sustituye a Realtime) | **implementado** · **detallado** |
 | GET | `/health` | Estado del servicio (infra) | implementado |
-| POST | `/auth/registro` | Alta de usuario | propuesto |
-| POST | `/auth/login` | Login email/contraseña | propuesto |
+| POST | `/auth/registro` | Alta de usuario | **implementado** · **detallado** |
+| POST | `/auth/login` | Login email/contraseña | **implementado** · **detallado** |
 | POST | `/auth/cara/registrar` | Guardar embedding facial (una sola vez) | **implementado** · **detallado** |
 | POST | `/auth/cara/verificar` | Login facial | **implementado** · **detallado** |
 | POST | `/auth/cara/reset` | Admin borra la plantilla de un usuario | **implementado** · **detallado** |
 | GET | `/trenes/:feed/:tripId/asientos?fecha=` | Asientos disponibles (simulado) | propuesto |
-| POST | `/reservas` | Crear reserva | propuesto |
+| POST | `/reservas` | Crear reserva | **implementado** · **detallado** |
 | POST | `/pagos/intent` | PaymentIntent Stripe test | propuesto |
 | POST | `/pagos/webhook` | Webhook de Stripe | propuesto |
-| GET | `/billetes` | Mis billetes | propuesto |
-| GET | `/billetes/:id/qr` | QR firmado | propuesto |
-| POST | `/billetes/validar` | Revisor valida un QR | propuesto · **detallado** (Alex) |
+| GET | `/billetes` | Mis billetes | **implementado** · **detallado** |
+| GET | `/billetes/:id/qr` | QR firmado | **implementado** · **detallado** |
+| POST | `/billetes/validar` | Revisor valida un QR | **implementado** · **detallado** (Alex) |
 | GET | `/admin/resumen` | Cifras para el panel de administración | propuesto · **detallado** (Alex) |
 | POST | `/chatbot/mensaje` | Mensaje al chatbot | propuesto |
-| GET | `/abonos` | Mis abonos y bonos | propuesto por la web · **detallado** (Alex) |
-| POST | `/abonos` | Comprar un abono o bono | propuesto por la web · **detallado** (Alex) |
-| GET | `/abonos/:id` | Un abono con su QR firmado | propuesto por la web · **detallado** (Alex) |
+| GET | `/abonos` | Mis abonos y bonos | **implementado** · **detallado** (Alex) |
+| POST | `/abonos` | Comprar un abono o bono | **implementado** · **detallado** (Alex) |
+| GET | `/abonos/:id` | Un abono con su QR firmado | **implementado** · **detallado** (Alex) |
 
 Los marcados **detallado** tienen contrato completo abajo. Los demás se detallan en el sprint que
 los implementa: no dependen de GTFS, así que no bloquean la fase de datos.
@@ -384,7 +432,7 @@ Notas:
 - `paradaActual` es el `stop_id` del feed, no el `id` unificado de `estaciones` (ver la nota de
   `/trenes/:feed/:tripId/posicion`).
 
-### Campos del viaje para el mapa — aceptado (Rubén, 2026-10-27) · **bloqueado por la BD**
+### Campos del viaje para el mapa — aceptado (Rubén, 2026-10-27) · **implementado (Alex, 2026-10-29)**
 
 Al pulsar un tren, la web quiere enseñar **qué tren es, de dónde sale, adónde va, la próxima parada
 y las horas**. Alex propuso estos campos y la web ya los lee (`frontend/web/src/api/cliente.ts`,
@@ -424,9 +472,117 @@ Dos avisos:
   `proximaParada.nombre` ni `origen`/`destino`.
 - Las horas, cuando lleguen, van **con el retraso aplicado** si se conoce, y con offset de Madrid.
 
+**Implementado el 29/10** (`backend/api/src/modules/posiciones/enriquecer.ts`): `/posiciones` y
+`/trenes/:feed/:tripId/posicion` cruzan cada posición con `viajes`, `rutas`, `horarios`,
+`estacion_feeds` y `estaciones` en **una consulta por feed y por refresco** del snapshot. Sin BD, o si
+el viaje no está en el catálogo (p. ej. los `SPECIAL_*` del día o Cercanías, que no está cargado), los
+seis campos van a `null` como antes. Detalles:
+
+- `nombre` = `rutas.nombre_corto` + `viajes.numero` (`AVE 03301`): en el feed real `nombre_corto` solo
+  trae el producto (`AVE`).
+- `proximaParada`: si el tren está `STOPPED_AT` es la siguiente a `paradaActual`; si va `IN_TRANSIT_TO`
+  es la propia `paradaActual`.
+- Dos campos nuevos, opcionales y aditivos:
+  - `estadoHorario`: `a_tiempo` (|retraso| < 3 min), `retraso`, `adelanto` o `sin_datos`.
+  - `retrasoFuente`: `renfe` (trip_updates de GTFS-RT, manda siempre), `horario` (Renfe no lo da y se
+    estima con el horario de la BD en la parada actual) o `null`.
+- La estimación por horario es un **mínimo**: solo cuenta lo que el tren ya va tarde en su parada. Contra
+  el retraso de Renfe el 29/10 dio un error mediano de 4 min (p90 18 min), así que es solo el plan B.
+
 **`velocidadKmh` y `rumbo` se quedan** (siempre `null`), aunque Alex propuso quitarlos: `aPosicion`
 todavía los mapea (`rumbo: p.rumbo ?? 0`) y quitarlos no arregla nada. Quedan como obsoletos; se
 pueden borrar cuando la web deje de leerlos.
+
+## POST /reservas
+
+Descripción: crea una reserva **pagada** (el pago es simulado: no hay Stripe) y emite **un billete con
+QR firmado por pasajero**. La API genera la plantilla de butacas del viaje y fecha si no existe, asigna
+las libres con `for update skip locked` y calcula el precio simulado y determinista del trayecto.
+Auth: **sí**
+
+Request:
+
+```json
+{
+  "feed": "avld",
+  "viajeId": "3097L23537C1",
+  "fecha": "2026-11-02",
+  "origenId": "60000",
+  "destinoId": "04040",
+  "pasajeros": [
+    { "nombre": "Lucía Pérez Gómez", "documento": "12345678Z" }
+  ]
+}
+```
+
+`pasajeros` va de 1 a 6: **una butaca por pasajero**. La butaca la elige la API (primeras libres por
+coche y número); el `documento` solo se enmascara en el QR (`••••678Z`).
+
+Response 201:
+
+```json
+{
+  "id": "9b2f…",
+  "localizador": "R-7K3M9Q",
+  "estado": "pagada",
+  "total": 45.0,
+  "creada": "2026-10-29T10:00:00+01:00",
+  "billetes": [
+    {
+      "id": "1c4a…",
+      "qr": "RNF1.eyJ2IjoxLCJpZCI6…",
+      "coche": 1, "asiento": "1A", "clase": "Confort", "precio": 45.0
+    }
+  ]
+}
+```
+
+Errores: `400` fecha pasada, origen = destino o pasajeros fuera de rango · `401` sin token · `404` el
+viaje no circula ese día o el trayecto no existe · `409` no quedan butacas · `503` BD caída.
+
+Notas: `estado` es siempre `pagada` mientras el pago sea simulado. La reserva, las butacas y los
+billetes se escriben en **una transacción**: si falla algo, no queda nada a medias. `expira_en` del
+billete es la fecha de servicio + 26 h.
+
+## GET /billetes
+
+Descripción: mis billetes, del más nuevo al más viejo.
+Auth: **sí**
+
+Response 200:
+
+```json
+{
+  "datos": [
+    {
+      "id": "1c4a…", "localizador": "R-7K3M9Q", "estado": "valido",
+      "tipo": "AVE", "numero": "02070",
+      "salida": "2026-11-02T07:15:00+01:00", "llegada": "2026-11-02T09:40:00+01:00",
+      "origen": { "id": "60000", "nombre": "Madrid-Puerta de Atocha" },
+      "destino": { "id": "04040", "nombre": "Zaragoza-Delicias" },
+      "coche": 3, "asiento": "12A", "clase": "Turista",
+      "precio": 45.0,
+      "emitido": "2026-10-29T10:00:00+01:00",
+      "expira": "2026-11-03T02:00:00+01:00",
+      "qr": "RNF1.eyJ2IjoxLCJpZCI6…"
+    }
+  ],
+  "total": 1
+}
+```
+
+Errores: `401` sin token · `503` BD caída. `estado` es el de `billetes` (`valido` | `usado` |
+`anulado` | `caducado`). `numero` puede ser `null`.
+
+## GET /billetes/:id/qr
+
+Descripción: QR firmado de un billete **propio**. Se devuelve el token guardado en BD, así que es
+idempotente (misma petición, mismo QR).
+Auth: **sí**
+
+Response 200: `{ "id": "1c4a…", "qr": "RNF1.eyJ2IjoxLCJpZCI6…" }`
+
+Errores: `401` sin token · `404` no existe o es de otro usuario.
 
 ## Formato del QR del billete — propuesto (Alex, 2026-10-27)
 
@@ -435,6 +591,9 @@ pueden borrar cuando la web deje de leerlos.
 - **API real:** Ed25519 con `QR_SIGNING_PRIVATE_KEY` (ver `.env.example`). La web nunca tiene la clave privada.
 - **Sin API (simulado):** HMAC-SHA256 con una clave de demostración en la web
   (`frontend/web/src/api/qr-billete.ts`). Detecta QR manipulados en la demo, pero no es seguridad real.
+- **Implementado (2026-10-29):** mientras no existan las claves Ed25519, la API firma con
+  **HMAC-SHA256** y `QR_SIGNING_SECRET` (secreto nuevo, ver `.env.example`). El formato del token y
+  las claves de `datos` son los mismos: cambiar a Ed25519 solo toca `common/qr/firma.ts`.
 - `datos` es JSON con claves cortas para que el QR sea pequeño:
 
 | Clave | Contenido |
@@ -447,7 +606,7 @@ pueden borrar cuando la web deje de leerlos.
 | `co`, `as`, `cl` | coche, asiento (`12A`) y clase |
 | `p`, `doc` | nombre del viajero y documento **enmascarado** (`••••678Z`) |
 
-## POST /billetes/validar — propuesto (Alex, 2026-10-27) · para Rubén
+## POST /billetes/validar — implementado (2026-10-29) · propuesto por Alex (2026-10-27)
 
 > **Ampliado (Alex, 2026-10-28):** también acepta QR de abonos (prefijo `RNA1.`). Estados nuevos: `agotado` (bono sin viajes) y `otro_dia` (abono aún no vigente). Con un abono válido la respuesta trae `abono` (tipo, titular enmascarado, trayecto, validez y viajes restantes) y, si es un bono, se descuenta un viaje.
 
@@ -492,8 +651,12 @@ Response 200 (siempre 200 si el QR se ha podido procesar; el veredicto va en `es
 
 Errores: `400` sin `qr` · `401` sin token · `403` sin rol de revisor.
 
-Notas: necesita una tabla de validaciones (`billete_id`, `revisor_id`, `validado_en`) en
-[[modelo-datos]] (Marina). La web ya lo consume en `cliente.ts` (`validarBillete`).
+Notas: la tabla `validaciones` (migración `20261029120000_billetes_y_abonos.sql`) es **append-only** y
+guarda también los intentos fallidos (`falso`, `no_existe`); `billetes.estado` es el estado actual.
+La web ya lo consume en `cliente.ts` (`validarBillete`). `comprobadoEnServidor` va siempre en `true`.
+El orden del veredicto de un billete es: anulado → caducado → otro día → ya validado → válido. Al
+validar por primera vez se marca `billetes.estado = 'usado'`. Un abono `bono-10` descuenta un viaje
+por lectura; los ilimitados no. `motivo` solo se rellena en los rechazos que no tienen fila detrás.
 
 ## GET /admin/resumen — propuesto (Alex, 2026-10-27)
 
@@ -502,7 +665,7 @@ Auth: **sí**, rol `admin`. Response 200: `billetesVendidos`, `reservas`, `reser
 `total`, `estado`, `creada`). Tipo `ResumenAdmin` en `frontend/web/src/api/tipos.ts`. El resto del
 panel (usuarios y roles, anular reservas, avisos) se detalla en el próximo sprint.
 
-## Abonos y bonos — propuesto por la web (Alex, 2026-10-28) · para Rubén
+## Abonos y bonos — implementado (2026-10-29) · propuesto por la web (Alex, 2026-10-28)
 
 Abonos y bonos como los de Renfe, **simulados** como los billetes. Auth: **sí** en las tres rutas;
 cada usuario solo ve los suyos (`404` si el id es de otro).
@@ -538,21 +701,25 @@ Response 200: `{ "datos": Abono[], "total": n }`, del más nuevo al más viejo.
 ### POST /abonos
 
 Request: `{ "tipo": "bono-10", "origenId": "60000", "destinoId": "04040", "inicio": "2026-11-01" }`.
-La API calcula `fin`, `precio` y los viajes, y crea el abono **pendiente de pago**; se paga como
-una reserva (`POST /pagos/intent` con `{ "abonoId" }` y el webhook de Stripe). Sin API, la web lo
-da por pagado al momento. Response 201: el `Abono`.
-Errores: `400` tipo desconocido, falta trayecto, origen = destino o `inicio` pasado o a más de 60
-días · `401` sin token.
+La API calcula `fin` (inicio + 30 días, o + 60 en `bono-10`, con el último día inclusive), `precio` y
+los viajes. **Sin Stripe** el abono nace `activo` y con su QR firmado; cuando exista el pago se
+cambiará a `pendiente` + activación por webhook como una reserva.
+Response 201: el `Abono`.
+Errores: `400` tipo desconocido, falta trayecto, origen = destino, `inicio` pasado o a más de 60
+días, o trayecto enviado en `cercanias-recurrente` · `401` sin token · `404` estación inexistente.
+
+Notas: precios simulados y cerrados: `ave-ld-mensual` 380 €, `avant-mensual` 230 €,
+`cercanias-recurrente` 60 € y `bono-10` 220 €.
 
 ### GET /abonos/:id
 
-Response 200: el `Abono` con `qr` firmado. Errores: `401` · `404`.
+Response 200: el `Abono` con `qr` firmado. Errores: `401` · `404` si no existe o es de otro usuario.
 
 ### QR del abono
 
 Mismo esquema que el del billete, con prefijo `RNA1`: `RNA1.<datos>.<firma>`. `datos` lleva
 `v`, `id`, `t` (tipo), `o`/`d` (nombres o `null`), `ini`/`fin`, `vr` (viajes restantes o `null`)
-y `p` (nombre del titular). El revisor y los tornos tendrán que aceptar `RNA1` (pendiente).
+y `p` (nombre del titular). El revisor ya acepta `RNA1` en `POST /billetes/validar`.
 
 ### Preferencia «Usar mi cara para validar»
 
@@ -656,12 +823,15 @@ Notas:
 
 ## Pendientes de detallar
 
-`/auth/registro`, `/auth/login`, `/trenes/:feed/:tripId/asientos`, `/reservas`, `/pagos/*`,
-`/billetes*` y `/chatbot/mensaje` no dependen de GTFS. Se detallan en el sprint que los implemente,
-siempre aquí antes del código.
+`/trenes/:feed/:tripId/asientos`, `/pagos/*`, `/admin/resumen` y `/chatbot/mensaje` no dependen de
+GTFS. Se detallan en el sprint que los implemente, siempre aquí antes del código.
 
 ## Historial
 
+- 2026-10-29 — Implementados `/auth/registro`, `/auth/login`, `/reservas`, `/billetes`,
+  `/billetes/:id/qr`, `/billetes/validar` y las tres rutas de `/abonos`. QRs firmados con
+  HMAC-SHA256 (`QR_SIGNING_SECRET`) hasta que existan las claves Ed25519. Los abonos nacen `activo`
+  mientras no haya Stripe.
 - 2026-10-28 — Propuestas por la web `GET/POST /abonos` y `GET /abonos/:id` (Alex).
 - 2026-10-28 — Detallados `/auth/cara/registrar`, `/auth/cara/verificar` y `/auth/cara/reset`
   (ADR-005: ArcFace 512, lógica en Postgres, JWT propio).

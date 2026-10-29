@@ -16,8 +16,15 @@ de [`obsidian/02-contratos-api/modelo-datos.md`](../../obsidian/02-contratos-api
 la excepción: leen GTFS-RT de Renfe en memoria cada 30 s, no tocan la BD y funcionan sin Supabase.
 `/posiciones` trae también el retraso real de `trip_updates` (puede ser negativo: tren adelantado).
 
+Los datos son reales (GTFS) y el resto va simulado: **`POST /auth/registro` y `POST /auth/login`**
+(Supabase Auth con `service_role`), **login facial** (`/auth/cara/*`), **`POST /reservas`** (pago
+simulado: crea la reserva pagada y emite un billete con QR por pasajero), **`GET /billetes`**,
+**`GET /billetes/:id/qr`**, **`POST /billetes/validar`** (rol `revisor`/`admin`) y **`/abonos`**
+(`GET`, `POST` y `GET /:id`). El contrato está en
+[`obsidian/02-contratos-api/endpoints.md`](../../obsidian/02-contratos-api/endpoints.md).
+
 Lo demás sigue pendiente: `/incidencias` y compañía necesitan las migraciones de Marina
-(`backend/database/`) y el worker GTFS.
+(`backend/database/`) y el worker GTFS, y `/pagos/*` es Stripe en modo test (Kevin).
 
 ## Arrancar
 
@@ -42,12 +49,18 @@ src/
   app.module.ts       ConfigModule validado + módulos
   config/entorno.ts   validación de variables de entorno
   common/auth/        SupabaseJwtGuard, RolesGuard y decorador @Roles
-  common/bd/          BdService: pool de Postgres opcional
+  common/bd/          BdService: pool de Postgres opcional (+ transacciones)
   common/gtfs/        tiempo (horas GTFS → ISO con offset), feeds y el SQL de calendarios
+  common/qr/          firma y verificación de los QR RNF1/RNA1 (HMAC-SHA256)
+  common/simulado/    precio simulado y determinista
   modules/
+    abonos/           GET/POST /abonos y GET /abonos/:id (QR RNA1)
+    auth/             /auth/registro, /auth/login (Supabase Auth) y /auth/cara/*
+    billetes/         GET /billetes, /billetes/:id/qr y POST /billetes/validar
     estaciones/       GET /estaciones (SQL sobre estaciones + estacion_feeds)
     health/           GET /health
     posiciones/       GET /posiciones (GTFS-RT en memoria, sin BD) y la posición por viaje
+    reservas/         POST /reservas (pago simulado, butacas y QR por pasajero)
     trenes/           GET /trenes, /trenes/:feed/:tripId y /:feed/:tripId/posicion
                       (precio y plazas simulados)
 ```
@@ -89,24 +102,33 @@ La API no decide nada: llama a las funciones de Postgres y traduce el `SQLSTATE`
 se expone al cliente** (es un oráculo para reconstruir la plantilla); todos los fallos se responden con
 el mismo `401`.
 
-Código en `src/modules/auth/`: `POST /auth/cara/registrar` y `POST /auth/cara/reset` piden el `Bearer`
-del login con contraseña; `POST /auth/cara/verificar` es público. El contrato está en
-`obsidian/02-contratos-api/endpoints.md`.
+### Registro y login con contraseña
 
-`/auth/registro` y `/auth/login` con contraseña todavía no existen (los emite Supabase Auth), y
-`/reservas` y `/billetes` llegarán después.
+`POST /auth/registro` y `POST /auth/login` usan **Supabase Auth con `service_role`**
+(`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`): la API crea el usuario y su fila en `perfiles`, y
+devuelve el `access_token` de Supabase más el perfil (`nombre`, `rol` y `caraRegistrada`). El alta
+siempre nace con rol `viajero`; el rol no se puede tocar desde el cliente.
 
-## Módulos previstos
+Código en `src/modules/auth/`. El contrato está en `obsidian/02-contratos-api/endpoints.md`.
+
+### QR de billetes y abonos
+
+`common/qr/firma.ts` firma `RNF1.<datos>.<firma>` y `RNA1.<datos>.<firma>` con **HMAC-SHA256** y
+`QR_SIGNING_SECRET` (32+ caracteres; sin él, emitir un billete o abono responde `503`). El contrato
+prevé Ed25519 con `QR_SIGNING_PRIVATE_KEY`; cambiar la firma no toca los servicios ni el formato.
+
+## Módulos
 
 | Módulo | Qué hace | Responsable |
 |---|---|---|
 | `auth` | Registro/login con Supabase Auth, login facial (la decisión la toma Postgres) | Rubén |
 | `estaciones` | Búsqueda de estaciones sobre datos GTFS | Rubén |
 | `trenes` | Búsqueda por origen/destino/fecha, detalle, retrasos, posiciones | Rubén |
-| `reservas` | Asientos y reservas simulados | Rubén |
-| `pagos` | PaymentIntent de Stripe test + webhook | Kevin |
-| `billetes` | QR firmado (Ed25519) y validación para el revisor | Rubén |
-| `chatbot` | Claude API con tool use | Rubén |
+| `reservas` | Reserva pagada simulada: butacas y un billete con QR por pasajero | Rubén |
+| `pagos` | PaymentIntent de Stripe test + webhook (pendiente) | Kevin |
+| `billetes` | Mis billetes, QR firmado y validación para el revisor | Rubén |
+| `abonos` | Abonos y bonos simulados con QR propio | Rubén |
+| `chatbot` | Claude API con tool use (pendiente) | Rubén |
 
 ## Reglas
 
