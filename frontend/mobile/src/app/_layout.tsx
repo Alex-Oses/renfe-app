@@ -47,8 +47,9 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="pasajero" options={{ title: "Datos del pasajero" }} />
-        <Stack.Screen name="billete/[id]" options={{ title: "Billete", presentation: "modal" }} />
+        <Stack.Screen name="resultados" options={{ headerShown: false }} />
+        <Stack.Screen name="pasajero" options={{ headerShown: false }} />
+        <Stack.Screen name="billete/[id]" options={{ headerShown: false }} />
       </Stack>
     </>
   );

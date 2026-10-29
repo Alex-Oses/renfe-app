@@ -5,6 +5,24 @@ import * as ExpoCrypto from "expo-crypto";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 
+// En Expo no existe sessionStorage: se aliasa al almacén local para que la sesión y los
+// billetes sigan el mismo criterio que la web (sessionStorage) sin perderlos al recargar.
+interface AlmacenSincrono {
+  readonly length: number;
+  clear(): void;
+  getItem(clave: string): string | null;
+  key(indice: number): string | null;
+  removeItem(clave: string): void;
+  setItem(clave: string, valor: string): void;
+}
+
+const g = globalThis as unknown as {
+  localStorage?: AlmacenSincrono;
+  sessionStorage?: AlmacenSincrono;
+  crypto?: Record<string, unknown>;
+};
+g.sessionStorage ??= g.localStorage;
+
 type Datos = ArrayBuffer | ArrayBufferView;
 const bytes = (d: Datos) =>
   d instanceof ArrayBuffer ? new Uint8Array(d) : new Uint8Array(d.buffer, d.byteOffset, d.byteLength);
@@ -23,7 +41,6 @@ const subtle = {
   },
 };
 
-const g = globalThis as unknown as { crypto?: Record<string, unknown> };
 g.crypto ??= {};
 g.crypto.getRandomValues ??= ExpoCrypto.getRandomValues;
 g.crypto.randomUUID ??= ExpoCrypto.randomUUID;
