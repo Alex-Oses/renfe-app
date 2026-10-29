@@ -1,4 +1,4 @@
-# Reglas de PR: nombre de rama, rama destino y título (Conventional Commits). Check: "PR / reglas".
+# Reglas de PR: nombre de rama, rama destino y título (Conventional Commits flexible). Check: "PR / reglas".
 name: PR
 
 on:
@@ -36,7 +36,7 @@ jobs:
         env:
           HEAD: ${{ github.head_ref }}
       - name: Título del PR
-        run: printf '%s\n' "$TITULO" | pnpm exec commitlint
+        run: printf '%s\n' "$TITULO" | pnpm exec commitlint --config commitlint.pr.config.mjs
         env:
           TITULO: ${{ github.event.pull_request.title }}
 

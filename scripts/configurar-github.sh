@@ -19,16 +19,19 @@ gh api -X PATCH "repos/$REPO" \
 echo "✔ Ajustes generales"
 
 # 2. Protección de ramas (main y develop). Los checks se llaman por el id del job: ci.yml → ok, pr.yml → reglas
+#    Aprobaciones: 3 = todo el equipo. El autor no puede aprobar su propio PR, así que
+#    con 4 personas hacen falta los 3 compañeros restantes. Nadie (ni admin) puede saltárselo.
 proteger() {
   local rama="$1" aprobaciones="$2"
   gh api -X PUT "repos/$REPO/branches/$rama/protection" --input - >/dev/null <<JSON
 {
   "required_status_checks": { "strict": true, "contexts": ["ok", "reglas"] },
-  "enforce_admins": false,
+  "enforce_admins": true,
   "required_pull_request_reviews": {
     "required_approving_review_count": $aprobaciones,
     "dismiss_stale_reviews": true,
-    "require_code_owner_reviews": true
+    "require_code_owner_reviews": true,
+    "require_last_push_approval": true
   },
   "restrictions": null,
   "required_linear_history": false,
@@ -39,8 +42,8 @@ proteger() {
 JSON
   echo "✔ Protección de $rama"
 }
-proteger develop 1
-proteger main 1
+proteger develop 3
+proteger main 3
 
 # 3. Labels
 crear_label() { gh label create "$1" --color "$2" --description "$3" --repo "$REPO" --force >/dev/null; }
@@ -50,7 +53,6 @@ crear_label frontend  8a1b61 "frontend/"
 crear_label api       0e8a16 "backend/api"
 crear_label database  5319e7 "backend/database"
 crear_label gtfs      fbca04 "backend/gtfs-worker"
-crear_label face      c5def5 "backend/face-service"
 crear_label devops    000000 "Docker, CI, infra"
 crear_label vault     7057ff "obsidian/"
 crear_label release   b60205 "PR de develop a main"

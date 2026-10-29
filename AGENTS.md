@@ -7,7 +7,7 @@ Este fichero lo leen automáticamente OpenCode, Codex, Claude Code (vía `CLAUDE
 Monorepo pnpm de una app tipo Renfe hecha por un equipo de 4 personas con Scrum. Está dividido en tres zonas:
 
 - `frontend/` → app Expo / React Native (responsable: Alex).
-- `backend/` → API NestJS (Rubén), Supabase (Marina), worker GTFS (Marina), face service Python (Kevin).
+- `backend/` → API NestJS (Rubén, con el login facial dentro), Supabase (Marina), worker GTFS (Marina).
 - `obsidian/` → **vault de Obsidian, memoria compartida entre humanos e IAs.**
 
 Antes de tocar una zona, lee su `README.md`. No modifiques zonas de otra persona sin que la tarea lo pida; si es necesario, déjalo anotado en el handoff.
@@ -72,7 +72,7 @@ Detalle completo en `docs/flujo-trabajo.md`. Resumen para agentes:
 
 ### Pull requests
 - Siempre contra `develop`, con `.github/pull_request_template.md`. Título en formato Conventional Commits (será el commit final: se mergea con **squash**).
-- Enlaza la issue (`Closes #N`). Revisor automático por `CODEOWNERS`; necesita 1 aprobación y CI verde (`CI / ok`, `PR / reglas`).
+- Enlaza la issue (`Closes #N`). Revisor automático por `CODEOWNERS`; necesita 3 aprobaciones (todo el equipo; el autor no cuenta) y CI verde (`CI / ok`, `PR / reglas`).
 - A `main` solo llegan PRs desde `develop` (fin de sprint, merge commit, lo abre Alex) o `hotfix/*`.
 - Los agentes **no aprueban ni mergean PRs**; eso lo hacen las personas.
 
@@ -81,7 +81,8 @@ Comandos: `/rama` (empezar tarea), `/pr` (commits + handoff + push + PR), `/hand
 ## 4. Convenciones de código
 
 - Gestor de paquetes: **pnpm** (nunca npm ni yarn). Node 22.
-- TypeScript estricto en frontend, API y worker. Python 3.12 en `backend/face-service/`.
+- TypeScript estricto en frontend, API y worker. No hay servicio facial aparte ni código Python: el
+  vector lo calcula el dispositivo y decide Postgres (ADR-007).
 - Variables de entorno: añade la clave a `.env.example` (sin valor real). Nunca subas `.env`.
 
 ## 5. Límites

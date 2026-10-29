@@ -1,4 +1,7 @@
-# PRs semanales de actualización de dependencias contra develop.
+# Actualizaciones de versión desactivadas: Dependabot no abre PRs de dependencias.
+# `open-pull-requests-limit: 0` desactiva las PRs de versión de cada ecosistema,
+# pero mantiene el seguimiento. Las alertas y PRs de SEGURIDAD se configuran
+# aparte en Settings > Code security y no se desactivan desde este fichero.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -6,22 +9,10 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
-    commit-message:
-      prefix: chore
-      include: scope
-    open-pull-requests-limit: 5
-  - package-ecosystem: pip
-    directory: /backend/face-service
-    target-branch: develop
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: chore
-      include: scope
+    open-pull-requests-limit: 0
   - package-ecosystem: github-actions
     directory: /
     target-branch: develop
     schedule:
       interval: weekly
-    commit-message:
-      prefix: ci
+    open-pull-requests-limit: 0

@@ -1,28 +1,31 @@
 # Docker Compose del monorepo (responsable: Kevin).
-# PLACEHOLDER: los Dockerfile existen pero las apps aún no tienen código,
-# así que `docker compose up` no funcionará hasta el Sprint 1.
-# Supabase local se levanta aparte con la CLI: `supabase start` (ver backend/database/README.md).
+# La BD es Supabase local, que levanta la CLI con Docker: `pnpm db:start` (puertos 54321 API/Auth y 54322 Postgres).
+# Luego: `docker compose up --build api` → API en http://localhost:3000 contra esa BD.
 
 services:
   api:
-    build: ./backend/api
+    build:
+      context: .
+      dockerfile: backend/api/Dockerfile
     env_file: .env
+    environment:
+      # Desde el contenedor, "localhost" es el propio contenedor: Supabase local está en el host.
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      SUPABASE_URL: http://host.docker.internal:54321
+      API_PORT: "3000"
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "3000:3000"
-    depends_on:
-      - face-service
 
+  # shortcut: el Dockerfile del worker sigue siendo el placeholder; se importa desde el host con `pnpm gtfs:importar`.
   gtfs-worker:
+    profiles: [worker]
     build: ./backend/gtfs-worker
     env_file: .env
     volumes:
       - gtfs-data:/app/data
-
-  face-service:
-    build: ./backend/face-service
-    env_file: .env
-    ports:
-      - "8001:8001"
 
   # La app Expo se ejecuta fuera de Docker (pnpm dev:mobile) para usar Expo Go en el móvil.
 

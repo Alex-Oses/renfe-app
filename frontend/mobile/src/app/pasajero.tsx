@@ -69,19 +69,22 @@ export default function Pasajero() {
 
   useEffect(() => {
     let vivo = true;
-    Promise.all([obtenerTren(trenId), obtenerAsientos(trenId)]).then(
-      ([t, a]) => {
-        if (!vivo) return;
-        setTren(t);
-        setAsientos(a);
-        setCargando(false);
-      },
-      (e: Error) => {
-        if (!vivo) return;
-        setError(e.message);
-        setCargando(false);
-      },
-    );
+    // Los asientos se piden a partir del tren: la plantilla local necesita su precio y su id.
+    obtenerTren(trenId)
+      .then(async (t) => ({ t, a: await obtenerAsientos(t) }))
+      .then(
+        ({ t, a }) => {
+          if (!vivo) return;
+          setTren(t);
+          setAsientos(a);
+          setCargando(false);
+        },
+        (e: Error) => {
+          if (!vivo) return;
+          setError(e.message);
+          setCargando(false);
+        },
+      );
     return () => {
       vivo = false;
     };
@@ -153,7 +156,7 @@ export default function Pasajero() {
         email: email.trim(),
         tipo: tipos[i],
       }));
-      const r = await crearReserva({
+      const r = await crearReserva(tren, {
         trenId,
         asientos: elegidos.map((a) => a.id),
         pasajeros,

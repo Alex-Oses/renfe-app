@@ -1,3 +1,4 @@
 # src
 
-`static/` (import del GTFS), `realtime/` (polling GTFS-RT) e `index.ts`. Ver el README del worker.
+Código del importador GTFS. La estructura y el runbook están en el
+[README del worker](../README.md).

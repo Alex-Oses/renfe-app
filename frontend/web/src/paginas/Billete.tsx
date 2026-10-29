@@ -1,24 +1,31 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import QRCode from "qrcode";
-import { misBilletes, obtenerBillete } from "@renfe/shared/api/cliente";
+import { misBilletes, obtenerBillete, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Billete as TBillete } from "@renfe/shared/api/tipos";
 import { fecha, hora } from "./reserva/formato";
 import Cartera from "./billetes/Cartera";
+import RetrasoVivo from "./billetes/RetrasoVivo";
 import "./billetes.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
+import { useSesion } from "../estado/sesion";
 
 const aSvg = (texto: string) => QRCode.toString(texto, { type: "svg", margin: 1, errorCorrectionLevel: "M" });
 
 export default function Billete() {
+  const { sesion } = useSesion();
+  const { pathname, search } = useLocation();
   const { id = "" } = useParams();
   const [b, setB] = useState<TBillete | null>(null);
   const [qr, setQr] = useState("");
   const [error, setError] = useState("");
   const [grupo, setGrupo] = useState<TBillete[]>([]);
   const [qrsGrupo, setQrsGrupo] = useState<string[] | null>(null);
+  // Con la API real /billetes/:id/qr exige sesión (401 sin token): sin sesión no se piden datos.
+  const conSesion = usaDatosSimulados || Boolean(sesion);
 
   useEffect(() => {
+    if (!conSesion) return;
     obtenerBillete(id)
       .then((x) => {
         setB(x);
@@ -35,13 +42,14 @@ export default function Billete() {
       })
       .then(setQr)
       .catch((e: Error) => setError(e.message));
-  }, [id]);
+  }, [id, conSesion]);
 
   const verTodos = () => {
     if (qrsGrupo) return setQrsGrupo(null);
     Promise.all(grupo.map((g) => aSvg(g.qr))).then(setQrsGrupo, () => setQrsGrupo(null));
   };
 
+  if (!conSesion) return <Navigate to={`/acceder?volver=${encodeURIComponent(pathname + search)}`} replace />;
   if (error)
     return (
       <div className="contenedor seccion" role="alert">
@@ -82,6 +90,7 @@ export default function Billete() {
             {b.tren.tipo} {b.tren.numero}
           </span>
           <EstadoViaje salida={b.tren.salida} llegada={b.tren.llegada} />
+          <RetrasoVivo tren={b.tren} />
         </header>
         <div className="pase__ruta">
           <div>
