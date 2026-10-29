@@ -432,7 +432,7 @@ Notas:
 - `paradaActual` es el `stop_id` del feed, no el `id` unificado de `estaciones` (ver la nota de
   `/trenes/:feed/:tripId/posicion`).
 
-### Campos del viaje para el mapa — aceptado (Rubén, 2026-10-27) · **bloqueado por la BD**
+### Campos del viaje para el mapa — aceptado (Rubén, 2026-10-27) · **implementado (Alex, 2026-10-29)**
 
 Al pulsar un tren, la web quiere enseñar **qué tren es, de dónde sale, adónde va, la próxima parada
 y las horas**. Alex propuso estos campos y la web ya los lee (`frontend/web/src/api/cliente.ts`,
@@ -471,6 +471,23 @@ Dos avisos:
   `estaciones`. Para traducirlo hace falta `estacion_feeds`, que también es BD. Sin eso no hay ni
   `proximaParada.nombre` ni `origen`/`destino`.
 - Las horas, cuando lleguen, van **con el retraso aplicado** si se conoce, y con offset de Madrid.
+
+**Implementado el 29/10** (`backend/api/src/modules/posiciones/enriquecer.ts`): `/posiciones` y
+`/trenes/:feed/:tripId/posicion` cruzan cada posición con `viajes`, `rutas`, `horarios`,
+`estacion_feeds` y `estaciones` en **una consulta por feed y por refresco** del snapshot. Sin BD, o si
+el viaje no está en el catálogo (p. ej. los `SPECIAL_*` del día o Cercanías, que no está cargado), los
+seis campos van a `null` como antes. Detalles:
+
+- `nombre` = `rutas.nombre_corto` + `viajes.numero` (`AVE 03301`): en el feed real `nombre_corto` solo
+  trae el producto (`AVE`).
+- `proximaParada`: si el tren está `STOPPED_AT` es la siguiente a `paradaActual`; si va `IN_TRANSIT_TO`
+  es la propia `paradaActual`.
+- Dos campos nuevos, opcionales y aditivos:
+  - `estadoHorario`: `a_tiempo` (|retraso| < 3 min), `retraso`, `adelanto` o `sin_datos`.
+  - `retrasoFuente`: `renfe` (trip_updates de GTFS-RT, manda siempre), `horario` (Renfe no lo da y se
+    estima con el horario de la BD en la parada actual) o `null`.
+- La estimación por horario es un **mínimo**: solo cuenta lo que el tren ya va tarde en su parada. Contra
+  el retraso de Renfe el 29/10 dio un error mediano de 4 min (p90 18 min), así que es solo el plan B.
 
 **`velocidadKmh` y `rumbo` se quedan** (siempre `null`), aunque Alex propuso quitarlos: `aPosicion`
 todavía los mapea (`rumbo: p.rumbo ?? 0`) y quitarlos no arregla nada. Quedan como obsoletos; se
