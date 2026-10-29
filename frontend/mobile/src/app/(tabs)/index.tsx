@@ -1,16 +1,16 @@
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Animated,
-  Easing,
   ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  type ScrollViewInstance,
 } from "react-native";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
 import { colores, espaciado, estilos, fuentes, gradientes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
@@ -45,54 +45,48 @@ const OFERTAS = [
 ];
 
 export default function Comprar() {
-  // Entrada de la portada como en la web: el tren llega desde la derecha y el buscador
-  // aparece después, ya asentado sobre el andén.
-  const entrada = useRef(new Animated.Value(0)).current;
-  const panel = useRef(new Animated.Value(0)).current;
+  // La portada se anima con el scroll, como el tramo sticky de la web: el tren sale hacia
+  // la izquierda mientras el buscador entra desde la derecha y se asienta sobre el andén.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const desplazamiento = useRef<ScrollViewInstance>(null);
+  const [reducir, setReducir] = useState(false);
+  const [altoVista, setAltoVista] = useState(0);
+  // La portada ocupa la pantalla disponible y se queda fija durante la entrada del buscador,
+  // como el tramo sticky de la web. Con movimiento reducido no se fija y se acorta.
+  const altoPortada = reducir ? 240 : altoVista > 0 ? altoVista : 600;
+  const recorrido = Math.max(1, Math.round(altoPortada * 0.72));
 
   useEffect(() => {
     let vivo = true;
-    const entrar = () => {
-      if (!vivo) return;
-      Animated.parallel([
-        Animated.timing(entrada, {
-          toValue: 1,
-          duration: 1150,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(panel, {
-          toValue: 1,
-          duration: 820,
-          delay: 260,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    };
-    // Si el sistema no puede decirnos si hay que reducir el movimiento, animamos igual:
-    // nunca dejamos el tren fuera de pantalla ni el buscador invisible.
     AccessibilityInfo.isReduceMotionEnabled()
-      .then((reducir) => {
-        if (!vivo) return;
-        if (reducir) {
-          entrada.setValue(1);
-          panel.setValue(1);
-        } else {
-          entrar();
-        }
+      .then((si) => {
+        if (vivo) setReducir(si);
       })
-      .catch(entrar);
+      .catch(() => undefined);
     return () => {
       vivo = false;
     };
-  }, [entrada, panel]);
+  }, []);
 
-  const trenX = entrada.interpolate({ inputRange: [0, 1], outputRange: [430, 0] });
-  const lemaY = entrada.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] });
-  const lemaEscala = entrada.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
-  const lemaOpacidad = entrada.interpolate({ inputRange: [0, 0.45, 1], outputRange: [0, 0.92, 0.92] });
-  const panelY = panel.interpolate({ inputRange: [0, 1], outputRange: [38, 0] });
+  const acotar = { extrapolate: "clamp" as const };
+  // El tren arranca en el primer píxel; el buscador entra desde la derecha mientras sube.
+  const pinY = scrollY.interpolate({ inputRange: [0, recorrido], outputRange: [0, recorrido], ...acotar });
+  const trenX = scrollY.interpolate({ inputRange: [0, recorrido * 0.55], outputRange: [0, -402], ...acotar });
+  const panelX = scrollY.interpolate({
+    inputRange: [recorrido * 0.05, recorrido * 0.45],
+    outputRange: [320, 0],
+    ...acotar,
+  });
+  const panelOpacidad = scrollY.interpolate({
+    inputRange: [recorrido * 0.05, recorrido * 0.22, recorrido * 0.45],
+    outputRange: [0, 0.35, 1],
+    ...acotar,
+  });
+  const pistaOpacidad = scrollY.interpolate({ inputRange: [0, recorrido * 0.16], outputRange: [1, 0], ...acotar });
+
+  const irAlBuscador = () => {
+    desplazamiento.current?.scrollTo({ y: recorrido, animated: !reducir });
+  };
 
   const buscar = (c: Criterios) => {
     router.push({
@@ -112,27 +106,65 @@ export default function Comprar() {
   };
 
   return (
-    <Pantalla contenido={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
-      <View style={styles.portada}>
-        <LinearGradient colors={gradientes.heroe} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-        <View style={styles.catenaria} pointerEvents="none" />
-        <Animated.Text
-          style={[styles.lema, { opacity: lemaOpacidad, transform: [{ translateY: lemaY }, { scale: lemaEscala }] }]}
+    <Pantalla
+      scrollY={scrollY}
+      scrollRef={desplazamiento}
+      onLayoutVista={setAltoVista}
+      contenido={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}
+    >
+      <View style={{ height: altoPortada }}>
+        <Animated.View
+          style={[styles.portada, { height: altoPortada }, reducir ? null : { transform: [{ translateY: pinY }] }]}
         >
-          Renfe
-        </Animated.Text>
-        <Animated.View style={[styles.tren, { transform: [{ translateX: trenX }] }]} pointerEvents="none">
-          <TrenSvg ancho={760} />
+          <LinearGradient colors={gradientes.heroe} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+          <View style={styles.paisaje} pointerEvents="none">
+            <View style={[styles.colina, { left: "4%", width: "48%", height: "100%", backgroundColor: "#dcc9d6" }]} />
+            <View style={[styles.colina, { left: "36%", width: "44%", height: "72%", backgroundColor: "#e6d7e1" }]} />
+            <View style={[styles.colina, { left: "64%", width: "48%", height: "94%", backgroundColor: "#d9c6d3" }]} />
+          </View>
+          <View style={styles.catenaria} pointerEvents="none">
+            <View style={styles.cable} />
+            {[-2, 21, 44, 67, 90].map((x) => (
+              <View key={x} style={[styles.poste, { left: `${x}%` }]} />
+            ))}
+          </View>
+          <Text style={styles.lema}>Renfe</Text>
+          {!reducir ? (
+            <Animated.View style={[styles.tren, { transform: [{ translateX: trenX }] }]} pointerEvents="none">
+              <TrenSvg ancho={760} />
+            </Animated.View>
+          ) : null}
+          <View style={styles.anden} pointerEvents="none">
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+              <View key={i} style={[styles.raya, { left: `${8 + i * 14}%` }]} />
+            ))}
+          </View>
+          <View style={styles.sombraTren} pointerEvents="none" />
+          {!reducir ? (
+            <Animated.View style={[styles.pista, { opacity: pistaOpacidad }]}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Ir al buscador"
+                onPress={irAlBuscador}
+                style={({ pressed }) => [styles.pistaBoton, pressed && { transform: [{ scale: 0.98 }] }]}
+              >
+                <Text style={styles.pistaTexto}>Desliza o toca para buscar</Text>
+                <View style={{ transform: [{ rotate: "-90deg" }] }}>
+                  <Icono nombre="chevron" tamano={15} color={colores.marca} grosor={2.2} />
+                </View>
+              </Pressable>
+            </Animated.View>
+          ) : null}
         </Animated.View>
-        <View style={styles.anden} pointerEvents="none">
-          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-            <View key={i} style={[styles.raya, { left: `${8 + i * 14}%` }]} />
-          ))}
-        </View>
-        <View style={styles.sombraTren} pointerEvents="none" />
       </View>
 
-      <Animated.View style={{ marginHorizontal: 12, marginTop: -26, opacity: panel, transform: [{ translateY: panelY }] }}>
+      <Animated.View
+        style={{
+          marginHorizontal: 12,
+          marginTop: -26,
+          ...(reducir ? null : { opacity: panelOpacidad, transform: [{ translateX: panelX }] }),
+        }}
+      >
         <Cristal padding={espaciado[4]} gap={espaciado[3]}>
           <View style={{ gap: espaciado[1] }}>
             <Text style={estilos.h1}>Busca tu próximo viaje</Text>
@@ -253,32 +285,61 @@ export default function Comprar() {
 
 const styles = StyleSheet.create({
   portada: {
-    height: 214,
+    width: "100%",
     overflow: "hidden",
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
+  },
+  paisaje: {
+    position: "absolute",
+    left: "-20%",
+    right: "-10%",
+    bottom: "30%",
+    height: "22%",
+  },
+  colina: {
+    position: "absolute",
+    bottom: 0,
+    borderTopLeftRadius: 999,
+    borderTopRightRadius: 999,
+  },
+  catenaria: {
+    position: "absolute",
+    left: -40,
+    right: -40,
+    bottom: "30%",
+    height: "34%",
+    opacity: 0.5,
+  },
+  cable: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "12%",
+    height: 1.5,
+    backgroundColor: "#464646",
+  },
+  poste: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: "#6b6b6b",
   },
   lema: {
+    position: "absolute",
+    top: "12%",
+    left: 0,
+    right: 0,
     fontFamily: fuentes.negrita,
     fontSize: 46,
     letterSpacing: -2.4,
     color: paleta.moradoOscuro,
     textAlign: "center",
-    marginTop: 18,
     opacity: 0.92,
-  },
-  catenaria: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 112,
-    height: 1.5,
-    backgroundColor: "rgba(70,70,70,0.4)",
   },
   tren: {
     position: "absolute",
-    left: -330,
-    bottom: 22,
+    right: 12,
+    bottom: "29.5%",
     width: 760,
     shadowColor: "#460032",
     shadowOffset: { width: 0, height: 8 },
@@ -291,7 +352,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 42,
+    height: "30%",
     backgroundColor: "#dfe5ea",
     borderTopWidth: 4,
     borderTopColor: colores.accion,
@@ -301,10 +362,30 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    bottom: 42,
-    height: 10,
-    backgroundColor: "rgba(70,0,50,0.08)",
+    bottom: "29.6%",
+    height: 8,
+    backgroundColor: "rgba(70,0,50,0.07)",
   },
+  pista: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 92,
+    alignItems: "center",
+  },
+  pistaBoton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: 32,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.82)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.95)",
+    ...sombras[1],
+  },
+  pistaTexto: { fontFamily: fuentes.seminegrita, fontSize: 12.4, color: colores.marca },
   seccion: { paddingHorizontal: 12, paddingTop: espaciado[6], gap: espaciado[3] },
   aviso: {
     width: 214,

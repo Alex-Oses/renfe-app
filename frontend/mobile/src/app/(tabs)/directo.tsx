@@ -76,7 +76,9 @@ export default function Directo() {
   const [filtro, setFiltro] = useState("");
   const [seleccion, setSeleccion] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
-  const [oculto, setOculto] = useState(false);
+  // En el mapa en directo el panel arranca plegado: primero se ve el mapa y la pastilla
+  // con el número de trenes; el desplegable se abre al tocarla.
+  const [oculto, setOculto] = useState(true);
 
   const vivo = useRef(true);
   const enVuelo = useRef(false);
