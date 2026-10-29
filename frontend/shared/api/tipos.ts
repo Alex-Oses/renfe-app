@@ -368,6 +368,12 @@ export interface SesionApi extends Sesion {
   refreshToken: string | null;
 }
 
+export interface RespuestaChatbot {
+  respuesta: string;
+  conversationId: string;
+  herramientas: string[];
+}
+
 // POST /reservas: la API elige la butaca, así que el frontend no manda los asientos elegidos.
 export interface PasajeroApi {
   nombre: string; // nombre completo ("Lucía Pérez Gómez")

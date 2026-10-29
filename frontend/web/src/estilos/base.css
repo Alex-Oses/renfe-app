@@ -1061,6 +1061,186 @@ a.mega__titulo:hover {
     backdrop-filter: var(--cristal-desenfoque);
   }
 
+  .solo-lectura {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .chatbot {
+    position: fixed;
+    right: max(1.25rem, env(safe-area-inset-right));
+    bottom: max(1.25rem, env(safe-area-inset-bottom));
+    z-index: var(--z-modal);
+  }
+
+  .chatbot__boton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1rem 0.8rem 0.8rem;
+    border: 1px solid rgb(255 255 255 / 0.75);
+    border-radius: var(--radio-pildora);
+    background: var(--morado);
+    color: var(--blanco);
+    box-shadow: var(--sombra-3);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform var(--dur-corta) ease, background var(--dur-corta) ease;
+  }
+
+  .chatbot__boton:hover {
+    background: var(--morado-oscuro);
+    transform: translateY(-2px);
+  }
+
+  .chatbot__icono {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--blanco);
+    color: var(--morado);
+    font-size: 1.25rem;
+  }
+
+  .chatbot__panel {
+    display: flex;
+    flex-direction: column;
+    width: min(22rem, calc(100vw - 2rem));
+    height: min(35rem, calc(100vh - 2rem));
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 0.8);
+    border-radius: var(--radio-grande);
+    background: var(--cristal-3);
+    box-shadow: var(--sombra-3);
+    -webkit-backdrop-filter: var(--cristal-desenfoque-fuerte);
+    backdrop-filter: var(--cristal-desenfoque-fuerte);
+  }
+
+  .chatbot__cabecera {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--esp-4);
+    padding: 1.25rem 1.25rem 1rem;
+    background: linear-gradient(135deg, var(--morado), var(--frambuesa));
+    color: var(--blanco);
+  }
+
+  .chatbot__cabecera h2 {
+    margin: 0;
+    color: inherit;
+    font-size: 1.15rem;
+  }
+
+  .chatbot__eyebrow {
+    margin: 0 0 0.35rem;
+    opacity: 0.82;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .chatbot__cerrar {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .chatbot__mensajes {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+
+  .chatbot__mensaje {
+    width: fit-content;
+    max-width: 88%;
+    margin: 0 0 0.7rem;
+    padding: 0.7rem 0.85rem;
+    border-radius: 1rem 1rem 1rem 0.25rem;
+    background: var(--blanco);
+    color: var(--grafito);
+    box-shadow: var(--sombra-1);
+    white-space: pre-wrap;
+  }
+
+  .chatbot__mensaje--usuario {
+    margin-left: auto;
+    border-radius: 1rem 1rem 0.25rem 1rem;
+    background: var(--morado);
+    color: var(--blanco);
+  }
+
+  .chatbot__escribiendo {
+    color: var(--gris);
+    font-style: italic;
+  }
+
+  .chatbot__error {
+    margin: 0;
+    color: var(--color-error);
+    font-size: 0.85rem;
+  }
+
+  .chatbot__formulario {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-top: 1px solid var(--linea);
+    background: rgb(255 255 255 / 0.7);
+  }
+
+  .chatbot__formulario input {
+    min-width: 0;
+    flex: 1;
+    border: 1px solid var(--linea);
+    border-radius: var(--radio-pildora);
+    padding: 0.7rem 0.9rem;
+    background: var(--blanco);
+    color: var(--grafito);
+    font: inherit;
+  }
+
+  .chatbot__enviar {
+    display: grid;
+    flex: 0 0 2.75rem;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--frambuesa);
+    color: var(--blanco);
+    font-size: 1.25rem;
+    cursor: pointer;
+  }
+
+  .chatbot__enviar:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 47.99rem) {
+    .chatbot {
+      right: 0.75rem;
+      bottom: 0.75rem;
+    }
+
+    .chatbot__panel {
+      width: calc(100vw - 1.5rem);
+      height: min(34rem, calc(100vh - 1.5rem));
+    }
+  }
+
   /* Nivel 2: cabecera, buscador, paneles principales */
   .cristal--fuerte,
   .buscador {
