@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
+import MapView, { Marker, Polyline, type MapPressEvent } from "react-native-maps";
 import { colorTipo, colores } from "@/tema";
 import { TrenMarcador } from "./Icono";
 import type { PropsMapa } from "./mapa-tipos";
@@ -12,7 +12,33 @@ const ESPANA = { latitude: 40.2, longitude: -3.7, latitudeDelta: 9.4, longitudeD
 // El marcador del tren elegido lleva un anillo y el recorrido se pinta encima.
 export function MapaTrenes({ trenes, seleccion, onElegir }: PropsMapa) {
   const mapa = useRef<MapView>(null);
+  const visible = useRef({ latitudeDelta: ESPANA.latitudeDelta, longitudeDelta: ESPANA.longitudeDelta });
   const elegido = trenes.find((t) => t.trenId === seleccion);
+
+  // En iOS el toque de un marcador personalizado a veces se queda en la vista del tren.
+  // Además de `Marker.onPress`, el mapa busca el tren más cercano al punto pulsado: así
+  // cualquier toque cerca del dibujo abre su detalle.
+  const alPulsarMapa = useCallback(
+    (e: MapPressEvent) => {
+      if (!onElegir || trenes.length === 0) return;
+      const { latitude, longitude } = e.nativeEvent.coordinate;
+      const latD = Math.max(visible.current.latitudeDelta, 0.002);
+      const lonD = Math.max(visible.current.longitudeDelta, 0.002);
+      let mejor: (typeof trenes)[number] | null = null;
+      let distancia = Number.POSITIVE_INFINITY;
+      for (const t of trenes) {
+        const dLat = (t.lat - latitude) / latD;
+        const dLon = (t.lon - longitude) / lonD;
+        const d = dLat * dLat + dLon * dLon;
+        if (d < distancia) {
+          distancia = d;
+          mejor = t;
+        }
+      }
+      if (mejor && distancia <= 0.0045) onElegir(mejor);
+    },
+    [trenes, onElegir],
+  );
 
   useEffect(() => {
     if (!elegido) return;
@@ -38,6 +64,10 @@ export function MapaTrenes({ trenes, seleccion, onElegir }: PropsMapa) {
       loadingEnabled
       loadingBackgroundColor="#eff3f6"
       loadingIndicatorColor={colores.marca}
+      onRegionChangeComplete={(r) => {
+        visible.current = { latitudeDelta: r.latitudeDelta, longitudeDelta: r.longitudeDelta };
+      }}
+      onPress={alPulsarMapa}
     >
       {elegido && elegido.ruta.length > 1 ? (
         <Polyline
@@ -68,7 +98,7 @@ export function MapaTrenes({ trenes, seleccion, onElegir }: PropsMapa) {
                   transform: [{ rotate: `${Number.isFinite(t.rumbo) ? t.rumbo : 0}deg` }],
                 }}
               >
-                <TrenMarcador tipo={t.tipo} tamano={activo ? 32 : 24} />
+                <TrenMarcador tipo={t.tipo} tamano={activo ? 36 : 27} />
               </View>
             </View>
           </Marker>
@@ -80,16 +110,16 @@ export function MapaTrenes({ trenes, seleccion, onElegir }: PropsMapa) {
 
 const styles = StyleSheet.create({
   marcador: {
-    width: 58,
-    height: 62,
+    width: 68,
+    height: 74,
     alignItems: "center",
     justifyContent: "center",
   },
   anillo: {
     position: "absolute",
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     borderWidth: 3,
     borderColor: colores.accion,
     backgroundColor: "rgba(214,45,97,0.10)",

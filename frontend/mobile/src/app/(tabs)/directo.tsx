@@ -76,6 +76,7 @@ export default function Directo() {
   const [filtro, setFiltro] = useState("");
   const [seleccion, setSeleccion] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
+  const [oculto, setOculto] = useState(false);
 
   const vivo = useRef(true);
   const enVuelo = useRef(false);
@@ -144,11 +145,18 @@ export default function Directo() {
   const elegir = (t: PosicionTren) => {
     setSeleccion(t.trenId);
     setAbierto(true);
+    setOculto(false);
   };
 
   const cerrarDetalle = () => {
     setSeleccion(null);
     setAbierto(false);
+  };
+
+  const ocultarLista = () => {
+    setSeleccion(null);
+    setAbierto(false);
+    setOculto(true);
   };
 
   const alto: `${number}%` = seleccion ? "61%" : abierto ? "64%" : "43%";
@@ -176,7 +184,39 @@ export default function Directo() {
         </Cristal>
       </View>
 
-      <View style={[styles.hoja, { bottom: Math.max(insets.bottom, 8) + 82, height: alto }]}>
+      {oculto ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Mostrar la lista de trenes"
+          onPress={() => setOculto(false)}
+          style={({ pressed }) => [
+            styles.verLista,
+            { bottom: Math.max(insets.bottom, 8) + 82 },
+            pressed && { transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <View style={styles.verListaIcono}>
+            <Icono nombre="lineas" tamano={19} color={colores.marca} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.verListaTitulo} numberOfLines={1}>
+              {visibles.length} {visibles.length === 1 ? "tren" : "trenes"} en circulación
+            </Text>
+            <Text style={styles.verListaSub}>Toca para ver la lista</Text>
+          </View>
+          <View style={{ transform: [{ rotate: "180deg" }] }}>
+            <Icono nombre="chevron" tamano={19} color={colores.marca} />
+          </View>
+        </Pressable>
+      ) : null}
+
+      <View
+        style={[
+          styles.hoja,
+          { bottom: Math.max(insets.bottom, 8) + 82, height: alto },
+          oculto && { display: "none" },
+        ]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={abierto ? "Bajar el panel" : "Subir el panel"}
@@ -201,14 +241,28 @@ export default function Directo() {
                 : `${visibles.length} de ${trenes.length} trenes · ${hace === null ? "conectando…" : `actualizado hace ${hace} s`}`}
             </Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={seleccion ? "Cerrar detalle" : abierto ? "Bajar el panel" : "Subir el panel"}
-            onPress={seleccion ? cerrarDetalle : () => setAbierto((a) => !a)}
-            style={({ pressed }) => [styles.botonRedondo, pressed && { backgroundColor: tonos.rosaFuerte }]}
-          >
-            <Icono nombre={seleccion ? "cerrar" : abierto ? "chevron" : "atras"} tamano={19} color={colores.marca} />
-          </Pressable>
+          <View style={styles.botonesCabecera}>
+            {!seleccion ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={abierto ? "Bajar el panel" : "Subir el panel"}
+                onPress={() => setAbierto((a) => !a)}
+                style={({ pressed }) => [styles.botonRedondo, pressed && { backgroundColor: tonos.rosaFuerte }]}
+              >
+                <View style={{ transform: [{ rotate: abierto ? "0deg" : "180deg" }] }}>
+                  <Icono nombre="chevron" tamano={19} color={colores.marca} />
+                </View>
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={seleccion ? "Cerrar detalle" : "Ocultar la lista y ver el mapa"}
+              onPress={seleccion ? cerrarDetalle : ocultarLista}
+              style={({ pressed }) => [styles.botonRedondo, pressed && { backgroundColor: tonos.rosaFuerte }]}
+            >
+              <Icono nombre={seleccion ? "cerrar" : "menos"} tamano={19} color={colores.marca} />
+            </Pressable>
+          </View>
         </View>
 
         {avisoApi ? (
@@ -439,6 +493,34 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     ...sombras[3],
   },
+  verLista: {
+    position: "absolute",
+    left: espaciado[3],
+    right: espaciado[3],
+    zIndex: 25,
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: espaciado[3],
+    paddingHorizontal: espaciado[3],
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.96)",
+    ...sombraFlotante,
+  },
+  verListaIcono: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tonos.rosa,
+  },
+  verListaTitulo: { fontFamily: fuentes.seminegrita, fontSize: 14, color: colores.titulo },
+  verListaSub: { fontFamily: fuentes.normal, fontSize: 11.5, color: colores.textoSuave },
+  botonesCabecera: { flexDirection: "row", alignItems: "center", gap: 6 },
   zonaAsa: { alignItems: "center", paddingTop: 7, paddingBottom: 4 },
   asa: { width: 40, height: 4.5, borderRadius: 3, backgroundColor: "rgba(129,0,94,0.19)" },
   hojaCabecera: { flexDirection: "row", alignItems: "center", gap: espaciado[2], paddingBottom: espaciado[2] },

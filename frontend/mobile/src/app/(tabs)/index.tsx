@@ -1,6 +1,17 @@
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import {
+  AccessibilityInfo,
+  Animated,
+  Easing,
+  ImageBackground,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
 import { colores, espaciado, estilos, fuentes, gradientes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
 import { Buscador, type Criterios } from "@/components/Buscador";
@@ -34,6 +45,55 @@ const OFERTAS = [
 ];
 
 export default function Comprar() {
+  // Entrada de la portada como en la web: el tren llega desde la derecha y el buscador
+  // aparece después, ya asentado sobre el andén.
+  const entrada = useRef(new Animated.Value(0)).current;
+  const panel = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let vivo = true;
+    const entrar = () => {
+      if (!vivo) return;
+      Animated.parallel([
+        Animated.timing(entrada, {
+          toValue: 1,
+          duration: 1150,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(panel, {
+          toValue: 1,
+          duration: 820,
+          delay: 260,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    };
+    // Si el sistema no puede decirnos si hay que reducir el movimiento, animamos igual:
+    // nunca dejamos el tren fuera de pantalla ni el buscador invisible.
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reducir) => {
+        if (!vivo) return;
+        if (reducir) {
+          entrada.setValue(1);
+          panel.setValue(1);
+        } else {
+          entrar();
+        }
+      })
+      .catch(entrar);
+    return () => {
+      vivo = false;
+    };
+  }, [entrada, panel]);
+
+  const trenX = entrada.interpolate({ inputRange: [0, 1], outputRange: [430, 0] });
+  const lemaY = entrada.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] });
+  const lemaEscala = entrada.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+  const lemaOpacidad = entrada.interpolate({ inputRange: [0, 0.45, 1], outputRange: [0, 0.92, 0.92] });
+  const panelY = panel.interpolate({ inputRange: [0, 1], outputRange: [38, 0] });
+
   const buscar = (c: Criterios) => {
     router.push({
       pathname: "/resultados",
@@ -56,10 +116,14 @@ export default function Comprar() {
       <View style={styles.portada}>
         <LinearGradient colors={gradientes.heroe} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         <View style={styles.catenaria} pointerEvents="none" />
-        <Text style={styles.lema}>Renfe</Text>
-        <View style={styles.tren} pointerEvents="none">
+        <Animated.Text
+          style={[styles.lema, { opacity: lemaOpacidad, transform: [{ translateY: lemaY }, { scale: lemaEscala }] }]}
+        >
+          Renfe
+        </Animated.Text>
+        <Animated.View style={[styles.tren, { transform: [{ translateX: trenX }] }]} pointerEvents="none">
           <TrenSvg ancho={760} />
-        </View>
+        </Animated.View>
         <View style={styles.anden} pointerEvents="none">
           {[0, 1, 2, 3, 4, 5, 6].map((i) => (
             <View key={i} style={[styles.raya, { left: `${8 + i * 14}%` }]} />
@@ -68,15 +132,17 @@ export default function Comprar() {
         <View style={styles.sombraTren} pointerEvents="none" />
       </View>
 
-      <Cristal style={{ marginHorizontal: 12, marginTop: -26 }} padding={espaciado[4]} gap={espaciado[3]}>
-        <View style={{ gap: espaciado[1] }}>
-          <Text style={estilos.h1}>Busca tu próximo viaje</Text>
-          <Text style={[estilos.suave, { fontSize: 15, lineHeight: 21 }]}>
-            Trenes de larga y media distancia. Eliges asiento y llevas el billete en el móvil.
-          </Text>
-        </View>
-        <Buscador onBuscar={buscar} />
-      </Cristal>
+      <Animated.View style={{ marginHorizontal: 12, marginTop: -26, opacity: panel, transform: [{ translateY: panelY }] }}>
+        <Cristal padding={espaciado[4]} gap={espaciado[3]}>
+          <View style={{ gap: espaciado[1] }}>
+            <Text style={estilos.h1}>Busca tu próximo viaje</Text>
+            <Text style={[estilos.suave, { fontSize: 15, lineHeight: 21 }]}>
+              Trenes de larga y media distancia. Eliges asiento y llevas el billete en el móvil.
+            </Text>
+          </View>
+          <Buscador onBuscar={buscar} />
+        </Cristal>
+      </Animated.View>
 
       <View style={styles.seccion}>
         <Text style={estilos.h2}>Antes de viajar</Text>
