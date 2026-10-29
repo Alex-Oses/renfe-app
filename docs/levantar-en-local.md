@@ -9,7 +9,18 @@ Probado el 29/10/2026 en Windows 11 con Docker Desktop 29.
 - Node 22 y `corepack enable` (los scripts del monorepo llaman a `pnpm` por su nombre).
 - `pnpm install` en la raíz.
 
-## Pasos
+## Con un comando
+
+```bash
+pnpm local                 # Supabase + .env + catálogo AV/LD/MD y Cercanías + API en Docker
+pnpm local --sin-cercanias # sin los ~2 M horarios de Cercanías
+pnpm local --sin-importar  # si la BD ya tiene los horarios (arranques siguientes)
+```
+
+Al terminar imprime las URLs. Después, la web con `VITE_API_URL=http://localhost:3000 pnpm dev:web` y la app
+con `EXPO_PUBLIC_API_URL=http://<IP-del-PC>:3000 pnpm dev:mobile` (en el móvil, `localhost` es el móvil).
+
+## Pasos a mano (lo mismo que hace `pnpm local`)
 
 1. **Base de datos** (aplica todas las migraciones de `backend/database/supabase/migrations`):
    ```bash
