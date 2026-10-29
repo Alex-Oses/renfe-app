@@ -77,7 +77,7 @@ export function usarToken(t: string | null) {
 }
 
 export async function enviarMensajeChatbot(mensaje: string, conversationId?: string): Promise<RespuestaChatbot> {
-  if (!BASE) throw new Error("El chat no está disponible en modo demo");
+  if (!BASE) return simular(() => respuestaChatbotDemo(mensaje), 250);
   return pedir<RespuestaChatbot>("/chatbot/mensaje", "POST", {
     mensaje,
     ...(conversationId && { conversationId }),
@@ -98,7 +98,7 @@ async function mensajeDeError(r: Response, ruta: string): Promise<string> {
 }
 
 async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise<T> {
-  const r = await fetch(`${BASE}${ruta}`, {
+  const r = await fetchConLimite(`${BASE}${ruta}`, {
     method: metodo,
     headers: {
       ...(cuerpo !== undefined && { "Content-Type": "application/json" }),
@@ -200,6 +200,35 @@ async function posicionesVercel(): Promise<PosicionTren[]> {
 const simular = <T>(f: () => T | Promise<T>, ms = 350): Promise<T> =>
   new Promise((ok, ko) => setTimeout(() => (async () => f())().then(ok, ko), ms));
 
+const TIEMPO_LIMITE_API_MS = 8_000;
+
+async function fetchConLimite(url: string, init?: RequestInit): Promise<Response> {
+  const controlador = new AbortController();
+  const temporizador = setTimeout(() => controlador.abort(), TIEMPO_LIMITE_API_MS);
+  try {
+    return await fetch(url, { ...init, signal: controlador.signal });
+  } catch (razon) {
+    if (razon instanceof DOMException && razon.name === "AbortError") {
+      throw new Error("La API está tardando demasiado en responder. Inténtalo de nuevo.");
+    }
+    throw razon;
+  } finally {
+    clearTimeout(temporizador);
+  }
+}
+
+function respuestaChatbotDemo(mensaje: string): RespuestaChatbot {
+  const pregunta = mensaje.toLocaleLowerCase("es");
+  let respuesta =
+    "Estoy en modo demo. Puedo ayudarte con estaciones, trenes y horarios usando los datos simulados de la aplicación.";
+  if (pregunta.includes("estación") || pregunta.includes("estacion")) {
+    respuesta = "En el modo demo puedes buscar estaciones como Madrid, Barcelona, Valencia o Sevilla.";
+  } else if (pregunta.includes("tren") || pregunta.includes("horario")) {
+    respuesta = "En demo hay trenes simulados para probar búsquedas de Madrid a Barcelona y otros trayectos.";
+  }
+  return { respuesta, conversationId: "demo", herramientas: [] };
+}
+
 // GET /estaciones?q=&feed=
 export async function buscarEstaciones(q: string, feed?: "cercanias" | "avld"): Promise<Estacion[]> {
   // El contrato exige `q` de 1 a 60 caracteres: con el campo vacío no se pregunta (sería un 400).
@@ -297,7 +326,7 @@ export async function verificarCara(datos: { email: string; embedding: Embedding
 
 export async function posicionesTrenes(): Promise<PosicionTren[]> {
   if (BASE_POSICIONES) {
-    const r = await fetch(`${BASE_POSICIONES}/posiciones`);
+    const r = await fetchConLimite(`${BASE_POSICIONES}/posiciones`);
     if (!r.ok) throw new Error(await mensajeDeError(r, "/posiciones"));
     posicionesReales = true;
     return unoPorVehiculo(((await r.json()) as Lista<PosicionApi>).datos).map(aPosicion);
