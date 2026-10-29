@@ -4,7 +4,7 @@ autor: Rubén
 area: devops
 para: [Kevin, Marina, Alex]
 rama: chore/infra-docker-servidor
-pr: (pendiente)
+pr: 87
 tags: [handoff, infra, docker, despliegue]
 ---
 
