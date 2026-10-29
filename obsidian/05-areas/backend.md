@@ -11,6 +11,10 @@ en PR; los de negocio (reservas, pagos, billetes, chatbot) siguen pendientes.
 Plan completo, diagramas y caminos de petición: [`docs/arquitectura.md`](../../docs/arquitectura.md)
 Contrato de cada ruta: [[endpoints]]. Esquema: [[modelo-datos]].
 
+La API emite JWT propios firmados con `JWT_SECRET` (HS256, 12 horas) tanto para el login con
+contraseña como para el login facial. Supabase Auth se usa internamente para validar credenciales y
+`DATABASE_URL` permanece solo en el backend.
+
 ## Módulos
 
 | Módulo | Responsable | Estado |
