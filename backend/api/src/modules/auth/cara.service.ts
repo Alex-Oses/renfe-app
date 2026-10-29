@@ -9,9 +9,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SignJWT } from 'jose';
 import type { QueryResultRow } from 'pg';
 import type { Rol } from '../../common/auth/auth.types.js';
+import { firmarToken } from '../../common/auth/firmar-token.js';
 import { BdService } from '../../common/bd/bd.service.js';
 import type { RegistrarCaraDto } from './dto/registrar-cara.dto.js';
 import type { ResetearCaraDto } from './dto/resetear-cara.dto.js';
@@ -39,8 +39,6 @@ interface FilaUsuario {
   nombre: string;
   rol: string;
 }
-
-const HORAS_TOKEN = 12;
 
 // Los SQLSTATE los pone la migración (`raise exception ... using errcode`), así
 // que la API no compara textos. Cualquier otro error es la BD, no la petición.
@@ -123,19 +121,14 @@ export class CaraService {
     };
   }
 
-  /** Mismos claims que el token de Supabase, para que el guard no distinga cómo se entró. */
-  private async firmar({ id, email, rol }: UsuarioSesion): Promise<string> {
-    const secreto = this.config.get<string>('SUPABASE_JWT_SECRET');
+  /** El rol no viaja en el token: el guard lo lee de `perfiles.rol`, igual entre cara y contraseña. */
+  private async firmar({ id, email }: UsuarioSesion): Promise<string> {
+    const secreto = this.config.get<string>('JWT_SECRET');
     if (!secreto) {
-      throw new ServiceUnavailableException('La API no tiene configurado SUPABASE_JWT_SECRET');
+      throw new ServiceUnavailableException('La API no tiene configurado JWT_SECRET');
     }
 
-    return new SignJWT({ email, app_metadata: { rol } })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setSubject(id)
-      .setIssuedAt()
-      .setExpirationTime(`${HORAS_TOKEN}h`)
-      .sign(new TextEncoder().encode(secreto));
+    return firmarToken({ id, email }, secreto);
   }
 
   private async ejecutar(sql: string, valores: unknown[]): Promise<void> {

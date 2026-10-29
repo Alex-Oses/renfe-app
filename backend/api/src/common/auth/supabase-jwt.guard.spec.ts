@@ -1,15 +1,19 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SignJWT } from 'jose';
-import type { Rol } from './auth.types.js';
+import { BdService } from '../bd/bd.service.js';
 import { SupabaseJwtGuard } from './supabase-jwt.guard.js';
 
 const SECRETO = 'secreto-de-prueba-suficientemente-largo-1234';
 
-const firmar = (secreto: string, rol: Rol = 'viajero', expiracion = '5m') =>
-  new SignJWT({ app_metadata: { rol }, email: `${rol}@renfe.test` })
+const firmar = (secreto: string, usuario = 'viajero', expiracion: string | number = '5m') =>
+  new SignJWT({ email: `${usuario}@renfe.test` })
     .setProtectedHeader({ alg: 'HS256' })
-    .setSubject(`uuid-${rol}`)
+    .setSubject(`uuid-${usuario}`)
     .setExpirationTime(expiracion)
     .sign(new TextEncoder().encode(secreto));
 
@@ -20,20 +24,55 @@ const contexto = (cabecera?: string): ExecutionContext =>
     }),
   }) as unknown as ExecutionContext;
 
-const guardCon = (secreto: string | undefined) =>
-  new SupabaseJwtGuard({ get: () => secreto } as unknown as ConfigService);
+const guardCon = (
+  secreto: string | undefined,
+  consultar: (sql: string, valores: unknown[]) => Promise<unknown> = async () => ({ rows: [] }),
+) =>
+  new SupabaseJwtGuard({ get: () => secreto } as unknown as ConfigService, {
+    consultar,
+  } as unknown as BdService);
 
 describe('SupabaseJwtGuard', () => {
-  it('acepta un token válido y deja el usuario en la petición', async () => {
+  it('acepta un token válido y toma el rol de perfiles', async () => {
+    const peticion: { headers: Record<string, string>; usuario?: unknown } = { headers: {} };
+    const ctx = {
+      switchToHttp: () => ({ getRequest: () => peticion }),
+    } as unknown as ExecutionContext;
+    let valores: unknown[] = [];
+
+    peticion.headers.authorization = `Bearer ${await firmar(SECRETO, 'revisor')}`;
+
+    const guard = guardCon(SECRETO, async (_sql, recibidos) => {
+      valores = recibidos;
+      return { rows: [{ rol: 'revisor' }] };
+    });
+
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+    expect(valores).toEqual(['uuid-revisor']);
+    expect(peticion.usuario).toMatchObject({ rol: 'revisor', email: 'revisor@renfe.test' });
+  });
+
+  it('sin fila de perfil el rol es viajero', async () => {
     const peticion: { headers: Record<string, string>; usuario?: unknown } = { headers: {} };
     const ctx = {
       switchToHttp: () => ({ getRequest: () => peticion }),
     } as unknown as ExecutionContext;
 
-    peticion.headers.authorization = `Bearer ${await firmar(SECRETO, 'revisor')}`;
+    peticion.headers.authorization = `Bearer ${await firmar(SECRETO)}`;
 
     await expect(guardCon(SECRETO).canActivate(ctx)).resolves.toBe(true);
-    expect(peticion.usuario).toMatchObject({ rol: 'revisor', email: 'revisor@renfe.test' });
+    expect(peticion.usuario).toMatchObject({ rol: 'viajero' });
+  });
+
+  it('si la BD falla responde 503, no degrada a viajero', async () => {
+    const token = await firmar(SECRETO);
+    const guard = guardCon(SECRETO, async () => {
+      throw new Error('BD caída');
+    });
+
+    await expect(guard.canActivate(contexto(`Bearer ${token}`))).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
   });
 
   it('rechaza si no hay cabecera', async () => {

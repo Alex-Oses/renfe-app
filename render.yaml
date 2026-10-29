@@ -23,5 +23,11 @@ services:
         value: https://renfe-app-beta.vercel.app
       - key: DATABASE_URL # cadena de conexión de Supabase en la nube (pooler)
         sync: false
-      - key: SUPABASE_JWT_SECRET
+      - key: JWT_SECRET # lo firma la API (HS256); NO es el JWT secret de Supabase (ES256)
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false

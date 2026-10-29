@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
+import { jwtVerify } from 'jose';
 import { BdService } from '../../common/bd/bd.service.js';
 import { AuthService } from './auth.service.js';
 
@@ -15,7 +16,12 @@ const ENTORNO: Record<string, string> = {
   SUPABASE_URL: 'https://proyecto.supabase.co',
   SUPABASE_SERVICE_ROLE_KEY: SECRETO,
   SUPABASE_ANON_KEY: SECRETO,
+  JWT_SECRET: SECRETO,
 };
+
+/** Verifica que el token lo firma la API con `JWT_SECRET` (HS256). */
+const tokenPropio = async (token: string) =>
+  (await jwtVerify(token, new TextEncoder().encode(SECRETO), { algorithms: ['HS256'] })).payload;
 
 const servicioCon = (
   consultar: (sql: string, valores: unknown[]) => Promise<unknown> = async () => ({ rows: [] }),
@@ -50,18 +56,15 @@ describe('AuthService.registro', () => {
       .fn()
       .mockResolvedValueOnce(respuesta({ id: USUARIO_ID, email: registro.email }))
       .mockResolvedValueOnce(
-        respuesta({
-          access_token: 'token-supabase',
-          refresh_token: 'refresh-supabase',
-          user: { id: USUARIO_ID, email: registro.email },
-        }),
+        respuesta({ user: { id: USUARIO_ID, email: registro.email } }),
       );
     vi.stubGlobal('fetch', peticiones);
 
     const sesion = await servicioCon(consultar).registro(registro);
 
-    expect(sesion.token).toBe('token-supabase');
-    expect(sesion.refreshToken).toBe('refresh-supabase');
+    const payload = await tokenPropio(sesion.token);
+    expect(payload).toMatchObject({ sub: USUARIO_ID, email: registro.email });
+    expect(sesion.refreshToken).toBeNull();
     expect(sesion.usuario).toEqual({
       id: USUARIO_ID,
       nombre: 'Ana',
@@ -74,8 +77,9 @@ describe('AuthService.registro', () => {
     expect(alta).toMatchObject({
       email: registro.email,
       email_confirm: true,
-      app_metadata: { rol: 'viajero' },
     });
+    // El rol vive solo en `perfiles.rol` (ADR-007): no se duplica en `app_metadata`.
+    expect(alta).not.toHaveProperty('app_metadata');
     expect(peticiones.mock.calls[0]![0]).toBe('https://proyecto.supabase.co/auth/v1/admin/users');
 
     const insert = consultas.find((consulta) => consulta.sql.includes('insert into perfiles'));
@@ -125,21 +129,17 @@ describe('AuthService.login', () => {
     vi.unstubAllGlobals();
   });
 
-  it('devuelve el token de Supabase y el rol del perfil', async () => {
+  it('firma un token propio de la API y lee el rol del perfil', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(
-        respuesta({
-          access_token: 'token-supabase',
-          refresh_token: 'refresh-supabase',
-          user: { id: USUARIO_ID, email: login.email },
-        }),
-      ),
+      vi.fn().mockResolvedValue(respuesta({ user: { id: USUARIO_ID, email: login.email } })),
     );
 
     const sesion = await servicioCon(async () => ({ rows: [PERFIL] })).login(login);
 
-    expect(sesion.token).toBe('token-supabase');
+    const payload = await tokenPropio(sesion.token);
+    expect(payload).toMatchObject({ sub: USUARIO_ID, email: login.email });
+    expect(sesion.refreshToken).toBeNull();
     expect(sesion.usuario.rol).toBe('revisor');
     expect(sesion.usuario.caraRegistrada).toBe(true);
   });
@@ -147,17 +147,17 @@ describe('AuthService.login', () => {
   it('sin perfil usa el email como nombre y el rol viajero', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(
-        respuesta({ access_token: 'token', user: { id: USUARIO_ID, email: login.email } }),
-      ),
+      vi.fn().mockResolvedValue(respuesta({ user: { id: USUARIO_ID, email: login.email } })),
     );
 
     const sesion = await servicioCon(async () => ({ rows: [] })).login(login);
 
-    expect(sesion).toMatchObject({
-      token: 'token',
-      refreshToken: null,
-      usuario: { id: USUARIO_ID, nombre: login.email, rol: 'viajero', caraRegistrada: false },
+    expect(sesion.refreshToken).toBeNull();
+    expect(sesion.usuario).toMatchObject({
+      id: USUARIO_ID,
+      nombre: login.email,
+      rol: 'viajero',
+      caraRegistrada: false,
     });
   });
 
@@ -176,9 +176,7 @@ describe('AuthService.login', () => {
   it('si la BD falla al leer el perfil responde 503', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(
-        respuesta({ access_token: 'token', user: { id: USUARIO_ID, email: login.email } }),
-      ),
+      vi.fn().mockResolvedValue(respuesta({ user: { id: USUARIO_ID, email: login.email } })),
     );
     const consultar = async () => {
       throw new Error('BD caída');
@@ -187,5 +185,18 @@ describe('AuthService.login', () => {
     await expect(servicioCon(consultar).login(login)).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
+  });
+
+  it('sin JWT_SECRET responde 503 en vez de devolver un token sin firmar', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(respuesta({ user: { id: USUARIO_ID, email: login.email } })),
+    );
+
+    await expect(
+      servicioCon(async () => ({ rows: [PERFIL] }), { ...ENTORNO, JWT_SECRET: undefined }).login(
+        login,
+      ),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });

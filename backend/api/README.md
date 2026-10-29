@@ -71,11 +71,36 @@ src/
 arranca igual, `GET /health` devuelve `"baseDatos": "no configurada"` y los endpoints de datos
 responderán `503`. Sin ORM: `bd.consultar(sql, valores)` y SQL a mano (ver ADR-002).
 
+El `.env` se lee de la **raíz del monorepo** (`envFilePath: ['../../.env', '.env']`), porque los
+scripts de pnpm corren en `backend/api` y no en la raíz.
+
+### Probar contra la base de datos local (Docker)
+
+```bash
+# 1. Docker Desktop abierto
+pnpm db:start                       # Supabase local: Postgres en 54322
+pnpm db:reset                       # aplica las 4 migraciones + seed.sql
+pnpm gtfs:importar                  # carga el feed avld (~70 000 horarios)
+
+# 2. Copia .env.example a .env en la raíz y rellena SUPABASE_JWT_SECRET
+#    (lo imprime `pnpm db:status`). DATABASE_URL ya apunta a localhost:54322.
+
+# 3. Comprobación
+pnpm --filter @renfe/api test:e2e   # los e2e de BD se saltan solos sin DATABASE_URL
+pnpm dev:api                        # GET /health debe decir "baseDatos": "ok"
+```
+
+`test/bd.e2e-spec.ts` cubre el catálogo (`/estaciones`, `/trenes` y el detalle) y los caminos de
+error del facial contra la BD real. Se salta entero si no hay `DATABASE_URL`, así que CI sigue verde
+sin base de datos.
+
 ## Auth
 
 `SupabaseJwtGuard` verifica el `Bearer` contra `SUPABASE_JWT_SECRET` (HS256) y deja en
-`request.usuario` → `{ id, email, rol }`. El rol sale de `app_metadata.rol` (`viajero` por defecto,
-`revisor` y `admin` explícitos). `RolesGuard` + `@Roles('revisor')` limitan endpoints por rol.
+`request.usuario` → `{ id, email, rol }`. **El rol no viaja en el token**: se lee de `perfiles.rol`
+con una consulta por clave primaria (es donde vive según el modelo de datos y lo que usa
+`resetear_cara`). Sin fila de perfil → `viajero`; si la BD no responde → `503`.
+`RolesGuard` + `@Roles('revisor')` limitan endpoints por rol.
 
 ```ts
 @UseGuards(SupabaseJwtGuard, RolesGuard)

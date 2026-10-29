@@ -91,7 +91,7 @@ describe('CaraService.verificar', () => {
 
   const peticion = { email: 'ana@ejemplo.es', embedding: EMBEDDING } as never;
 
-  it('firma un token con los claims de Supabase y devuelve la sesión', async () => {
+  it('firma un token sin rol y devuelve el rol que da perfiles', async () => {
     const servicio = servicioVerificar(
       { usuario_id: USUARIO_ID, coincide: true },
       { email: 'ana@ejemplo.es', nombre: 'Ana', rol: 'revisor' },
@@ -114,8 +114,20 @@ describe('CaraService.verificar', () => {
     );
     expect(payload.sub).toBe(USUARIO_ID);
     expect(payload.email).toBe('ana@ejemplo.es');
-    expect(payload.app_metadata).toEqual({ rol: 'revisor' });
+    // El rol no viaja en el token: el guard lo lee de perfiles.
+    expect(payload.app_metadata).toBeUndefined();
     expect(payload.exp! - payload.iat!).toBe(12 * 60 * 60);
+  });
+
+  it('un perfil admin sale como admin', async () => {
+    const servicio = servicioVerificar(
+      { usuario_id: USUARIO_ID, coincide: true },
+      { email: 'ana@ejemplo.es', nombre: 'Ana', rol: 'admin' },
+    );
+
+    await expect(servicio.verificar(peticion)).resolves.toMatchObject({
+      usuario: { rol: 'admin' },
+    });
   });
 
   it.each([

@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { QueryResultRow } from 'pg';
 import type { Rol } from '../../common/auth/auth.types.js';
+import { firmarToken } from '../../common/auth/firmar-token.js';
 import { BdService } from '../../common/bd/bd.service.js';
 import type { LoginDto } from './dto/login.dto.js';
 import type { RegistroDto } from './dto/registro.dto.js';
@@ -19,7 +20,7 @@ export interface UsuarioSesion {
   caraRegistrada: boolean;
 }
 
-/** Mismo shape que `/auth/cara/verificar`, más el `refreshToken` de Supabase. */
+/** Mismo shape que `/auth/cara/verificar`. `refreshToken` se mantiene por el contrato y va a `null`. */
 export interface SesionAutenticada {
   token: string;
   refreshToken: string | null;
@@ -32,8 +33,6 @@ interface UsuarioSupabase {
 }
 
 interface RespuestaToken {
-  access_token?: string;
-  refresh_token?: string;
   user?: UsuarioSupabase;
 }
 
@@ -58,9 +57,10 @@ function aRol(rol: string | undefined): Rol {
 }
 
 /**
- * Registro y login con contraseña. Supabase Auth es el dueño de las credenciales
- * y del token; la API solo crea el perfil y lee el rol. El login facial vive en
- * `CaraService`.
+ * Registro y login con contraseña. Supabase Auth es el dueño de las credenciales;
+ * la API crea el perfil, lee el rol de `perfiles.rol` y **firma su propio token**
+ * (`JWT_SECRET`), porque el `access_token` de Supabase es ES256 y el guard no lo
+ * puede verificar. El login facial vive en `CaraService`.
  */
 @Injectable()
 export class AuthService {
@@ -73,7 +73,7 @@ export class AuthService {
     const servicio = this.claveObligatoria('SUPABASE_SERVICE_ROLE_KEY');
     const respuesta = await this.pedir(
       '/auth/v1/admin/users',
-      { email, password, email_confirm: true, app_metadata: { rol: ROL_POR_DEFECTO } },
+      { email, password, email_confirm: true },
       servicio,
     );
 
@@ -122,23 +122,25 @@ export class AuthService {
       throw new ServiceUnavailableException('Supabase Auth no responde');
     }
 
-    const { access_token: token, refresh_token: refreshToken, user } =
-      (await respuesta.json()) as RespuestaToken;
-    if (!token || !user?.id) {
+    const { user } = (await respuesta.json()) as RespuestaToken;
+    if (!user?.id) {
       throw new ServiceUnavailableException('Supabase Auth no devolvió la sesión');
     }
 
     const perfil = await this.perfil(user.id);
+    const usuario = {
+      id: user.id,
+      nombre: perfil?.nombre ?? user.email ?? email,
+      email: user.email ?? email,
+      rol: aRol(perfil?.rol),
+    };
+
+    // El `access_token` de Supabase es ES256 y el guard no lo puede verificar: la
+    // API firma el suyo con `JWT_SECRET`, igual que en el login facial.
     return {
-      token,
-      refreshToken: refreshToken ?? null,
-      usuario: {
-        id: user.id,
-        nombre: perfil?.nombre ?? user.email ?? email,
-        email: user.email ?? email,
-        rol: aRol(perfil?.rol),
-        caraRegistrada: perfil?.cara_registrada ?? false,
-      },
+      token: await firmarToken(usuario, this.claveJwt()),
+      refreshToken: null,
+      usuario: { ...usuario, caraRegistrada: perfil?.cara_registrada ?? false },
     };
   }
 
@@ -157,6 +159,14 @@ export class AuthService {
       throw new ServiceUnavailableException(`La API no tiene configurado ${nombre}`);
     }
     return clave;
+  }
+
+  private claveJwt(): string {
+    const secreto = this.config.get<string>('JWT_SECRET');
+    if (!secreto) {
+      throw new ServiceUnavailableException('La API no tiene configurado JWT_SECRET');
+    }
+    return secreto;
   }
 
   private async pedir(

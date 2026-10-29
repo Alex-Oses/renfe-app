@@ -5,15 +5,12 @@ a `develop`: crea otra nueva.
 
 ## Estado
 
-**Escritas y sin aplicar.** No se han ejecutado ni en Supabase local ni en la nube, y no se ha
-importado ningún dato. Se aplican en la **VM Linux de Azure `genai-openllm-vm`** (Docker Desktop está
-bloqueado en el portátil corporativo).
-
-La 04 sí se ha probado en local con **PGlite** (Postgres 17 en WASM) sobre un preludio que imita
-`auth` (`auth.users`, `auth.uid()`) y las tablas de 01–03: crea sin errores, y se han comprobado los
-`CHECK`, el `UNIQUE (asiento_id)`, el trigger de `actualizado_en` y las políticas RLS (cada viajero ve
-lo suyo y `authenticated` no puede escribir). Eso **no sustituye** a aplicarla en Supabase: faltan
-`pgvector`, `pg_trgm` y los roles reales de Supabase.
+**Las 4 primeras están aplicadas en Supabase Cloud** (`hqwwucagvlhnlqrspwvh`, 29/10) y validadas en la
+VM (`genai-openllm-vm`) con el feed `avld` cargado. La 05 está escrita y probada en local con
+**PGlite** (Postgres 17 en WASM) sobre un preludio que imita `auth` y las tablas de 01–04: crea sin
+errores, y se han comprobado los `CHECK`, el `UNIQUE (asiento_id)`, el trigger de `actualizado_en` y
+las políticas RLS (cada viajero ve lo suyo y `authenticated` no puede escribir). Eso **no sustituye** a
+aplicarla en Supabase: faltan `pgvector`, `pg_trgm` y los roles reales.
 
 ## Orden
 
@@ -22,11 +19,12 @@ lo suyo y `authenticated` no puede escribir). Eso **no sustituye** a aplicarla e
 | 01 | `20261028120000_extensiones_y_funciones.sql` | Esquema `extensions`; extensiones `vector` y `pg_trgm`; función `set_actualizado_en()` |
 | 02 | `20261028120100_identidad.sql` | `perfiles` y `embeddings_faciales` + RLS |
 | 03 | `20261028120200_catalogo_gtfs.sql` | `estaciones`, `estacion_feeds`, `rutas`, `calendarios`, `calendario_excepciones`, `viajes`, `horarios` + RLS |
-| 04 | `20261029120000_billetes_y_abonos.sql` | `reservas`, `asientos`, `abonos`, `billetes`, `validaciones` + RLS |
+| 04 | `20261028120300_reconocimiento_facial.sql` | `config_cara` y las funciones `registrar_cara` / `verificar_cara` / `resetear_cara` (ADR-007) |
+| 05 | `20261029120000_billetes_y_abonos.sql` | `reservas`, `asientos`, `abonos`, `billetes`, `validaciones` + RLS |
 
-El orden importa: 02 usa la función y el esquema que crea 01, 03 usa `pg_trgm` y la función, y 04
-apunta a `perfiles` (02), `viajes` y `estaciones` (03). También se aplica después de
-`20261028120300_reconocimiento_facial.sql` (va después de 02 por fecha), que añade el rol `admin`.
+El orden importa: 02 usa la función y el esquema que crea 01, 03 usa `pg_trgm` y la función, 04 usa
+`perfiles` y `embeddings_faciales` de 02, y 05 apunta a `perfiles` (02) y a `viajes` y `estaciones`
+(03), y cuenta con el rol `admin` que añade 04.
 
 ## Qué NO entra todavía
 
@@ -44,9 +42,9 @@ pnpm db:reset                       # aplica las migraciones en orden + seed.sql
 pnpm exec supabase db push --workdir backend/database
 ```
 
-Si se aplican con `psql` puro (sin CLI de Supabase), 02, 03 y 04 fallan: necesitan el esquema `auth`,
-la función `auth.uid()` y los roles `anon`/`authenticated` que crea Supabase. Están escritas para
-Supabase.
+Si se aplican con `psql` puro (sin CLI de Supabase), 02–05 fallan: necesitan el esquema `auth`, la
+función `auth.uid()` y los roles `anon`/`authenticated` que crea Supabase. Para un Postgres pelado,
+`deploy/postgres/00-compat-supabase.sql` crea ese mínimo antes (ver [`deploy/README.md`](../../../deploy/README.md)).
 
 ## Contrato y decisiones
 
