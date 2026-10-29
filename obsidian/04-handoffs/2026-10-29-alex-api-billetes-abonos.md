@@ -22,3 +22,13 @@ tags: [handoff, api, base-datos, billetes, abonos]
 - **Rubén:** el QR se firma con HMAC-SHA256, no con Ed25519 como decía el contrato (anotado en [[endpoints]]). Si prefieres Ed25519, se cambia en `backend/api/src/common/qr/firma.ts`.
 - **Rubén:** los abonos nacen `activo` porque aún no hay Stripe ni webhook.
 - **Marina:** revisa las decisiones de la migración (origen/destino en `reservas`, `qr` guardado en `billetes`, `usuario_id` con `on delete set null`).
+
+## Prueba local (29/10, sin Docker)
+Las 5 migraciones aplicadas en orden en PGlite (Postgres 17 en WASM) y la API real (`node dist/main.js`) conectada por el protocolo de Postgres, con un viaje Madrid-Zaragoza-Barcelona de prueba:
+- `/estaciones`, `/trenes` y `/trenes/:feed/:tripId` devuelven datos y paradas.
+- `POST /reservas` crea la reserva pagada con el billete y el QR; `GET /billetes` y `/billetes/:id/qr` OK.
+- `/billetes/validar`: `valido` → `ya_validado` el mismo día, `otro_dia` si es otro día, `falso` si el QR está tocado, 403 si no eres revisor.
+- `POST/GET /abonos` OK; el abono de otro usuario da 404.
+- Facial: registro con un vector de 512 y `verificar` da token con la misma cara y 401 con otra.
+- **Sin probar:** `/auth/registro` y `/auth/login` (necesitan Supabase Auth de verdad).
+- **Rubén:** `/trenes` devuelve `numero: null` aunque `viajes.numero` tenga valor: `numeroDe()` lo saca de `rutas.nombre_corto` (`trenes.service.ts:123`). Los billetes sí lo llevan.
