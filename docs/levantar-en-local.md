@@ -9,6 +9,12 @@ Probado el 29/10/2026 en Windows 11 con Docker Desktop 29.
 - Node 22 y `corepack enable` (los scripts del monorepo llaman a `pnpm` por su nombre).
 - `pnpm install` en la raíz.
 
+## Atajo con un solo comando
+
+`pnpm entorno arrancar` levanta Supabase y la API en Docker y espera a que `/health` responda;
+`pnpm entorno parar` los para (los datos de Supabase se conservan) y `pnpm entorno estado` enseña
+qué está corriendo. Los pasos de abajo siguen valiendo si prefieres hacerlo a mano.
+
 ## Pasos
 
 1. **Base de datos** (aplica todas las migraciones de `backend/database/supabase/migrations`):
@@ -40,4 +46,4 @@ Probado el 29/10/2026 en Windows 11 con Docker Desktop 29.
   (y los del login facial, con `SUPABASE_JWT_SECRET` en HS256).
 - Para dar rol de revisor a un usuario de prueba, en la BD local:
   `update perfiles set rol='revisor' where id = '<uuid>'` y lo mismo en `auth.users.raw_app_meta_data`.
-- `pnpm db:stop` para pararlo todo; los datos se conservan en el volumen de Docker.
+- `pnpm entorno parar` (o `pnpm db:stop`) para pararlo todo; los datos se conservan en el volumen de Docker.

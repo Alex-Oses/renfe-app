@@ -21,6 +21,7 @@
     "db:stop": "supabase stop --workdir backend/database",
     "db:reset": "supabase db reset --workdir backend/database",
     "db:status": "supabase status --workdir backend/database",
+    "entorno": "node scripts/entorno-docker.mjs",
     "gtfs:importar": "pnpm --filter @renfe/gtfs-worker importar",
     "gtfs:verificar": "pnpm --filter @renfe/gtfs-worker verificar",
     "docker:up": "docker compose up -d",
