@@ -52,8 +52,10 @@ function semilla(texto: string): number {
 const claseDeCoche = (c: number): ClaseAsiento => (c <= 2 ? "Prémium" : c <= 4 ? "Confort" : "Estándar");
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
-export function obtenerAsientos(trenId: string): Asiento[] {
-  const tren = obtenerTren(trenId);
+// Plantilla de butacas sin depender del tren simulado: la usa la web cuando trabaja contra la API
+// real, que todavía no publica GET /trenes/:feed/:tripId/asientos (contrato: «propuesto»).
+// Allí la butaca la asigna la API al crear la reserva, así que lo elegido es una preferencia.
+export function plantillaAsientos(trenId: string, precioDesde: number): Asiento[] {
   const ocupados = new Set(
     leer()
       .reservas.filter((r) => r.tren.id === trenId && r.estado !== "cancelada")
@@ -72,12 +74,16 @@ export function obtenerAsientos(trenId: string): Asiento[] {
           letra,
           clase,
           libre: semilla(`${trenId}:${id}`) % 100 >= 35 && !ocupados.has(id),
-          precio: redondear(tren.precioDesde * FACTOR[clase]),
+          precio: redondear(precioDesde * FACTOR[clase]),
         });
       }
     }
   }
   return asientos;
+}
+
+export function obtenerAsientos(trenId: string): Asiento[] {
+  return plantillaAsientos(trenId, obtenerTren(trenId).precioDesde);
 }
 
 const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0/O, 1/I

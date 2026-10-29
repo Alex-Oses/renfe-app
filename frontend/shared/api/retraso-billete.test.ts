@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { emparejarTren, seguirRetraso, textoRetraso } from "./retraso-billete";
 import type { PosicionTren } from "./tipos";
 
-const pos = (numero: string, retrasoMin = 0) => ({ trenId: `t-${numero}-${retrasoMin}`, numero, retrasoMin }) as PosicionTren;
+const pos = (numero: string, retrasoMin = 0, retrasoSeg: number | null = retrasoMin * 60) =>
+  ({ trenId: `t-${numero}-${retrasoMin}`, numero, retrasoMin, retrasoSeg }) as PosicionTren;
 const tren = { numero: "03142", salida: "2026-11-02T10:00:00+01:00", llegada: "2026-11-02T12:30:00+01:00" };
 
 describe("emparejarTren", () => {
@@ -28,4 +29,5 @@ describe("seguirRetraso", () => {
 it("textoRetraso", () => {
   expect(textoRetraso(pos("1"))).toBe("Puntual");
   expect(textoRetraso(pos("1", 12))).toBe("+12 min");
+  expect(textoRetraso(pos("1", 0, null))).toBe("Sin datos");
 });

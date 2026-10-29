@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { misAbonos } from "@renfe/shared/api/cliente";
+import { misAbonos, obtenerAbono } from "@renfe/shared/api/cliente";
 import { estadoAbono } from "@renfe/shared/api/simulado-abonos";
 import type { Abono, Usuario } from "@renfe/shared/api/tipos";
 import { fecha } from "../reserva/formato";
@@ -34,8 +34,15 @@ export function MisAbonos({ usuario }: { usuario: Usuario }) {
     if (abierto === a.id) return setAbierto(null);
     setAbierto(a.id);
     setQr("");
-    const { default: QRCode } = await import("qrcode");
-    setQr(await QRCode.toString(a.qr, { type: "svg", margin: 1, errorCorrectionLevel: "M" }));
+    setError("");
+    try {
+      // GET /abonos/:id devuelve el abono con su QR firmado; la lista puede venir sin él.
+      const conQr = await obtenerAbono(a.id).catch(() => a);
+      const { default: QRCode } = await import("qrcode");
+      setQr(await QRCode.toString(conQr.qr || a.qr, { type: "svg", margin: 1, errorCorrectionLevel: "M" }));
+    } catch (e) {
+      setError((e as Error).message || "No hemos podido generar el QR del abono.");
+    }
   };
 
   const cambiarCara = (v: boolean) => {

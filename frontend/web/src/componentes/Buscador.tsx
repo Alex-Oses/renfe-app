@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
+import { buscarEstaciones, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { estacionConocida } from "@renfe/shared/api/estaciones-memoria";
+import type { Estacion } from "@renfe/shared/api/tipos";
 import { Desplegable } from "./Desplegable";
 import { SelectorNumero } from "./ui/SelectorNumero";
 import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
@@ -16,6 +19,16 @@ export function porNombre(texto: string) {
   if (exacta) return exacta;
   const parecidas = ESTACIONES.filter((e) => normal(`${e.nombre} ${e.ciudad}`).includes(t));
   return parecidas.length === 1 ? parecidas[0] : undefined;
+}
+
+// Con la API real las estaciones llegan de /estaciones: se busca por nombre exacto o código y, si el
+// texto es una ciudad, solo se acepta cuando hay una única estación (si no, que la elija de la lista).
+export function elegirEstacion(lista: Estacion[], texto: string): Estacion | undefined {
+  const t = normal(texto);
+  if (!t) return undefined;
+  const exacta = lista.find((e) => normal(e.nombre) === t || e.id === t);
+  if (exacta) return exacta;
+  return lista.length === 1 ? lista[0] : undefined;
 }
 const hoy = () => new Date().toISOString().slice(0, 10);
 const contar = (uno: string, varios: string) => (n: number) => `${n} ${n === 1 ? uno : varios}`;
@@ -36,9 +49,14 @@ interface Props {
 
 export function Buscador({ inicial, compacto }: Props) {
   const navegar = useNavigate();
-  const nombreDe = (id?: string) => ESTACIONES.find((e) => e.id === id)?.nombre ?? "";
+  // El id de la URL puede venir de la API: se mira primero la memoria de estaciones ya vistas.
+  const nombreDe = (id?: string) => estacionConocida(id)?.nombre ?? ESTACIONES.find((e) => e.id === id)?.nombre ?? "";
   const [origen, setOrigen] = useState(nombreDe(inicial?.origen));
   const [destino, setDestino] = useState(nombreDe(inicial?.destino));
+  // Estación elegida en la lista: si el texto no cambia, no hace falta volver a resolverlo.
+  const [origenElegido, setOrigenElegido] = useState<Estacion | null>(null);
+  const [destinoElegido, setDestinoElegido] = useState<Estacion | null>(null);
+  const [buscando, setBuscando] = useState(false);
   const [fecha, setFecha] = useState(inicial?.fecha ?? hoy());
   const [vuelta, setVuelta] = useState(inicial?.vuelta ?? "");
   const [idaVuelta, setIdaVuelta] = useState(!!inicial?.vuelta);
@@ -50,30 +68,60 @@ export function Buscador({ inicial, compacto }: Props) {
   const [giro, setGiro] = useState(0);
   const [error, setError] = useState("");
 
-  function buscar(e: FormEvent) {
+  async function resolver(texto: string, elegida: Estacion | null): Promise<Estacion | undefined> {
+    // Se sigue usando la estación elegida mientras el texto no cambie.
+    if (elegida && normal(elegida.nombre) === normal(texto)) return elegida;
+    if (usaDatosSimulados) return porNombre(texto);
+    if (!texto.trim()) return undefined;
+    const lista = await buscarEstaciones(texto.trim()).catch(() => [] as Estacion[]);
+    return elegirEstacion(lista, texto);
+  }
+
+  async function buscar(e: FormEvent) {
     e.preventDefault();
-    const o = porNombre(origen);
-    const d = porNombre(destino);
-    if (!o || !d) {
-      const falta = !o ? (origen.trim() ? `No encontramos «${origen.trim()}» como origen` : "Falta el origen") : destino.trim() ? `No encontramos «${destino.trim()}» como destino` : "Falta el destino";
-      return setError(`${falta}. Escribe el nombre de la estación o la ciudad y elígela de la lista.`);
+    setBuscando(true);
+    try {
+      const [o, d] = await Promise.all([resolver(origen, origenElegido), resolver(destino, destinoElegido)]);
+      if (!o || !d) {
+        const falta = !o ? (origen.trim() ? `No encontramos «${origen.trim()}» como origen` : "Falta el origen") : destino.trim() ? `No encontramos «${destino.trim()}» como destino` : "Falta el destino";
+        setError(`${falta}. Escribe el nombre de la estación o la ciudad y elígela de la lista.`);
+        return;
+      }
+      if (o.id === d.id) {
+        setError("El origen y el destino tienen que ser estaciones distintas.");
+        return;
+      }
+      if (idaVuelta && (!vuelta || vuelta < fecha)) {
+        setError("La fecha de vuelta tiene que ser igual o posterior a la de ida.");
+        return;
+      }
+      if (adultos + ninos > 9) {
+        setError("Como máximo 9 viajeros con asiento por compra.");
+        return;
+      }
+      if (bebes > adultos) {
+        setError("Cada bebé tiene que viajar con un adulto.");
+        return;
+      }
+      setError("");
+      const q = new URLSearchParams({ origen: o.id, destino: d.id, fecha, pasajeros: String(adultos + ninos) });
+      if (idaVuelta) q.set("vuelta", vuelta);
+      if (ninos) q.set("ninos", String(ninos));
+      if (bebes) q.set("bebes", String(bebes));
+      if (descuento !== "ninguno") q.set("descuento", descuento);
+      navegar(`/trenes?${q}`);
+    } catch (err) {
+      setError(`No se han podido comprobar las estaciones: ${(err as Error).message}`);
+    } finally {
+      setBuscando(false);
     }
-    if (o.id === d.id) return setError("El origen y el destino tienen que ser estaciones distintas.");
-    if (idaVuelta && (!vuelta || vuelta < fecha)) return setError("La fecha de vuelta tiene que ser igual o posterior a la de ida.");
-    if (adultos + ninos > 9) return setError("Como máximo 9 viajeros con asiento por compra.");
-    if (bebes > adultos) return setError("Cada bebé tiene que viajar con un adulto.");
-    setError("");
-    const q = new URLSearchParams({ origen: o.id, destino: d.id, fecha, pasajeros: String(adultos + ninos) });
-    if (idaVuelta) q.set("vuelta", vuelta);
-    if (ninos) q.set("ninos", String(ninos));
-    if (bebes) q.set("bebes", String(bebes));
-    if (descuento !== "ninguno") q.set("descuento", descuento);
-    navegar(`/trenes?${q}`);
   }
 
   function intercambiar() {
     setOrigen(destino);
     setDestino(origen);
+    setOrigenElegido(destinoElegido);
+    setDestinoElegido(origenElegido);
     setGiro((g) => g + 180);
   }
 
@@ -81,13 +129,31 @@ export function Buscador({ inicial, compacto }: Props) {
     <form className={`buscador${compacto ? " buscador--compacto" : ""}`} onSubmit={buscar} noValidate>
       <div className="trayecto">
         <div className="trayecto__via" aria-hidden="true" />
-        <Desplegable etiqueta="Desde" texto={origen} onTexto={setOrigen} placeholder="Estación de origen" />
+        <Desplegable
+          etiqueta="Desde"
+          texto={origen}
+          onTexto={(t) => {
+            setOrigen(t);
+            setOrigenElegido(null);
+          }}
+          onElegir={setOrigenElegido}
+          placeholder="Estación de origen"
+        />
         <button type="button" className="intercambiar" onClick={intercambiar} aria-label="Intercambiar origen y destino">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" style={{ transform: `rotate(${giro}deg)` }}>
             <path d="M7 4v13m0 0-3-3m3 3 3-3M17 20V7m0 0-3 3m3-3 3 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <Desplegable etiqueta="Hasta" texto={destino} onTexto={setDestino} placeholder="Estación de destino" />
+        <Desplegable
+          etiqueta="Hasta"
+          texto={destino}
+          onTexto={(t) => {
+            setDestino(t);
+            setDestinoElegido(null);
+          }}
+          onElegir={setDestinoElegido}
+          placeholder="Estación de destino"
+        />
       </div>
 
       <div className="buscador__modo" role="radiogroup" aria-label="Tipo de viaje">
@@ -123,7 +189,9 @@ export function Buscador({ inicial, compacto }: Props) {
             ))}
           </select>
         </label>
-        <button type="submit" className="boton">Buscar trenes</button>
+        <button type="submit" className="boton" disabled={buscando} aria-busy={buscando}>
+          {buscando ? "Buscando…" : "Buscar trenes"}
+        </button>
       </div>
       {error && (
         <p className="buscador__error" role="alert">
