@@ -40,3 +40,8 @@ API local (`node dist/main.js`) contra `hqwwucagvlhnlqrspwvh` por el session poo
 - **Arreglado** (`8081399`): `numero` sale de `viajes.numero` y se quitan los trenes duplicados del feed (mismo número y hora con dos `trip_id`, p. ej. `0307312026-10-28` y `0307322026-10-28`).
 - **Pendiente:** `/trenes` y el detalle siguen con `retrasoSeg: null` (el retraso real solo llega en `/posicion` y `/posiciones`; lo cubre la #47 de Rubén).
 - **No probado en la nube:** reservas, billetes y abonos (falta aplicar `20261029120000_billetes_y_abonos.sql`, Marina) y registro/login (falta Supabase Auth en la API: `SUPABASE_URL` y claves).
+
+## Mapa en tiempo real contra la BD y biometría (29/10, tarde)
+- **`/posiciones` cruza con la BD** (`89ab2eb`): de 122 trenes AV/LD en vivo, 118 llevan nombre, origen, destino, próxima parada y llegada al destino (los 4 restantes son `SPECIAL_*` que no están en el horario). Campos nuevos `estadoHorario` y `retrasoFuente`: ver [[endpoints]] («Campos del viaje para el mapa»). La web ya los pintaba: no ha hecho falta tocarla, salvo el recorte de nombres de ciudad.
+- **Biometría en la BD real:** probada contra Supabase Cloud **dentro de una transacción con rollback** (no queda nada): `registrar_cara` guarda solo el vector (512 dimensiones, `modelo` `arcface/buffalo_l`, sin fotos), `verificar_cara` acepta la misma cara y rechaza otra, y un segundo registro da `RF004 cara_ya_registrada`.
+- **Para Rubén:** el retraso de `/trenes` y del detalle sigue a `null`; el de las posiciones ya llega (Renfe o estimado).
