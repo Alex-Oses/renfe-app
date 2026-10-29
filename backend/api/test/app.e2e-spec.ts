@@ -4,8 +4,6 @@ import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 
-process.env.JWT_SECRET = 'e2e-secret-with-at-least-32-characters';
-
 describe('API (e2e)', () => {
   let app: INestApplication<App>;
 
