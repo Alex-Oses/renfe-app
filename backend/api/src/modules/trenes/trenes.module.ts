@@ -7,5 +7,6 @@ import { TrenesService } from './trenes.service.js';
   imports: [PosicionesModule],
   controllers: [TrenesController],
   providers: [TrenesService],
+  exports: [TrenesService],
 })
 export class TrenesModule {}

@@ -10,6 +10,7 @@ import { HealthModule } from './modules/health/health.module.js';
 import { PosicionesModule } from './modules/posiciones/posiciones.module.js';
 import { ReservasModule } from './modules/reservas/reservas.module.js';
 import { TrenesModule } from './modules/trenes/trenes.module.js';
+import { ChatbotModule } from './modules/chatbot/chatbot.module.js';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TrenesModule } from './modules/trenes/trenes.module.js';
     ReservasModule,
     BilletesModule,
     AbonosModule,
+    ChatbotModule,
   ],
 })
 export class AppModule {}

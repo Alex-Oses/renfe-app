@@ -25,3 +25,5 @@ services:
         sync: false
       - key: SUPABASE_JWT_SECRET
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
