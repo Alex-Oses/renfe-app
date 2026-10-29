@@ -34,6 +34,13 @@ export const numeroDeServicio = (numero?: string | null, linea?: string | null):
 export const nombreDeTren = (t: Pick<Tren, "tipo" | "numero" | "linea">): string =>
   t.numero ? `${t.tipo} ${t.numero}` : (t.linea ?? t.tipo);
 
+// El id de tren del contrato es "feed:tripId:fecha"; las rutas de viaje lo piden por partes.
+// El mapa usa "feed:tripId" (sin fecha): se parte igual y la fecha se resuelve con hoy.
+export function partirIdTren(id: string): { feed?: string; tripId?: string; fecha?: string } {
+  const [feed, tripId, fecha] = id.split(":");
+  return { feed, tripId, fecha: /^\d{4}-\d{2}-\d{2}$/.test(fecha ?? "") ? fecha : undefined };
+}
+
 // /posiciones manda a veces el nombre completo del servicio ("AVE 02070") en `nombre`; como la UI ya
 // pinta el tipo aparte, se quita la primera palabra cuando es el producto, para no leer "AVE AVE 02070".
 export function sinProducto(nombre: string, tipo: TipoTren): string {

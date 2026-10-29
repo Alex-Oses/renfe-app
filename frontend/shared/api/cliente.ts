@@ -5,6 +5,7 @@ import type {
   Abono,
   Asiento,
   Billete,
+  BilleteApi,
   BusquedaTrenes,
   EmbeddingFacial,
   EnlaceWallet,
@@ -14,16 +15,30 @@ import type {
   NuevoAbono,
   ParadaViaje,
   PosicionTren,
+  QrBilleteApi,
+  ReservaApi,
   Reserva,
+  ResultadoValidacionApi,
   ResultadoValidacion,
   ResumenAdmin,
   Sesion,
+  SesionApi,
   Tren,
   TrenApi,
   TrenDetalle,
   TrenDetalleApi,
 } from "./tipos";
-import { aDetalleTren, aTren, desplazarHora, marcarParadas, numeroDeServicio, sinProducto } from "./adaptador-trenes";
+import {
+  aDetalleTren,
+  aTren,
+  desplazarHora,
+  marcarParadas,
+  numeroDeServicio,
+  partirIdTren,
+  sinProducto,
+} from "./adaptador-trenes";
+import { cuerpoLogin, cuerpoRegistro } from "./adaptador-cuenta";
+import { billeteDeApi, cuerpoReserva, reservaDeApi, validacionDeApi } from "./adaptador-reservas";
 import { cuerpoRegistrarCara, cuerpoVerificarCara, validarEmbedding } from "./cara";
 import { recordarEstaciones } from "./estaciones-memoria";
 import * as trenes from "./simulado";
@@ -97,11 +112,9 @@ interface Lista<T> {
 const datos = <T>(ruta: string) => pedir<Lista<T>>(ruta).then((r) => r.datos ?? []);
 
 // El id de tren del contrato es "feed:tripId:fecha"; las rutas de viaje lo piden por partes.
-// El mapa usa "feed:tripId" (sin fecha): se parte igual y la fecha se resuelve con hoy.
-export function partirIdTren(id: string): { feed?: string; tripId?: string; fecha?: string } {
-  const [feed, tripId, fecha] = id.split(":");
-  return { feed, tripId, fecha: /^\d{4}-\d{2}-\d{2}$/.test(fecha ?? "") ? fecha : undefined };
-}
+// partirIdTren vive en adaptador-trenes.ts (lo usan también las reservas); se sigue exportando aquí
+// porque era la puerta de entrada del cliente.
+export { partirIdTren };
 
 // La fecha de servicio es local de Madrid, no UTC.
 export const hoyEnMadrid = (ahora = new Date()): string =>
@@ -202,39 +215,56 @@ export async function obtenerTren(id: string, fecha?: string): Promise<TrenDetal
   return aDetalleTren(detalle);
 }
 
-// GET /trenes/:feed/:tripId/asientos?fecha=
-export const obtenerAsientos = (trenId: string): Promise<Asiento[]> =>
-  BASE ? datos<Asiento>(rutaViaje(trenId, "/asientos")) : simular(() => reservas.obtenerAsientos(trenId));
+// GET /trenes/:feed/:tripId/asientos?fecha=  (contrato: «propuesto», la API todavía no lo tiene)
+// La API real asigna la butaca al crear la reserva, así que con API se pinta la misma plantilla
+// local con los precios del tren para poder elegir: lo elegido es una preferencia, no una garantía.
+export const obtenerAsientos = (tren: Tren): Promise<Asiento[]> =>
+  BASE
+    ? simular(() => reservas.plantillaAsientos(tren.id, tren.precioDesde), 0)
+    : simular(() => reservas.obtenerAsientos(tren.id));
 
 // POST /reservas
-export const crearReserva = (r: NuevaReserva): Promise<Reserva> =>
-  BASE ? pedir("/reservas", "POST", r) : simular(() => reservas.crearReserva(r), 600);
+// La API asigna la butaca y crea la reserva ya pagada (el pago es simulado): los asientos elegidos
+// en la web son una preferencia que el contrato todavía no admite.
+export async function crearReserva(tren: Tren, r: NuevaReserva): Promise<Reserva> {
+  if (!BASE) return simular(() => reservas.crearReserva(r), 600);
+  const creada = await pedir<ReservaApi>("/reservas", "POST", cuerpoReserva(tren, r));
+  return reservaDeApi(creada, tren, r);
+}
 
 // POST /pagos/intent
 export const crearIntentoPago = (reservaId: string): Promise<IntentoPago> =>
   BASE ? pedir("/pagos/intent", "POST", { reservaId }) : simular(() => reservas.crearIntentoPago(reservaId));
 
-// Simulado: en la API real lo confirma el webhook de Stripe (POST /pagos/webhook).
+// Simulado: en la API real la reserva ya nace pagada (el pago de Stripe está pendiente).
 export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
   BASE
     ? Promise.reject(new Error("Con la API real el pago lo confirma Stripe: falta conectar Stripe Elements."))
     : simular(() => reservas.confirmarPago(reservaId), 1200);
 
 // GET /billetes
-export const misBilletes = (): Promise<Billete[]> =>
-  BASE ? datos<Billete>("/billetes") : simular(() => reservas.misBilletes());
+export const misBilletes = async (): Promise<Billete[]> =>
+  BASE
+    ? (await datos<BilleteApi>("/billetes")).map(billeteDeApi)
+    : simular(() => reservas.misBilletes());
 
-// GET /billetes/:id/qr  (devuelve el billete con su QR firmado)
-export const obtenerBillete = (id: string): Promise<Billete> =>
-  BASE ? pedir(`/billetes/${encodeURIComponent(id)}/qr`) : simular(() => reservas.obtenerBillete(id));
+// GET /billetes/:id/qr  (la API devuelve `{ id, qr }`: el billete se completa con GET /billetes)
+export async function obtenerBillete(id: string): Promise<Billete> {
+  if (!BASE) return simular(() => reservas.obtenerBillete(id));
+  const { qr } = await pedir<QrBilleteApi>(`/billetes/${encodeURIComponent(id)}/qr`);
+  const todos = await datos<BilleteApi>("/billetes");
+  const encontrado = todos.find((b) => b.id === id);
+  if (!encontrado) throw new Error("No encontramos ese billete.");
+  return billeteDeApi({ ...encontrado, qr });
+}
 
 // POST /auth/registro
 export const registrarse = (datos: { nombre: string; email: string; contrasena: string }): Promise<Sesion> =>
-  BASE ? pedir("/auth/registro", "POST", datos) : simular(() => cuenta.registrarse(datos), 700);
+  BASE ? pedir<SesionApi>("/auth/registro", "POST", cuerpoRegistro(datos)) : simular(() => cuenta.registrarse(datos), 700);
 
 // POST /auth/login
 export const iniciarSesion = (datos: { email: string; contrasena: string }): Promise<Sesion> =>
-  BASE ? pedir("/auth/login", "POST", datos) : simular(() => cuenta.iniciarSesion(datos), 700);
+  BASE ? pedir<SesionApi>("/auth/login", "POST", cuerpoLogin(datos)) : simular(() => cuenta.iniciarSesion(datos), 700);
 
 // POST /auth/cara/registrar  (204 sin cuerpo; una sola vez por usuario)
 export async function registrarCara(embedding: EmbeddingFacial): Promise<{ ok: true }> {
@@ -355,8 +385,10 @@ export const enlaceWallet = (billeteId: string, plataforma: EnlaceWallet["plataf
     : simular(() => reservas.enlaceWallet(billeteId, plataforma));
 
 // POST /billetes/validar  (rol revisor). Sin API se comprueba la firma del QR en el navegador.
-export const validarBillete = (qr: string): Promise<ResultadoValidacion> =>
-  BASE ? pedir("/billetes/validar", "POST", { qr }) : simular(() => revisor.validarBillete(qr), 300);
+export const validarBillete = async (qr: string): Promise<ResultadoValidacion> =>
+  BASE
+    ? validacionDeApi(await pedir<ResultadoValidacionApi>("/billetes/validar", "POST", { qr }))
+    : simular(() => revisor.validarBillete(qr), 300);
 
 // GET /admin/resumen  (rol admin; propuesto en endpoints.md, pendiente de la API).
 export const resumenAdmin = (): Promise<ResumenAdmin> =>

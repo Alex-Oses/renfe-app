@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buscarEstaciones, buscarTrenes, completarRuta, configurarApi, posicionDeTren, registrarCara } from "./cliente";
-import type { PosicionTren } from "./tipos";
+import {
+  buscarEstaciones,
+  buscarTrenes,
+  completarRuta,
+  configurarApi,
+  obtenerAsientos,
+  posicionDeTren,
+  registrarCara,
+} from "./cliente";
+import type { PosicionTren, Tren } from "./tipos";
 
 const vector = (n: number) => Array.from({ length: n }, () => 0.01);
 
@@ -146,6 +154,28 @@ describe("con VITE_API_URL", () => {
     expect(r.tipo).toBe("AVE");
     expect(r.progreso).toBe(0.5);
     expect(r.llegadaProxima).toBe("2026-11-02T07:35:00.000Z"); // 08:32 en Madrid + 3 min de retraso
+  });
+
+  it("no pregunta por /asientos (la API todavía no lo tiene) y usa la plantilla local", async () => {
+    configurarApi({ api: "http://api" });
+    const llamadas = api(() => undefined);
+    const tren: Tren = {
+      id: "avld:3097L23537C1:2026-11-02",
+      tipo: "AVE",
+      numero: "02070",
+      origen: { id: "60000", nombre: "Madrid-Puerta de Atocha" },
+      destino: { id: "04040", nombre: "Zaragoza-Delicias" },
+      salida: "2026-11-02T07:15:00+01:00",
+      llegada: "2026-11-02T08:32:00+01:00",
+      precioDesde: 45,
+      plazasLibres: 12,
+    };
+
+    const asientos = await obtenerAsientos(tren);
+    expect(llamadas).toHaveLength(0);
+    expect(asientos).toHaveLength(240);
+    expect(asientos[0].precio).toBeCloseTo(45 * 1.9, 2); // coche 1 es Prémium
+    expect(asientos.some((a) => a.libre)).toBe(true);
   });
 
   it("si el viaje no está circulando, /posicion da 404 y no es un error", async () => {

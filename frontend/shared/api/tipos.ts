@@ -185,6 +185,8 @@ export interface Usuario {
 
 export interface Sesion {
   token: string;
+  // Solo lo devuelve /auth/login y /auth/registro (token de Supabase Auth). El facial no lo tiene.
+  refreshToken?: string | null;
   usuario: Usuario;
 }
 
@@ -356,4 +358,77 @@ export interface Abono {
   precio: number;
   creado: string;
   qr: string;
+}
+
+// --- Formas del contrato de cuenta, reservas y billetes (API real) ---
+
+// POST /auth/registro y /auth/login: mismo shape, más el refreshToken de Supabase Auth.
+// El facial (/auth/cara/verificar) no devuelve refreshToken: dura 12 h y se vuelve a mirar.
+export interface SesionApi extends Sesion {
+  refreshToken: string | null;
+}
+
+// POST /reservas: la API elige la butaca, así que el frontend no manda los asientos elegidos.
+export interface PasajeroApi {
+  nombre: string; // nombre completo ("Lucía Pérez Gómez")
+  documento: string; // se guarda entero; el QR solo lleva los 4 últimos
+}
+
+export interface NuevaReservaApi {
+  feed: Feed;
+  viajeId: string; // trip_id de GTFS
+  fecha: string; // AAAA-MM-DD
+  origenId: string;
+  destinoId: string;
+  pasajeros: PasajeroApi[]; // de 1 a 6: una butaca por pasajero
+}
+
+export interface BilleteEmitidoApi {
+  id: string;
+  qr: string;
+  coche: number;
+  asiento: string; // "12A"
+  clase: string; // "Turista" | "Confort"
+  precio: number;
+}
+
+// POST /reservas: nace pagada (el pago es simulado) y con un billete por pasajero.
+export interface ReservaApi {
+  id: string;
+  localizador: string;
+  estado: "pagada";
+  total: number;
+  creada: string; // ISO con offset
+  billetes: BilleteEmitidoApi[];
+}
+
+// GET /billetes: lo justo para pintar el billete; el viajero y el documento salen del QR firmado.
+export interface BilleteApi {
+  id: string;
+  localizador: string;
+  estado: string; // valido | usado | anulado | caducado
+  tipo: string; // AVE, ALVIA… en mayúsculas
+  numero: string | null;
+  salida: string; // ISO con offset
+  llegada: string;
+  origen: Pick<Estacion, "id" | "nombre">;
+  destino: Pick<Estacion, "id" | "nombre">;
+  coche: number;
+  asiento: string; // "12A"
+  clase: string; // "Turista" | "Confort"
+  precio: number;
+  emitido: string;
+  expira: string;
+  qr: string; // RNF1.…
+}
+
+// GET /billetes/:id/qr (idempotente: devuelve el token ya guardado).
+export interface QrBilleteApi {
+  id: string;
+  qr: string;
+}
+
+// POST /billetes/validar: `primeraValidacion` viene como null, no como undefined.
+export interface ResultadoValidacionApi extends Omit<ResultadoValidacion, "primeraValidacion"> {
+  primeraValidacion: string | null;
 }
