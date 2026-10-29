@@ -1,7 +1,24 @@
+# Contexto de build = la RAÍZ del monorepo (ver docker-compose.yml).
+# pnpm valida el lockfile contra los manifiestos que encuentra: los del
+# frontend no hacen falta para ninguna imagen y se quedan fuera.
+
 **/node_modules
 **/dist
-**/.env
-.git
-obsidian
-frontend/mobile
+**/.nest
+**/.expo
 **/coverage
+
+# Zonas que no entran en ninguna imagen
+frontend
+obsidian
+docs
+scripts
+.github
+.git
+.obsidian
+
+# Secretos: nunca en una capa de la imagen
+.env
+.env.*
+
+**/*.md
