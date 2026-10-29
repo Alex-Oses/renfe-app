@@ -17,6 +17,8 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "test:ramas": "node --test scripts/ramas.test.mjs",
+    "test:local": "node --test scripts/levantar-local.test.mjs",
+    "local": "node scripts/levantar-local.mjs",
     "db:start": "supabase start --workdir backend/database",
     "db:stop": "supabase stop --workdir backend/database",
     "db:reset": "supabase db reset --workdir backend/database",
