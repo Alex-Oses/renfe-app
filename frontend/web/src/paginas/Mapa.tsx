@@ -9,7 +9,7 @@ import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
 import { useAvisos } from "../estado/avisos";
 import { CapaTrenes, COLOR_TIPO, SIGLA_TIPO, svgTren } from "./mapa/CapaTrenes";
 import { Estaciones, RutaElegida, RutasTodas } from "./mapa/CapasRuta";
-import { etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas } from "./mapa/estado-tren";
+import { etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas, ciudadCorta } from "./mapa/estado-tren";
 
 const TIPOS = Object.keys(COLOR_TIPO) as TipoTren[];
 
@@ -75,13 +75,6 @@ const reducidoInicial = () => window.matchMedia?.("(prefers-reduced-motion: redu
 
 function Retraso({ seg }: { seg: number | null | undefined }) {
   return <span className={`retraso retraso--${nivelRetraso(seg)}`}>{etiquetaRetraso(seg)}</span>;
-}
-
-// "Madrid-Puerta de Atocha" → "Madrid"; respeta ciudades de dos palabras como "A Coruña".
-function ciudadCorta(estacion: string): string {
-  const [base] = estacion.split("-");
-  const [primera, segunda] = base.split(" ");
-  return primera.length > 1 || !segunda ? primera : `${primera} ${segunda}`;
 }
 
 // "2026-10-27T12:41:00+01:00" → "12:41" (mismo formato que la lista de paradas).

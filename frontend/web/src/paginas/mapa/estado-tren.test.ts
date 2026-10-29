@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ParadaRuta } from "@renfe/shared/api/tipos";
-import { etiquetaRetraso, extremos, nivelRetraso, progresoDe, proximaDe, repasarParadas } from "./estado-tren";
+import { ciudadCorta, etiquetaRetraso, extremos, nivelRetraso, progresoDe, proximaDe, repasarParadas } from "./estado-tren";
 
 const parada = (nombre: string, llegada: string, pasada: boolean): ParadaRuta => ({
   estacionId: nombre,
@@ -79,5 +79,15 @@ describe("progreso, próxima y extremos", () => {
     expect(salida?.nombre).toBe("Madrid");
     expect(llegada?.nombre).toBe("Barcelona");
     expect(extremos([])).toEqual({ salida: undefined, llegada: undefined });
+  });
+});
+
+describe("ciudadCorta", () => {
+  it("quita el nombre de la estación y deja enteras las ciudades compuestas", () => {
+    expect(ciudadCorta("MADRID-PUERTA DE ATOCHA-ALMUDENA GRANDES")).toBe("MADRID");
+    expect(ciudadCorta("SAN SEBASTIÁN-DONOSTIA")).toBe("SAN SEBASTIÁN");
+    expect(ciudadCorta("A CORUÑA")).toBe("A CORUÑA");
+    expect(ciudadCorta("LA ROBLA")).toBe("LA ROBLA");
+    expect(ciudadCorta("SANTIAGO DE COMPOSTELA-DANIEL CASTELAO")).toBe("SANTIAGO");
   });
 });
