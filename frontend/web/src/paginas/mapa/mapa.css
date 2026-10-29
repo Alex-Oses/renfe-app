@@ -197,10 +197,9 @@
   flex: 1;
 }
 
+/* Nombres de ciudad enteros: la línea parte en dos antes que cortar con «…». */
 .mapa-tren__info > * {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .mapa-tren__info span {
