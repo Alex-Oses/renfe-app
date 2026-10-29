@@ -23,6 +23,12 @@ import { hoyEnMadrid } from "./gtfs/tiempo.js";
 import { ORDEN_CARGA, type TablaCarga } from "./sql.js";
 
 const URL_AVLD = "https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip";
+const URL_CERCANIAS = "https://ssl.renfe.com/ftransit/Fichero_CER_FOMENTO/fomento_transit.zip";
+// Feed → [variable de entorno, URL por defecto]. Cercanías caduca a los 30 días: reimportar a diario.
+const URLS_FEED: Record<string, [string, string]> = {
+  avld: ["GTFS_AVLD_URL", URL_AVLD],
+  cercanias: ["GTFS_CERCANIAS_URL", URL_CERCANIAS],
+};
 const URL_ESTACIONES = "https://ssl.renfe.com/ftransit/Fichero_estaciones/estaciones.csv";
 const DIR_DATOS = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
 
@@ -33,15 +39,16 @@ Importa el catálogo GTFS de AV/LD/MD en la base de datos.
 
 Opciones:
   --simular              descarga y analiza el feed, pero no toca la base de datos
-  --reemplazar           vacía el feed «${FEED}» antes de cargarlo
+  --reemplazar           vacía el feed antes de cargarlo
   --zip <ruta>           usa un zip ya descargado (no descarga nada)
   --estaciones <ruta>    usa un estaciones.csv ya descargado
-  --feed <nombre>        feed destino (hoy solo «${FEED}»)
+  --feed <nombre>        feed: «avld» (por defecto) o «cercanias»
   --ayuda                esta ayuda
 
 Variables de entorno (o .env en la raíz):
   DATABASE_URL           conexión a Postgres (obligatoria salvo con --simular)
-  GTFS_AVLD_URL          URL del zip (por defecto, la de Renfe)
+  GTFS_AVLD_URL          URL del zip de AV/LD/MD (por defecto, la de Renfe)
+  GTFS_CERCANIAS_URL     URL del zip de Cercanías (por defecto, la de Renfe)
   GTFS_ESTACIONES_URL    URL del CSV de estaciones (por defecto, la de Renfe)
 `.trim();
 
@@ -57,15 +64,12 @@ async function principal(): Promise<void> {
   cargarEnv();
   const opciones = leerArgumentos(process.argv.slice(2));
 
-  if (opciones.feed !== FEED) {
-    throw new Error(
-      `Hoy solo está implementado el feed «${FEED}». Cercanías queda fuera del sprint: ` +
-        "falta el mapeo de las 497 paradas sin CODIGO (ver obsidian/05-areas/plan-ingesta-gtfs.md).",
-    );
+  if (!(opciones.feed in URLS_FEED)) {
+    throw new Error(`Feed desconocido «${opciones.feed}». Válidos: ${Object.keys(URLS_FEED).join(", ")}`);
   }
 
   console.log(`\n▶ GTFS ${opciones.feed} · ${hoyEnMadrid()}`);
-  const zip = await obtenerZip(opciones.zip);
+  const zip = await obtenerZip(opciones.zip, opciones.feed);
   const estacionesCsv = await obtenerEstaciones(opciones.estaciones);
 
   console.log("· Analizando el feed…");
@@ -77,19 +81,19 @@ async function principal(): Promise<void> {
     return;
   }
 
-  await cargarEnBaseDeDatos(catalogo, opciones.reemplazar);
+  await cargarEnBaseDeDatos(catalogo, opciones.reemplazar, opciones.feed);
   console.log(`\n✔ Importación terminada. Comprueba con: pnpm gtfs:verificar\n`);
 }
 
-async function cargarEnBaseDeDatos(catalogo: Catalogo, reemplazar: boolean): Promise<void> {
+async function cargarEnBaseDeDatos(catalogo: Catalogo, reemplazar: boolean, feed: string): Promise<void> {
   const url = variable("DATABASE_URL");
   console.log(`\n· Conectando a ${ocultarCredenciales(url)}`);
   const conexion = await abrir(url);
   try {
     await enTransaccion(conexion, async () => {
       if (reemplazar) {
-        console.log(`· Vaciando el feed «${FEED}» (--reemplazar)…`);
-        await vaciarFeed(conexion, FEED);
+        console.log(`· Vaciando el feed «${feed}» (--reemplazar)…`);
+        await vaciarFeed(conexion, feed);
       }
 
       const filas: Record<TablaCarga, object[]> = {
@@ -155,15 +159,16 @@ function imprimirInforme(catalogo: Catalogo): void {
   }
 }
 
-async function obtenerZip(ruta: string | null): Promise<Buffer> {
+async function obtenerZip(ruta: string | null, feed: string): Promise<Buffer> {
   if (ruta !== null) {
     console.log(`· Leyendo ${ruta}`);
     return readFileSync(ruta);
   }
-  const url = variable("GTFS_AVLD_URL", URL_AVLD);
+  const [clave, porDefecto] = URLS_FEED[feed]!;
+  const url = variable(clave, porDefecto);
   console.log(`· Descargando ${url}`);
   const datos = await descargar(url);
-  guardarEnDatos(`avld-${hoyEnMadrid()}.zip`, datos);
+  guardarEnDatos(`${feed}-${hoyEnMadrid()}.zip`, datos);
   return datos;
 }
 

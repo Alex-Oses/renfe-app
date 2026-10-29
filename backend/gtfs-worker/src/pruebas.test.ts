@@ -351,4 +351,14 @@ describe("leerCatalogo", () => {
   it("avisa si el zip no es el de AV/LD/MD", () => {
     expect(() => leerCatalogo(crearZip({ "agency.txt": "x" }), estacionesCsv())).toThrow(/no contiene/);
   });
+
+  it("acepta un feed sin calendar_dates.txt, como el de Cercanías", () => {
+    const sinFechas = descomprimirZip(feed());
+    sinFechas.delete("calendar_dates.txt");
+    const zip = crearZip(Object.fromEntries([...sinFechas].map(([n, b]) => [n, b.toString("utf8")])));
+    const c = leerCatalogo(zip, estacionesCsv(), "cercanias");
+    expect(c.excepciones).toEqual([]);
+    expect(c.viajes.length).toBeGreaterThan(0);
+    expect(c.viajes.every((v) => v.feed === "cercanias")).toBe(true);
+  });
 });
