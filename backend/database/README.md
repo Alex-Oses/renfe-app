@@ -52,7 +52,8 @@ Linux de Azure: `db:start`, Studio/API/PostgreSQL, `seed.sql` y `db:stop`.
 - **El modelo de datos se diseña primero en** `obsidian/02-contratos-api/modelo-datos.md` y luego se migra. El contrato manda.
 - Toda tabla con datos de usuario lleva RLS.
 - Embeddings faciales en `vector(512)` con pgvector (`create extension vector`). Nunca fotos.
-- Posiciones de trenes en una tabla con Realtime activado (la escribe gtfs-worker).
+- Posiciones de trenes: **no hay tabla**. La API guarda el GTFS-RT en memoria (ver §5.3 de
+  [`docs/arquitectura.md`](../../docs/arquitectura.md)) y el worker solo escribe el catálogo estático.
 - Nunca edites una migración ya mergeada en `develop`: crea otra nueva.
 - No commitees `.temp/` ni `.branches/` (los ignora `supabase/.gitignore`).
 
@@ -60,13 +61,14 @@ Linux de Azure: `db:start`, Studio/API/PostgreSQL, `seed.sql` y `db:stop`.
 
 Orden y contenido en [`supabase/migrations/README.md`](supabase/migrations/README.md).
 
-La **primera migración ya está escrita** (extensiones + identidad + catálogo GTFS) y
-**todavía no se ha aplicado** en ningún entorno: ni en Supabase local ni en la nube.
+Las **6 migraciones están escritas y aplicadas** en Supabase Cloud (`hqwwucagvlhnlqrspwvh`, eu-west-1):
+extensiones y funciones, identidad, catálogo GTFS, reconocimiento facial, billetes y abonos, y el modelo
+de cara w600k. El catálogo AVE/LD está importado y `pnpm gtfs:verificar` sale en verde.
 
 ```bash
-# En la VM Linux (Docker bloqueado en el portátil corporativo)
-pnpm db:start      # o: supabase start --workdir backend/database
-pnpm db:reset      # aplica las 3 migraciones + seed.sql
+pnpm db:start      # Supabase local
+pnpm db:reset      # aplica las 6 migraciones + seed.sql
+pnpm gtfs:importar && pnpm gtfs:verificar
 ```
 
 Decisiones del SQL y qué mirar en la revisión:
@@ -74,8 +76,7 @@ Decisiones del SQL y qué mirar en la revisión:
 
 ## Pendiente
 
-- Aplicar las migraciones en la VM y validar que `pnpm db:reset` termina en verde.
-- Proyecto de Supabase en la nube y `DATABASE_URL` en Render.
-- Importar el feed `avld` (ver `obsidian/05-areas/plan-ingesta-gtfs.md`).
-- Segunda migración: tiempo real (`posiciones_trenes`, `incidencias`) y reserva/pago/billete.
-- Kevin: cerrar `modelo-datos` §10.2 (campos del webhook de Stripe) antes de implementar el pago. No bloquea nada de lo anterior.
+- `DATABASE_URL` (session pooler) en Render: hasta entonces `/estaciones` y `/trenes` dan 503.
+- Importar el feed `cercanias` (el importador ya lo soporta; hoy solo está `avld`).
+- `posiciones_trenes` e `incidencias` **no existen** y no hacen falta: el GTFS-RT vive en memoria.
+- Pagos: no hay tabla ni webhook de Stripe. `reservas` nace `pagada` porque el pago es simulado.

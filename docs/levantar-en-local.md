@@ -28,12 +28,17 @@ Probado el 29/10/2026 en Windows 11 con Docker Desktop 29.
 4. **API en Docker** (`docker-compose.yml` ya apunta la API al Supabase del host):
    ```bash
    docker compose up -d --build api
-   curl localhost:3000/health   # "baseDatos":"ok"
+   curl localhost:3010/health   # "baseDatos":"ok"  (el puerto es API_PUBLICO, 3010 por defecto)
    ```
 5. **Web**:
    ```bash
-   VITE_API_URL=http://localhost:3000 pnpm dev:web
+   VITE_API_URL=http://localhost:3010 pnpm dev:web
    ```
+6. **App móvil** (solo con la rama `feat/mobile-app-expo` mergeada):
+   ```bash
+   EXPO_PUBLIC_API_URL=http://localhost:3010 pnpm dev:mobile
+   ```
+   Con el móvil en la misma wifi, cambia `localhost` por la IP del PC. Vacía = datos simulados.
 
 ## Notas
 

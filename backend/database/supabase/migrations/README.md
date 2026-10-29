@@ -23,24 +23,27 @@ lo suyo y `authenticated` no puede escribir). Eso **no sustituye** a aplicarla e
 | 02 | `20261028120100_identidad.sql` | `perfiles` y `embeddings_faciales` + RLS |
 | 03 | `20261028120200_catalogo_gtfs.sql` | `estaciones`, `estacion_feeds`, `rutas`, `calendarios`, `calendario_excepciones`, `viajes`, `horarios` + RLS |
 | 04 | `20261029120000_billetes_y_abonos.sql` | `reservas`, `asientos`, `abonos`, `billetes`, `validaciones` + RLS |
+| 05 | `20261028120300_reconocimiento_facial.sql` | `config_cara` (umbral, modelo) y el rol `admin` |
+| 06 | `20261029130000_modelo_cara_w600k_mbf.sql` | Modelo de cara `w600k_mbf` en `config_cara` |
+
+Las seis están **aplicadas en Supabase Cloud** (`hqwwucagvlhnlqrspwvh`, eu-west-1) el 29/10.
 
 El orden importa: 02 usa la función y el esquema que crea 01, 03 usa `pg_trgm` y la función, y 04
-apunta a `perfiles` (02), `viajes` y `estaciones` (03). También se aplica después de
-`20261028120300_reconocimiento_facial.sql` (va después de 02 por fecha), que añade el rol `admin`.
+apunta a `perfiles` (02), `viajes` y `estaciones` (03). 05 va después de 02 y 06 después de 05.
 
-## Qué NO entra todavía
+## Qué NO entra
 
-`posiciones_trenes` e `incidencias` (§6 del contrato, GTFS-RT) y `pagos` (§5.3: Stripe en modo test,
-va con el webhook). El sprint no los necesita.
+`posiciones_trenes` e `incidencias` (§6 del contrato, GTFS-RT) y `pagos`: **no se van a crear**. El
+GTFS-RT vive en memoria de la API y no hay Stripe ni pasarela de pago.
 
 ## Cómo aplicarlas
 
 ```bash
-# En la VM Linux
+# En la VM Linux o en local
 pnpm db:start                       # levanta Supabase local
 pnpm db:reset                       # aplica las migraciones en orden + seed.sql
 
-# O contra un proyecto de Supabase en la nube
+# O contra un proyecto de Supabase en la nube (así se hizo el 29/10)
 pnpm exec supabase db push --workdir backend/database
 ```
 

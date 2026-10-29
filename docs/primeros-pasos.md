@@ -14,7 +14,7 @@
 Según tu área:
 - **Alex:** app Expo Go en el móvil.
 - **Marina:** nada extra: la [Supabase CLI](https://supabase.com/docs/guides/local-development) viene como devDependency del repo (`pnpm install`). Para arrancar la BD local, Docker Desktop tiene que estar abierto.
-- **Kevin:** cuenta de Stripe (modo test).
+- **Kevin:** Docker Desktop y acceso al servidor asignado (ADR-009). No hace falta cuenta de Stripe.
 
 ## Clonar y preparar
 

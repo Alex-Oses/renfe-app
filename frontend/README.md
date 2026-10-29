@@ -2,27 +2,36 @@
 
 **Responsable:** Alex (Product Owner + Frontend) · IA: Claude Code
 
-Todo lo que ve el usuario vive aquí. El frontend **nunca** habla directamente con Renfe ni con el face service: solo con la API (`backend/api`) y, para tiempo real, con Supabase Realtime.
+Todo lo que ve el usuario vive aquí. El frontend **nunca** habla directamente con Renfe ni con la base
+de datos: solo con la API (`backend/api`).
 
 ## Contenido
 
-| Carpeta | Qué es |
-|---|---|
-| [`mobile/`](mobile/README.md) | App Expo + React Native (iOS, Android y web). Dos modos: **viajero** y **revisor**. |
+| Carpeta | Qué es | Estado |
+|---|---|---|
+| [`web/`](web/) | Web con Vite + React. Demo completa y plan B, desplegada en Vercel | ✅ en `develop` |
+| [`mobile/`](mobile/README.md) | App Expo SDK 58 (iOS y Android) con expo-router | 🟡 en la rama `feat/mobile-app-expo`, sin mergear |
+| [`shared/`](shared/README.md) | `@renfe/shared`: cliente de la API, tipos del contrato, simulados, contenido y tokens de diseño | ✅ en `develop` |
 
-## Pantallas previstas (por sprint, ver `obsidian/01-estado/sprint-actual.md`)
+La web y la app comparten la lógica de `shared/`; la UI no se comparte (React DOM vs React Native).
 
-- Login / registro + login con reconocimiento facial
-- Búsqueda de trenes (origen, destino, fecha)
-- Resultados y detalle del tren
-- Selección de asiento (simulado) y pago (Stripe test)
-- Mis billetes (QR firmado)
-- Modo revisor: escáner de QR y validación
-- Mapa en tiempo real de trenes
-- Chatbot
+## Pantallas
+
+| Pantalla | Web | App |
+|---|---|---|
+| Inicio + buscador | ✅ | ✅ (rama) |
+| Resultados y detalle del tren | ✅ | ✅ (rama) |
+| Reserva (asientos, viajeros, pago simulado) | ✅ | ✅ (rama) |
+| Mis billetes + QR | ✅ | ✅ (rama) |
+| Login / registro / login facial | ✅ (facial pendiente del 512) | 🟡 (rama) |
+| Mapa en tiempo real (`/posiciones`) | ✅ | ✅ (rama) |
+| Revisor (escáner) | ✅ | ⛔ |
+| Abonos y bonos | ✅ | ⛔ |
+| Chatbot | ✅ | ✅ (rama) |
 
 ## Reglas
 
-- Antes de consumir un endpoint, mira `obsidian/02-contratos-api/endpoints.md`. Si falta algo, pídelo a Rubén con un handoff, no inventes la respuesta.
-- Variables públicas solo con prefijo `EXPO_PUBLIC_` (ver `.env.example`).
-- Nada de claves secretas en la app.
+- Antes de consumir un endpoint, mira `obsidian/02-contratos-api/endpoints.md`. Si falta algo, pídelo a
+  Rubén con un handoff; no inventes la respuesta.
+- Variables públicas solo con prefijo `VITE_` (web) o `EXPO_PUBLIC_` (app). Ver `.env.example`.
+- Nada de claves secretas en el frontend.

@@ -6,8 +6,8 @@ API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../
 
 ## Estado
 
-Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger,
-autenticación propia con roles y acceso opcional a Postgres.
+Fases F0 y F1 cerradas: Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger, JWT propio
+con roles y acceso opcional a Postgres.
 
 **Endpoints de datos (fase F1): `GET /estaciones`, `GET /trenes`, `GET /trenes/:feed/:tripId`,
 `GET /trenes/:feed/:tripId/posicion` y `GET /posiciones`**, con SQL directo contra el modelo de datos
@@ -29,8 +29,8 @@ prompt injection, acceso a SQL, URLs arbitrarias ni a los datos privados de otro
 `GEMINI_API_KEY`; sin esa
 variable responde `503`, pero la API puede arrancar y servir el resto de rutas.
 
-Lo demás sigue pendiente: `/incidencias` y compañía necesitan las migraciones de Marina
-(`backend/database/`) y el worker GTFS, y `/pagos/*` es Stripe en modo test (Kevin).
+Lo que falta: `/incidencias` (necesita `alerts.json` y no trae `headerText`), `/admin/resumen` y
+`/pagos/*`. **Stripe está fuera de alcance**: la reserva nace `pagada` y no hay pasarela.
 
 ## Arrancar
 
@@ -133,7 +133,7 @@ prevé Ed25519 con `QR_SIGNING_PRIVATE_KEY`; cambiar la firma no toca los servic
 | `estaciones` | Búsqueda de estaciones sobre datos GTFS | Rubén |
 | `trenes` | Búsqueda por origen/destino/fecha, detalle, retrasos, posiciones | Rubén |
 | `reservas` | Reserva pagada simulada: butacas y un billete con QR por pasajero | Rubén |
-| `pagos` | PaymentIntent de Stripe test + webhook (pendiente) | Kevin |
+| `pagos` | **No existe**: Stripe está fuera de alcance, el pago es simulado | — |
 | `billetes` | Mis billetes, QR firmado y validación para el revisor | Rubén |
 | `abonos` | Abonos y bonos simulados con QR propio | Rubén |
 | `chatbot` | Gemini API con function calling y guardrails | Rubén |
