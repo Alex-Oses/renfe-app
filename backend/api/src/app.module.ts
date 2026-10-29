@@ -14,7 +14,12 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validarEntorno }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      // Un solo .env: el de la raíz del repo (en Docker no existe y se usan las variables del entorno).
+      envFilePath: ['../../.env', '.env'],
+      validate: validarEntorno,
+    }),
     BdModule,
     HealthModule,
     AuthModule,
