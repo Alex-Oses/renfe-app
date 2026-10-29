@@ -11,7 +11,8 @@ tags: [contrato, base-datos]
 > `backend/database/supabase/migrations/`. Si el código y esta nota discrepan, manda la nota:
 > se cambia primero aquí y luego se implementa (ver `AGENTS.md`).
 >
-> Alcance de esta versión: **contrato, sin SQL**. No hay migraciones todavía a propósito.
+> Alcance: contrato del esquema. **Ya hay 6 migraciones aplicadas** en Supabase Cloud (29/10) y el
+> catálogo `avld` cargado. Si el SQL y esta nota discrepan, manda la nota y se corrige el SQL.
 > Encaja con el contrato de [[endpoints]] de Rubén (dos feeds, `feed` en viajes/posiciones/incidencias
 > y estaciones unificadas con `feeds[]`).
 >

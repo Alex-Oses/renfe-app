@@ -1,33 +1,36 @@
 ---
-responsable: Rubén (pagos: Kevin)
+responsable: Rubén
 tags: [area]
 ---
 
 # 🧩 Área Backend (API)
 
-**Código:** `backend/api` · **Estado:** F1 en marcha. Los 6 endpoints de datos están implementados y
-en PR; los de negocio (reservas, pagos, billetes, chatbot) siguen pendientes.
+**Código:** `backend/api` · **Estado (29/10):** 9 módulos implementados y probados contra Postgres
+(Supabase Cloud). Falta desplegar con `DATABASE_URL` en Render.
 
 Plan completo, diagramas y caminos de petición: [`docs/arquitectura.md`](../../docs/arquitectura.md)
 Contrato de cada ruta: [[endpoints]]. Esquema: [[modelo-datos]].
 
-La API emite JWT propios firmados con `JWT_SECRET` (HS256, 12 horas) tanto para el login con
-contraseña como para el login facial. Supabase Auth se usa internamente para validar credenciales y
-`DATABASE_URL` permanece solo en el backend.
+La API emite JWT propios firmados con `JWT_SECRET` (HS256, 12 horas) tanto para el login con contraseña
+como para el login facial. Supabase Auth se usa internamente para validar credenciales y `DATABASE_URL`
+permanece solo en el backend. **Ningún token de Supabase llega al cliente** (`refreshToken: null`).
 
 ## Módulos
 
 | Módulo | Responsable | Estado |
 |---|---|---|
-| estaciones (`GET /estaciones`) | Rubén | ✅ implementado, **sin probar contra Postgres** (faltan migraciones) |
-| trenes (`GET /trenes`, detalle, `/posicion`) | Rubén | ✅ implementado; el detalle, sin probar contra Postgres |
-| posiciones (`GET /posiciones`) | Rubén | ✅ implementado y probado contra Renfe; no usa BD |
 | health (`GET /health`) | Rubén | ✅ |
-| auth (Supabase + login facial) | Rubén | ✅ las 3 rutas `/auth/cara/*` implementadas con tests; **sin probar contra Postgres** (faltan migraciones) |
-| reservas | Rubén | ⚪ |
-| pagos (Stripe test) | Kevin | ⚪ |
-| billetes (QR Ed25519) | Rubén | ⚪ |
-| chatbot | Rubén | 🟡 | Implementación en curso: agente Gemini `gemini-3.5-flash-lite`, contexto Renfe, guardrails y herramientas de consulta controladas |
+| estaciones (`GET /estaciones`) | Rubén | ✅ probado contra Supabase |
+| trenes (`GET /trenes`, detalle, `/posicion`) | Rubén | ✅ probado contra Supabase |
+| posiciones (`GET /posiciones`) | Rubén | ✅ probado contra Renfe; no usa BD |
+| auth (`/auth/registro`, `/auth/login`, `/auth/cara/*`) | Rubén | ✅ |
+| reservas (`POST /reservas`) | Rubén | ✅ pago simulado |
+| billetes (`GET /billetes`, `/qr`, `POST /billetes/validar`) | Rubén | ✅ QR HMAC-SHA256 |
+| abonos (`GET/POST /abonos`, `GET /abonos/:id`) | Rubén | ✅ |
+| chatbot (`POST /chatbot/mensaje`) | Rubén | ✅ Gemini `gemini-3.5-flash-lite` + guardrails |
+| pagos (Stripe) | — | ⛔ fuera de alcance: no hay pasarela |
+| incidencias (`GET /incidencias`) | Rubén | ⛔ propuesto, sin implementar |
+| admin (`GET /admin/resumen`) | Rubén | ⛔ propuesto, sin implementar |
 
 ## Datos reales que consume
 
@@ -37,8 +40,8 @@ Lo estático entra por `backend/gtfs-worker` a Postgres y la API solo lee. **La 
 
 | Dato | Fuente | Volumen medido |
 |---|---|---|
-| Estaciones, rutas y horarios | GTFS Cercanías (15,1 MB) + GTFS AVE/LD/MD (0,8 MB) | 2.155 paradas · ~141.000 viajes · 1,9 M horarios |
-| Posiciones, retrasos e incidencias | GTFS-RT Cercanías + AVE/LD (JSON, cada 30 s) | ~460 trenes, ~460 con retraso real |
+| Estaciones, rutas y horarios | GTFS Cercanías (15,1 MB) + GTFS AVE/LD/MD (0,8 MB) | **Cargado hoy: solo `avld`** (1 035 estaciones · 8 908 viajes · 71 781 horarios) |
+| Posiciones, retrasos e incidencias | GTFS-RT Cercanías + AVE/LD (JSON, cada 30 s) | ~500 posiciones, retraso real cruzado por `tripId` |
 
 ## Reglas técnicas
 
@@ -47,29 +50,31 @@ Lo estático entra por `backend/gtfs-worker` a Postgres y la API solo lee. **La 
 - `feed` (`cercanias` | `avld`) en toda tabla, DTO y clave que venga de GTFS.
 - Horas GTFS como segundos enteros: pueden pasar de 24:00.
 - Búsqueda con índice `(stop_id, departure_seconds)`, objetivo < 150 ms.
-- Precios, asientos y pagos son simulados; la tarjeta nunca pasa por la API.
+- Precios, asientos y pagos son simulados; no hay tarjeta ni Stripe.
 - Todo cambio de endpoint, tabla o evento se escribe antes en [[endpoints]] o [[modelo-datos]].
 
-## Decisiones abiertas
+## Decisiones cerradas
 
-- Una estación física, una o dos en la UI (Atocha está en los dos feeds). Ver §9 de la arquitectura.
-- Nombres de tabla: `gtfs_*` con prefijo ([[sprint-actual]]) o sin él ([[modelo-datos]]). Sin cerrar;
-  el SQL de `/estaciones`, `/trenes` y el detalle apunta hoy a los nombres sin prefijo.
+- Una estación lógica + `estacion_feeds` (Atocha no se duplica en la UI).
+- Nombres de tabla **sin prefijo**: `estaciones`, `viajes`, `horarios`… (`gtfs_*` era una abreviatura
+  de [[sprint-actual]]).
+- Tiempo real: snapshot en memoria + `GET /posiciones`. Sin worker ni Realtime.
+- Facial: el vector lo calcula el dispositivo y decide Postgres ([[ADR-007-reconocimiento-facial]]).
 
 ## Pendiente
 
-- **Chatbot:** reservar e implementar `POST /chatbot/mensaje` con Gemini function calling. El modelo solo
-  podrá consultar los servicios internos de estaciones, trenes y posiciones; no se permitirá SQL
-  generado ni HTTP arbitrario. La clave `GEMINI_API_KEY` se configura como secreto de entorno.
-
-- Migraciones de Marina (`backend/database/supabase/migrations/` no existe): sin ellas el SQL de
-  estaciones/trenes/detalle **no se ha ejecutado nunca** contra un Postgres real.
+- `DATABASE_URL` (session pooler) en Render: hasta entonces `/estaciones` y `/trenes` dan 503.
+- **Facial 1024 vs 512:** la web calcula 1024 (Human) y el contrato/BD piden 512 ArcFace.
 - `/incidencias`: degradado sin BD (`alerts.json` no trae `headerText` ni `cause`).
-- Los 6 campos del mapa de [[endpoints]] (`nombre`, `linea`, `origen`…) necesitan BD; hoy son `null`.
+- Cercanías en la BD: el código soporta el feed, pero no está cargado.
+- QR: pasar de HMAC-SHA256 a Ed25519 cuando existan las claves (`common/qr/firma.ts`).
 
 ## Historial
 
-- 2026-10-27 · `/posiciones` con retrasos reales, `paradaActual` y `GET /trenes/:feed/:tripId/posicion`
-  (PR #47). Corregido el falso bloqueo del `tripId`. Handoffs: [[2026-10-27-ruben-gtfsrt-para-alex]],
-  [[2026-10-27-ruben-campos-mapa-para-alex]], [[2026-10-27-ruben-gtfs-estatico-para-marina]].
-- 2026-10-26 · Plan de arquitectura y verificación de fuentes de Renfe: [[2026-10-26-ruben-arquitectura-api-renfe]]
+- 2026-10-29 — JWT propio de la API, chatbot con Gemini, `/reservas`, `/billetes`, `/abonos` y
+  `/billetes/validar` implementados. Handoffs: [[2026-10-29-ruben-jwt-propio-api]],
+  [[2026-10-29-ruben-chatbot]], [[2026-10-29-ruben-chat-frontend]].
+- 2026-10-27 — `/posiciones` con retrasos reales, `paradaActual` y `GET /trenes/:feed/:tripId/posicion`
+  (PR #47). Handoffs: [[2026-10-27-ruben-gtfsrt-para-alex]], [[2026-10-27-ruben-campos-mapa-para-alex]],
+  [[2026-10-27-ruben-gtfs-estatico-para-marina]].
+- 2026-10-26 — Plan de arquitectura y verificación de fuentes de Renfe: [[2026-10-26-ruben-arquitectura-api-renfe]]

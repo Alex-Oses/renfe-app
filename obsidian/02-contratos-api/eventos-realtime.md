@@ -1,12 +1,17 @@
 ---
 responsable: Marina
-estado: borrador
-actualizado: 2026-10-28
+estado: obsoleto
+actualizado: 2026-10-29
 tags: [contrato, realtime]
 ---
 
 # 📡 Eventos en tiempo real
 
+> **OBSOLETO desde el 27/10/2026.** No hay Supabase Realtime, ni tabla `posiciones_trenes`, ni worker de
+> GTFS-RT: el mapa usa **`GET /posiciones`** (snapshot en memoria de la API, sondeo cada 30 s) y se
+> refresca preguntando. Se conserva como histórico del diseño; si algún día vuelve el Realtime, se
+> reabre. Ver §5.3 de [`docs/arquitectura.md`](../../docs/arquitectura.md) y [[endpoints]].
+>
 > Solo lo que la app consume directamente de Supabase (Realtime). Todo lo demás va por la API.
 > La tabla y sus columnas están en [[modelo-datos]] §6.1.
 

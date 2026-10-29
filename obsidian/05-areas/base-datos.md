@@ -9,7 +9,7 @@ tags: [area]
 
 ## Pendiente
 - **Servidor Docker:** preparar Supabase self-hosted, almacenamiento persistente, backups y migración cuando el administrador abra los puertos y autorice proxy/TLS
-- **Render**: poner `DATABASE_URL` (session pooler) y `SUPABASE_JWT_SECRET` → `/health` con
+- **Render**: poner `DATABASE_URL` (session pooler), `JWT_SECRET` y `QR_SIGNING_SECRET` → `/health` con
   `"baseDatos":"ok"` y `/estaciones` / `/trenes` con datos reales. Lo hacen Kevin/Alex con los
   valores de [[supabase-nube]]
 - `explain analyze` de `/trenes` y `/estaciones` contra la nube; índice solo si hace falta
@@ -18,7 +18,7 @@ tags: [area]
 
 ## Notas técnicas
 - **Supabase Cloud (29/10):** proyecto `renfe-app`, ref `hqwwucagvlhnlqrspwvh`, región
-  **eu-west-1 (Irlanda)**. Las **4 migraciones** aplicadas con `db push` y el catálogo AV/LD
+  **eu-west-1 (Irlanda)**. Las **6 migraciones** aplicadas con `db push` y el catálogo AV/LD
   cargado por el **session pooler** (`aws-0-eu-west-1.pooler.supabase.com:5432`, usuario
   `postgres.<ref>`): la conexión directa es **solo IPv6** y la VM da `ENETUNREACH`.
   Conteos del feed del 29/10: 1 035 estaciones · 1 008 estacion_feeds · 668 rutas ·
@@ -34,9 +34,10 @@ tags: [area]
 - **Validado de punta a punta** el 26/10 en una VM Linux de Azure (Docker Desktop está bloqueado en
   el portátil corporativo): `db:start`, Studio/API/PostgreSQL accesibles, `seed.sql` aplicado y `db:stop`.
 - **Todo lo que necesite Docker/Supabase/contenedores se ejecuta en la VM `genai-openllm-vm`**, no en el portátil.
-- [[modelo-datos]]: contrato completo, sin SQL todavía. 16 tablas. **Dos feeds** (`cercanias` y `avld`)
+- [[modelo-datos]]: contrato completo; **las migraciones ya existen** (15 tablas). `posiciones_trenes`,
+  `incidencias` y `pagos` no se crean: el GTFS-RT vive en memoria y no hay Stripe. **Dos feeds** (`cercanias` y `avld`)
   con claves `(feed, id)`; estaciones unificadas con `estacion_feeds`; asientos por viaje **y fecha**;
-  `reservas.fecha_servicio`; tabla `incidencias` para los avisos GTFS-RT. Decisiones de Alex (15 min,
+  `reservas.fecha_servicio`; `incidencias` para los avisos GTFS-RT (descartada). Decisiones de Alex (15 min,
   QR por butaca, sin histórico de posiciones, webhook comprueba `expira_en`) y de Rubén
   (heurística de `tipo_servicio`, QR a `fecha_servicio + 26 h`, nombres de horas) incorporadas.
 - **Revisión contra los feeds reales (28/10):** los viajes vienen **expandidos por fecha** (AV/LD/MD

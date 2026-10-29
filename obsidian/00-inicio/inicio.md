@@ -11,7 +11,7 @@ tags: [inicio]
 ## Contratos
 - [[endpoints]] — API REST
 - [[modelo-datos]] — tablas de Supabase
-- [[eventos-realtime]] — canales de tiempo real
+- [[eventos-realtime]] — canales de tiempo real (obsoleto: hoy se usa `GET /posiciones`)
 
 ## Áreas
 - [[frontend]] · [[backend]] · [[base-datos]] · [[devops]]

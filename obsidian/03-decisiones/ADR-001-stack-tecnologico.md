@@ -7,6 +7,11 @@ tags: [adr]
 
 # ADR-001 — Stack tecnológico
 
+> **Superado en parte (29/10/2026):** el **facial** ya no es un microservicio Python ([[ADR-007-reconocimiento-facial]]:
+> vector en el dispositivo + Postgres) y el **tiempo real** no usa Supabase Realtime (snapshot en memoria
+> + `GET /posiciones`). Siguen vigentes el monorepo pnpm, NestJS, Supabase, el worker GTFS, los QR
+> firmados y Gemini.
+
 ## Contexto
 App tipo Renfe hecha por 4 personas, con IA, en ~5 meses. Renfe solo publica datos abiertos GTFS y GTFS-RT (no hay API de reservas ni precios).
 

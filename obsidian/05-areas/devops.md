@@ -5,7 +5,8 @@ tags: [area]
 
 # 🐳 Área DevOps y despliegue
 
-**Código:** `docker-compose.yml`, `.github/`, `render.yaml` · **Estado:** CI y Render en marcha; Docker pendiente
+**Código:** `docker-compose.yml`, `.github/`, `render.yaml` · **Estado:** CI y Render en marcha;
+Docker del servidor **escrito y validado, sin construir**
 
 > **Cambio del 28/10:** el facial ya no es de esta área. [[ADR-007-reconocimiento-facial]] lo resuelve **sin servidor Python** (el vector lo calcula el dispositivo y decide Postgres), así que `backend/face-service` ha desaparecido. Mi lista queda: CI, despliegue (Render + Vercel) y **D10 (qué se dockeriza)**, que es lo único que me queda abierto además de las variables de Render.
 
@@ -30,18 +31,25 @@ tags: [area]
 ## Render (27/10)
 - Servicio `renfe-api` creado por Alex con el blueprint: https://renfe-api.onrender.com (plan Free, Frankfurt, despliega desde `main`).
 - Plan Free: se duerme tras 15 min sin uso y tarda ~30–50 s en despertar. Abrir `/health` antes de la demo.
-- Faltan `DATABASE_URL` (Supabase en la nube, Marina) y `SUPABASE_JWT_SECRET` en Render → Environment.
+- Faltan en Render: `DATABASE_URL` (Supabase Cloud **ya existe** desde el 29/10: `hqwwucagvlhnlqrspwvh`,
+  eu-west-1), `JWT_SECRET` (JWT propio de la API) y `QR_SIGNING_SECRET` si se prueban billetes.
 
 ### Lista de comprobación cuando llegue `DATABASE_URL`
-1. Render → `renfe-api` → Environment: pegar la cadena del *pooler* de Supabase (no se escribe nunca en el repo) y el `SUPABASE_JWT_SECRET` del proyecto.
+1. Render → `renfe-api` → Environment: pegar la cadena del *pooler* de Supabase (no se escribe nunca en el repo), `JWT_SECRET` y `QR_SIGNING_SECRET`.
 2. Comprobar que la cadena lleva `?sslmode=require`: `BdService` no configura SSL y Supabase en la nube lo exige (hipótesis a validar el día que haya base de datos).
 3. Abrir `/health` y esperar `"baseDatos":"ok"` (hoy dice `"no configurada"`).
 4. Probar `GET /estaciones?q=Madrid`: debe dejar de dar 503.
 5. Avisar a Alex para que apunte `VITE_API_URL` a la API.
 
 ## Pendiente
-- **Kevin:** la PR #75 ya está mergeada (excepción de ramas Dependabot + `pnpm test:ramas`); falta rellenar `DATABASE_URL` y `SUPABASE_JWT_SECRET` en Render (bloqueado por Supabase en la nube).
-- **Kevin:** **D10 de [[ADR-005-app-movil-expo]]**: decidir qué se dockeriza y dejarlo funcionando con un comando. Los `Dockerfile` de `backend/api` y `backend/gtfs-worker` siguen siendo placeholders y **no** se pueden usar tal cual (asumen un proyecto autocontenido, sin monorepo pnpm).
+- **Kevin:** la PR #75 ya está mergeada (excepción de ramas Dependabot + `pnpm test:ramas`); falta rellenar
+  `DATABASE_URL`, `JWT_SECRET` y `QR_SIGNING_SECRET` en Render. El bloqueo de Supabase Cloud **ya no existe**.
+- **Kevin:** **D10 de [[ADR-005-app-movil-expo]]**: decidir qué se dockeriza y dejarlo funcionando con
+  un comando. Estado real (29/10): `docker-compose.yml` (db + api + worker en perfil `tools`),
+  `backend/api/Dockerfile` y `backend/gtfs-worker/Dockerfile` **ya están escritos** para el monorepo
+  pnpm y `docker compose config` valida; **ninguna imagen se ha construido todavía** (no hay daemon
+  Docker en el portátil). La BD no se publica: solo `127.0.0.1:${API_PUBLICO:-3010}`. Ver [[ADR-009-despliegue-servidor]]
+  y [`deploy/README.md`](../../deploy/README.md).
 - Fuera de la entrega: cuenta Stripe en modo test.
 - El facial **no** es de esta área: [[ADR-007-reconocimiento-facial]] lo mete en la API (`backend/api/src/modules/auth/cara*`), sin `backend/face-service` ni PoC de InsightFace.
 

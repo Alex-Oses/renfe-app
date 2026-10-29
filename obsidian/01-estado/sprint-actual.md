@@ -17,14 +17,19 @@ tags: [sprint]
 |---|---|
 | Alex | Frontend: mejora la web, lógica común en `@renfe/shared` y app Expo en `frontend/mobile` en cuanto haya BD y facial |
 | Rubén | Login facial **sin servidor Python**: dispositivo + Postgres, rutas `/auth/cara/*` en la API ([[ADR-007-reconocimiento-facial]]) |
-| Marina | Base de datos: migraciones `gtfs_*`, import y Supabase en la nube |
+| Marina | Base de datos: migraciones (sin prefijo `gtfs_`), import y Supabase en la nube ✅ |
 | Kevin | Despliegue y Docker (D10 pendiente) |
 
 ## Alcance
 
-**Entra:** app Expo (iOS y Android), login facial con el servidor Python, GTFS AVE/LD en Supabase, API en Render y web en Vercel.
+**Entra:** app Expo (iOS y Android), login facial sin servidor Python (vector en el dispositivo + Postgres), GTFS AVE/LD en Supabase, API en Render y web en Vercel.
 
-**Fuera (simulado o recortado):** Stripe real, reservas en BD, chatbot, Cercanías y worker separado.
+**Fuera (simulado o recortado):** Stripe y cualquier pasarela real, Cercanías cargado, `/incidencias`, `/admin/resumen` y Realtime. Las reservas, billetes y abonos **sí** están en BD (pago simulado) y el chatbot **sí** está hecho (Gemini).
+
+> **Actualización 29/10 (estado real):** la web está completa y desplegada; la API tiene 9 módulos
+> implementados (incluidos reservas, billetes, abonos y chatbot) y la BD está en Supabase Cloud con el
+> catálogo `avld`. La **app Expo existe en la rama `feat/mobile-app-expo`**, sin mergear: es el trabajo
+> pendiente más grande para la entrega. Ver [[2026-10-29-ruben-chatbot]] y el estado del equipo.
 
 > El plan de abajo es el del 27/10 y sigue sirviendo para la API y los datos. Donde diga «Fuera: app Expo», manda lo de arriba.
 
