@@ -832,6 +832,10 @@ GTFS. Se detallan en el sprint que los implemente, siempre aquí antes del códi
   `/billetes/:id/qr`, `/billetes/validar` y las tres rutas de `/abonos`. QRs firmados con
   HMAC-SHA256 (`QR_SIGNING_SECRET`) hasta que existan las claves Ed25519. Los abonos nacen `activo`
   mientras no haya Stripe.
+- 2026-10-29 — El rol sale de `perfiles.rol` y no del token (ADR-007): el guard lo consulta en cada
+  petición autenticada y responde `503` si la BD no está. **El token lo firma la API** (`JWT_SECRET`,
+  HS256) también en el login con contraseña: Supabase Cloud firma con claves asimétricas (ES256) y su
+  `access_token` no lo puede verificar el guard. `refresh_token` queda en `null`.
 - 2026-10-28 — Propuestas por la web `GET/POST /abonos` y `GET /abonos/:id` (Alex).
 - 2026-10-28 — Detallados `/auth/cara/registrar`, `/auth/cara/verificar` y `/auth/cara/reset`
   (ADR-005: ArcFace 512, lógica en Postgres, JWT propio).

@@ -6,7 +6,8 @@ tags: [area]
 # 🧩 Área Backend (API)
 
 **Código:** `backend/api` · **Estado:** F1 en marcha. Los 6 endpoints de datos están implementados y
-en PR; los de negocio (reservas, pagos, billetes, chatbot) siguen pendientes.
+mergeados; falta ejecutarlos contra la base de datos real. Los de negocio (reservas, pagos, billetes,
+chatbot) siguen pendientes.
 
 Plan completo, diagramas y caminos de petición: [`docs/arquitectura.md`](../../docs/arquitectura.md)
 Contrato de cada ruta: [[endpoints]]. Esquema: [[modelo-datos]].
@@ -15,11 +16,11 @@ Contrato de cada ruta: [[endpoints]]. Esquema: [[modelo-datos]].
 
 | Módulo | Responsable | Estado |
 |---|---|---|
-| estaciones (`GET /estaciones`) | Rubén | ✅ implementado, **sin probar contra Postgres** (faltan migraciones) |
-| trenes (`GET /trenes`, detalle, `/posicion`) | Rubén | ✅ implementado; el detalle, sin probar contra Postgres |
+| estaciones (`GET /estaciones`) | Rubén | ✅ implementado; **pendiente de probar contra la BD real** |
+| trenes (`GET /trenes`, detalle, `/posicion`) | Rubén | ✅ implementado; **pendiente de probar contra la BD real** |
 | posiciones (`GET /posiciones`) | Rubén | ✅ implementado y probado contra Renfe; no usa BD |
 | health (`GET /health`) | Rubén | ✅ |
-| auth (Supabase + login facial) | Rubén | ✅ las 3 rutas `/auth/cara/*` implementadas con tests; **sin probar contra Postgres** (faltan migraciones) |
+| auth (Supabase + login facial) | Rubén | ✅ las 3 rutas `/auth/cara/*` con tests; **pendiente de probar contra la BD real** |
 | reservas | Rubén | ⚪ |
 | pagos (Stripe test) | Kevin | ⚪ |
 | billetes (QR Ed25519) | Rubén | ⚪ |
@@ -49,18 +50,25 @@ Lo estático entra por `backend/gtfs-worker` a Postgres y la API solo lee. **La 
 ## Decisiones abiertas
 
 - Una estación física, una o dos en la UI (Atocha está en los dos feeds). Ver §9 de la arquitectura.
-- Nombres de tabla: `gtfs_*` con prefijo ([[sprint-actual]]) o sin él ([[modelo-datos]]). Sin cerrar;
-  el SQL de `/estaciones`, `/trenes` y el detalle apunta hoy a los nombres sin prefijo.
+
+Cerrado el 29/10: las tablas van **sin prefijo** (`estaciones`, `viajes`, `horarios`…), como en
+[[modelo-datos]]; la migración de Marina ya las crea así.
 
 ## Pendiente
 
-- Migraciones de Marina (`backend/database/supabase/migrations/` no existe): sin ellas el SQL de
-  estaciones/trenes/detalle **no se ha ejecutado nunca** contra un Postgres real.
+- **Ejecutar el SQL contra la BD real.** Las 4 migraciones están en `develop` y validadas en la VM de
+  Marina; falta `pnpm db:start` → `db:reset` → `gtfs:importar` y pasar
+  `pnpm --filter @renfe/api test:e2e`. Runbook en `backend/api/README.md` § Base de datos.
+- `/auth/registro` y `/auth/login`: sin `perfiles` no hay facial (la FK de `embeddings_faciales` va a
+  `perfiles`). Hasta entonces el facial solo se prueba por los caminos de error.
 - `/incidencias`: degradado sin BD (`alerts.json` no trae `headerText` ni `cause`).
 - Los 6 campos del mapa de [[endpoints]] (`nombre`, `linea`, `origen`…) necesitan BD; hoy son `null`.
 
 ## Historial
 
+- 2026-10-29 · El **rol sale de `perfiles.rol`** (el token ya no lleva `app_metadata`) y el guard
+  responde `503` si la BD no está. La API lee el `.env` de la raíz. Nuevo `test/bd.e2e-spec.ts` que se
+  salta sin `DATABASE_URL`. Handoff: [[2026-10-29-ruben-rol-perfiles-y-bd]].
 - 2026-10-27 · `/posiciones` con retrasos reales, `paradaActual` y `GET /trenes/:feed/:tripId/posicion`
   (PR #47). Corregido el falso bloqueo del `tripId`. Handoffs: [[2026-10-27-ruben-gtfsrt-para-alex]],
   [[2026-10-27-ruben-campos-mapa-para-alex]], [[2026-10-27-ruben-gtfs-estatico-para-marina]].

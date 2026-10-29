@@ -81,6 +81,8 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
   crea su `20261028120100_identidad.sql`. La mía (`20261028120300_...`) añade `config_cara`, las tres
   funciones y el valor `admin` en el CHECK de `perfiles.rol`. El rol del `reset` se lee de
   `perfiles.rol`, que es donde vive según [[modelo-datos]] §3.1.
+- **Desde el 29/10 el rol se lee de `perfiles.rol`**, no de `app_metadata`: es donde vive según el
+  modelo de datos de Marina. El guard hace una consulta por clave primaria en cada petición autenticada.
 - **Sin refresco de token**: el JWT facial dura 12 h y después hay que volver a mirar a la cámara. No hay
   `refresh_token` porque no lo emite Supabase Auth. Tampoco se puede revocar un token suelto.
 
