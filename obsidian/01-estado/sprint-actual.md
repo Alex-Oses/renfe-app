@@ -38,7 +38,7 @@ tags: [sprint]
 | 4/11 | **Congelación de código**: solo arreglos | ídem | ídem | ídem |
 | 5/11 | Ensayo de la demo + diapositivas | Explica la API | Explica los datos | Explica despliegue y CI |
 
-## ⚠️ Riesgo: base de datos solo en local
+## ⚠️ Riesgo: base de datos solo en local — ✅ **CERRADO el 29/10**
 
 Marina no está y sus migraciones no están en el repo (solo `backend/database/supabase/seed.sql`). Sin ellas no hay Supabase en la nube ni API con datos.
 
@@ -51,6 +51,11 @@ Marina no está y sus migraciones no están en el repo (solo `backend/database/s
 > `avld` (**69 670 horarios**), no los 2 M de las dos redes, así que la carga es de minutos.
 > Las tablas se llaman como en el modelo (`estaciones`, `viajes`, `horarios`…): `gtfs_*` era una
 > abreviatura.
+
+> **Actualización 29/10 (Marina):** **riesgo cerrado.** Los PRs #72, #73 y #74 están mergeados,
+> **Supabase Cloud creada** (`hqwwucagvlhnlqrspwvh`, eu-west-1), 4 migraciones aplicadas, catálogo
+> AV/LD cargado (feed 29/10: 1 035 estaciones · 668 rutas · 8 908 viajes · 71 781 horarios) y
+> `gtfs:verificar` en verde. Falta solo `DATABASE_URL` en Render (Kevin/Alex): [[supabase-nube]].
 
 ## Plan B
 

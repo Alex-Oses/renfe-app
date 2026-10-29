@@ -5,17 +5,25 @@ tags: [area]
 
 # 🗄️ Área Base de datos y datos Renfe
 
-**Código:** `backend/database`, `backend/gtfs-worker` · **Estado:** **catálogo AV/LD cerrado en local** (migración, carga, integridad e idempotencia validadas); siguiente hito: Supabase Cloud + Render ([[supabase-nube]])
+**Código:** `backend/database`, `backend/gtfs-worker` · **Estado:** **Supabase Cloud validada** (esquema + catálogo AV/LD cargados y verificados); lo único pendiente es conectar Render ([[supabase-nube]])
 
 ## Pendiente
-- Mergear las tres ramas: contrato v2 → migración `gtfs_*` → importador (ver [[2026-10-28-marina-importador-gtfs-avld]]); necesita aprobación de Alex y CI verde
-- **Supabase Cloud + Render**: proyecto, `db push`, carga y `DATABASE_URL` (session pooler) en Render ([[supabase-nube]])
+- **Render**: poner `DATABASE_URL` (session pooler) y `SUPABASE_JWT_SECRET` → `/health` con
+  `"baseDatos":"ok"` y `/estaciones` / `/trenes` con datos reales. Lo hacen Kevin/Alex con los
+  valores de [[supabase-nube]]
 - `explain analyze` de `/trenes` y `/estaciones` contra la nube; índice solo si hace falta
 - Reimportación semanal programada (AV/LD tiene horizonte hasta 29/09/2027)
 - Fuera del sprint: Cercanías (497 paradas sin `CODIGO`), `posiciones_trenes`, Stripe
 
 ## Notas técnicas
-- **Catálogo AV/LD (28/10):** migración [[migracion-catalogo-gtfs]] aplicada y
+- **Supabase Cloud (29/10):** proyecto `renfe-app`, ref `hqwwucagvlhnlqrspwvh`, región
+  **eu-west-1 (Irlanda)**. Las **4 migraciones** aplicadas con `db push` y el catálogo AV/LD
+  cargado por el **session pooler** (`aws-0-eu-west-1.pooler.supabase.com:5432`, usuario
+  `postgres.<ref>`): la conexión directa es **solo IPv6** y la VM da `ENETUNREACH`.
+  Conteos del feed del 29/10: 1 035 estaciones · 1 008 estacion_feeds · 668 rutas ·
+  8 908 calendarios · 31 991 excepciones · 8 908 viajes · 71 781 horarios.
+  `pnpm gtfs:verificar` **en verde**. Runbook completo en [[supabase-nube]].
+- **Catálogo AV/LD en local (28/10):** migración [[migracion-catalogo-gtfs]] aplicada y
   `backend/gtfs-worker` importando el feed real: 1 035 estaciones · 1 008 estacion_feeds ·
   663 rutas · 8 729 calendarios · 31 702 excepciones · 8 729 viajes · 69 670 horarios.
   Integridad y consulta de la API en verde, **idempotencia demostrada** (segunda pasada sin
