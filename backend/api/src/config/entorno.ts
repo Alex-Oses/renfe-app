@@ -34,6 +34,11 @@ export function validarEntorno(
     throw new Error('SUPABASE_JWT_SECRET parece demasiado corto (secreto JWT de Supabase)');
   }
 
+  const firmaQr = config.QR_SIGNING_SECRET;
+  if (typeof firmaQr === 'string' && firmaQr.length > 0 && firmaQr.length < 32) {
+    throw new Error('QR_SIGNING_SECRET parece demasiado corto (HMAC de los QR)');
+  }
+
   return {
     ...config,
     API_PORT: puerto,
