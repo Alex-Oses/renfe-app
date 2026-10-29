@@ -36,10 +36,13 @@ insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
   - **Cara**: la API firma el token cuando `verificar_cara` dice que coincide. Ver
     [[ADR-007-reconocimiento-facial]]. **Sin `refresh_token`**: dura 12 h y después hay que volver a
     mirar a la cámara.
-- Claims del token: `sub` (uuid), `email`, `app_metadata.rol` (`viajero` \| `revisor` \| `admin`),
-  `iat` y `exp`. El facial los rellena igual que Supabase para que el guard no distinga cómo se entró.
+- Claims del token: `sub` (uuid), `email`, `iat` y `exp`. **El rol no viaja en el token**: la API lo lee
+  de `perfiles.rol` en cada petición autenticada (una consulta por clave primaria). Si no hay fila de
+  perfil, el rol es `viajero`. Así el rol es el mismo entrando por contraseña o por cara.
 - Rol `admin` (propuesto por Alex, 2026-10-27): además de `revisor`, puede validar billetes.
 - Los endpoints públicos no llevan token. Los privados exigen `Authorization: Bearer <jwt>`.
+- `503` si la BD no está disponible al resolver el rol: sin rol no se autentica y **no** se cae a
+  `viajero` en silencio.
 - **Aviso para Marina**: si el proyecto nuevo firma con claves asimétricas (ES256/JWKS) en vez del
   secreto compartido, el guard actual (`algorithms: ['HS256']`) rechaza también los tokens de la
   contraseña. Hay que mirarlo al crear el proyecto.
@@ -609,7 +612,7 @@ Errores: `400` falta `usuarioId` · `401` token ausente o inválido · `403` el 
 `503` BD caída.
 
 Notas: la API pasa su propio `sub` y el `usuarioId` a `resetear_cara(...)`, y **Postgres** comprueba el
-rol contra `app_metadata`; la API no decide nada. Si el usuario no tenía plantilla, no hace nada.
+rol contra `perfiles.rol`; la API no decide nada. Si el usuario no tenía plantilla, no hace nada.
 
 ## POST /auth/cara/verificar
 
@@ -649,8 +652,8 @@ Notas:
 - La decisión es de Postgres (`verificar_cara`): umbral de `config_cara` y similitud coseno de pgvector.
 - **No se devuelve la similitud.** Un número de similitud por intento es un oráculo que permite
   reconstruir la plantilla probando vectores; se mide con SQL cuando toque ajustar el umbral.
-- El token es el mismo formato que el de la contraseña (HS256 con el secreto compartido), así que hay
-  un solo guard. Ver [[ADR-007-reconocimiento-facial]].
+- El token es el mismo formato que el de la contraseña (HS256 con el secreto compartido y sin rol), así
+  que hay un solo guard. Ver [[ADR-007-reconocimiento-facial]].
 - No hay límite de intentos todavía (fase F7): el facial es alternativa a la contraseña, nunca el
   único factor.
 
@@ -662,6 +665,8 @@ siempre aquí antes del código.
 
 ## Historial
 
+- 2026-10-29 — El rol sale de `perfiles.rol` y no del token (ADR-007): el guard lo consulta en cada
+  petición autenticada y responde `503` si la BD no está.
 - 2026-10-28 — Propuestas por la web `GET/POST /abonos` y `GET /abonos/:id` (Alex).
 - 2026-10-28 — Detallados `/auth/cara/registrar`, `/auth/cara/verificar` y `/auth/cara/reset`
   (ADR-005: ArcFace 512, lógica en Postgres, JWT propio).
