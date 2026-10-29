@@ -460,35 +460,6 @@ a.mega__titulo:hover {
   column-gap: var(--esp-6);
 }
 
-/* Selector de idioma (solo ES activo) */
-.idioma {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: var(--radio-pildora);
-  border: 1px solid rgb(129 0 94 / 0.16);
-}
-
-.idioma__opcion {
-  min-width: 44px;
-  min-height: 44px;
-  border: 0;
-  border-radius: var(--radio-pildora);
-  background: transparent;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--gris);
-}
-
-.idioma__opcion[aria-pressed="true"] {
-  background: var(--morado);
-  color: var(--blanco);
-}
-
-.idioma__opcion:disabled {
-  cursor: not-allowed;
-}
-
 /* Cajón móvil */
 .menu-movil {
   position: absolute;
@@ -500,10 +471,6 @@ a.mega__titulo:hover {
   border-radius: 24px;
   transform-origin: top right;
   animation: aparecer var(--dur-media) var(--curva-salida);
-}
-
-.menu-movil > .idioma {
-  margin: var(--esp-3) var(--esp-3) 0;
 }
 
 .nav--movil {
