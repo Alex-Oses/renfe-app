@@ -25,7 +25,6 @@ const MENUS: Menu[] = [
   },
 ];
 
-const IDIOMAS = ["ES", "CA", "EN", "FR"];
 
 // Barra inferior en móvil (como la tab bar de la app). Trazos 24x24.
 const PESTANAS = [
@@ -191,23 +190,6 @@ export function Cabecera() {
     </NavLink>
   ));
 
-  const idiomas = (
-    <div className="idioma" role="group" aria-label="Idioma">
-      {IDIOMAS.map((i) => (
-        <button
-          key={i}
-          type="button"
-          className="idioma__opcion"
-          aria-pressed={i === "ES"}
-          disabled={i !== "ES"}
-          title={i === "ES" ? "Español" : "Próximamente"}
-        >
-          {i}
-        </button>
-      ))}
-    </div>
-  );
-
   const abierto = MENUS.find((m) => m.ruta === mega);
 
   return (
@@ -290,7 +272,6 @@ export function Cabecera() {
           <nav aria-label="Mi viaje" className="nav">
             {accesos}
           </nav>
-          {idiomas}
         </div>
 
         {/* Mega-menú de escritorio */}
@@ -329,7 +310,6 @@ export function Cabecera() {
               </details>
             ))}
           </div>
-          {idiomas}
         </div>
       </header>
       <nav aria-label="Accesos rápidos" className="barra-pestanas cristal cristal--fuerte">
