@@ -28,6 +28,37 @@ tags: [contrato, api]
 Códigos de error habituales: `400` parámetros inválidos · `401` token ausente o inválido · `403` rol
 insuficiente · `404` recurso inexistente · `503` base de datos no disponible.
 
+## POST /chatbot/mensaje
+
+Consulta conversacional pública sobre los datos de Renfe disponibles en la API. El chatbot usa Claude
+con herramientas internas de solo lectura para buscar estaciones, consultar trenes, obtener el detalle
+de un viaje y consultar posiciones en tiempo real. No acepta SQL, URLs ni nombres de herramientas del
+cliente. El modelo no puede crear reservas, consultar billetes/abonos privados ni ejecutar acciones.
+
+Auth: **no**. La ruta requiere `ANTHROPIC_API_KEY`; si no está configurada o el proveedor no responde,
+devuelve `503`.
+
+Request:
+
+```json
+{ "mensaje": "¿Qué trenes hay de Madrid a Barcelona mañana?" }
+```
+
+`mensaje` debe tener entre 1 y 2000 caracteres. `conversationId` es opcional y opaco; el servidor no
+persiste conversaciones y solo lo devuelve para que el cliente pueda correlacionar la respuesta.
+
+Response 200:
+
+```json
+{
+  "respuesta": "He encontrado 3 trenes...",
+  "conversationId": "c-...",
+  "herramientas": ["buscar_trenes"]
+}
+```
+
+Errores: `400` mensaje inválido · `503` proveedor de IA o datos no disponibles.
+
 ## Autenticación
 
 - Dos formas de entrar, **un solo formato de token** (HS256 con `SUPABASE_JWT_SECRET`):

@@ -23,7 +23,7 @@ Contrato de cada ruta: [[endpoints]]. Esquema: [[modelo-datos]].
 | reservas | Rubén | ⚪ |
 | pagos (Stripe test) | Kevin | ⚪ |
 | billetes (QR Ed25519) | Rubén | ⚪ |
-| chatbot | Rubén | ⚪ |
+| chatbot | Rubén | 🟡 | Implementación en curso: agente con Claude y herramientas de consulta controladas |
 
 ## Datos reales que consume
 
@@ -53,6 +53,10 @@ Lo estático entra por `backend/gtfs-worker` a Postgres y la API solo lee. **La 
   el SQL de `/estaciones`, `/trenes` y el detalle apunta hoy a los nombres sin prefijo.
 
 ## Pendiente
+
+- **Chatbot:** reservar e implementar `POST /chatbot/mensaje` con Claude tool use. El modelo solo
+  podrá consultar los servicios internos de estaciones, trenes y posiciones; no se permitirá SQL
+  generado ni HTTP arbitrario. La clave `ANTHROPIC_API_KEY` se configura como secreto de entorno.
 
 - Migraciones de Marina (`backend/database/supabase/migrations/` no existe): sin ellas el SQL de
   estaciones/trenes/detalle **no se ha ejecutado nunca** contra un Postgres real.
