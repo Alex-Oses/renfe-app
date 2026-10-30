@@ -121,10 +121,13 @@ async function principal() {
         env: { ...env, NODE_OPTIONS: "--max-old-space-size=6144" },
       });
     }
+    // Sin esto los trenes de AV/LD/MD se dibujan en línea recta entre paradas.
+    paso("Recorrido por las vías (OSM; la primera vez descarga la red, varios minutos)");
+    ejecutar(`${p} --filter @renfe/gtfs-worker vias`, { env: { ...env, NODE_OPTIONS: "--max-old-space-size=6144" } });
   }
 
-  paso("API en Docker");
-  ejecutar("docker compose up -d --build api");
+  paso("API, web y app móvil en Docker");
+  ejecutar("docker compose up -d --build");
   const ok = await esperarApi("http://localhost:3000/health");
   if (!ok) {
     console.error("La API no responde con la BD. Mira `docker compose logs api`.");
@@ -135,7 +138,8 @@ async function principal() {
 ✔ Todo levantado
   API ........... http://localhost:3000   (docs: http://localhost:3000/docs)
   Supabase Studio  http://127.0.0.1:54323
-  Web ........... VITE_API_URL=http://localhost:3000 ${p} dev:web   → http://localhost:5173
+  Web ........... http://localhost:5173
+  App (web) ..... http://localhost:8081
   App (Expo Go) . EXPO_PUBLIC_API_URL=http://<IP-de-este-PC>:3000 ${p} dev:mobile
 
   Para pararlo: docker compose down && ${p} db:stop   (los datos se conservan)
