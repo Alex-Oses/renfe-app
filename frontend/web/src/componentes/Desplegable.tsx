@@ -27,9 +27,10 @@ interface Props {
   // y el id evita tener que volver a resolverlo al enviar el formulario.
   onElegir?: (e: Estacion) => void;
   placeholder?: string;
+  deshabilitado?: boolean;
 }
 
-export function Desplegable({ etiqueta, texto, onTexto, onElegir, placeholder }: Props) {
+export function Desplegable({ etiqueta, texto, onTexto, onElegir, placeholder, deshabilitado }: Props) {
   const id = useId();
   const [abierto, setAbierto] = useState(false);
   const [opciones, setOpciones] = useState<Estacion[]>([]);
@@ -85,6 +86,7 @@ export function Desplegable({ etiqueta, texto, onTexto, onElegir, placeholder }:
       <input
         id={`${id}c`}
         className="parada__campo"
+        disabled={deshabilitado}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={visible}

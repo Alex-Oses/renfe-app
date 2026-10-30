@@ -97,7 +97,7 @@ const aPasajeroApi = (p: Pasajero): PasajeroApi => ({
   documento: p.documento.trim(),
 });
 
-// POST /reservas: el tren ya dice feed, tripId, fecha, origen y destino; los asientos no se mandan.
+// POST /reservas: el tren ya dice feed, tripId, fecha, origen y destino.
 export function cuerpoReserva(tren: Tren, datos: NuevaReserva): NuevaReservaApi {
   const { feed, tripId, fecha } = partirIdTren(tren.id);
   if (!feed || !tripId || !fecha) {
@@ -113,6 +113,7 @@ export function cuerpoReserva(tren: Tren, datos: NuevaReserva): NuevaReservaApi 
     origenId: tren.origen.id,
     destinoId: tren.destino.id,
     pasajeros: datos.pasajeros.map(aPasajeroApi),
+    ...(datos.asientos.length ? { asientos: datos.asientos } : {}),
   };
 }
 
@@ -160,6 +161,7 @@ export function billeteDeApi(api: BilleteApi): Billete {
     },
     asiento: asientoDeApi(api.asiento, api.coche, api.clase, api.precio),
     pasajero: { nombre, apellidos, documento: qr.doc ?? "", email: "" },
+    emitido: api.emitido,
     qr: api.qr,
   };
 }

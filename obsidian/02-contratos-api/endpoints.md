@@ -292,6 +292,12 @@ Notas:
 - La fecha se resuelve con `calendarios` + `calendario_excepciones` en la misma consulta, y `recoge`/
   `deja` excluyen las paradas técnicas.
 
+## GET /trenes/transbordos — añadido (Alex, 2026-10-30)
+
+Mismos parámetros que `GET /trenes`. Devuelve `{ datos: Opcion[], total }` con un transbordo como máximo, en la misma
+estación, con entre 15 min y 3 h de espera. `Opcion`: `{ tramos: [Tren, Tren], transbordo: { id, nombre }, esperaMin,
+duracionMin, precio }`. `precio` es la suma por plaza. Cada tramo se compra con su propio `POST /reservas`.
+
 ## GET /trenes/:feed/:tripId
 
 Descripción: detalle de un viaje: paradas, horas y retraso por parada.
@@ -360,6 +366,12 @@ trazado real del tren para el mapa. Sale de `formas` (el `shapes.txt` de Cercan�
 tiene forma (AV/LD/MD), de `tramos_via`: el camino por las vías de OpenStreetMap entre cada par de
 paradas seguidas (`pnpm gtfs:vias`). Donde falte un tramo, ese trozo va en línea recta entre las dos
 paradas. `null` si no hay ninguna geometría: la web y la app dibujan entonces parada a parada.
+
+## GET /trenes/:feed/:tripId/asientos — implementado (Alex, 2026-10-30)
+
+Query: `fecha`, `origen`, `destino`. Response `{ datos: [{ id: "1-2A", coche, fila, letra, clase, libre, precio }], total }`.
+`libre` es la ocupación real del viaje ese día. `POST /reservas` admite `asientos: ["1-2A"]` (uno por pasajero, opcional);
+si alguna ya no está libre responde 409. Cancelar una reserva libera sus butacas.
 
 ## GET /trenes/:feed/:tripId/posicion
 

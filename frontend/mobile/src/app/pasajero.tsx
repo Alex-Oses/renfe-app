@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
+import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import {
@@ -70,7 +71,10 @@ export default function Pasajero() {
   useEffect(() => {
     let vivo = true;
     obtenerTren(trenId)
-      .then(async (t) => [t, await obtenerAsientos(t)] as const)
+      .then(async (detalle) => {
+        const t = soloTramo(detalle, params.origen, params.destino);
+        return [t, await obtenerAsientos(t)] as const;
+      })
       .then(
       ([t, a]) => {
         if (!vivo) return;

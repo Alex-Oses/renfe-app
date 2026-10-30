@@ -140,7 +140,7 @@ describe('ReservasService.crear', () => {
 
     expect(reserva.billetes).toHaveLength(2);
     expect(reserva.total).toBe(Number((reserva.billetes[0]!.precio * 2).toFixed(2)));
-    expect(reserva.billetes[1]!.asiento).toBe('2B');
+    expect(reserva.billetes[1]!.asiento).toBe('1B');
   });
 
   it('rechaza fechas pasadas sin tocar la BD', async () => {

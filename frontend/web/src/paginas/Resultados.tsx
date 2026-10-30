@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
-import type { TipoTren, Tren } from "@renfe/shared/api/tipos";
+import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import type { OpcionTransbordo, TipoTren, Tren } from "@renfe/shared/api/tipos";
 import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
 import { Buscador } from "../componentes/Buscador";
 import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
@@ -80,6 +80,21 @@ export function Resultados() {
       .then(setTrenes)
       .catch((e: Error) => setError(e.message));
   }, [origen, destino, fecha]);
+
+  // Sin directos se ofrecen opciones con un transbordo.
+  const [transbordos, setTransbordos] = useState<OpcionTransbordo[] | null>(null);
+  useEffect(() => {
+    setTransbordos(null);
+    if (trenes?.length !== 0) return;
+    let vivo = true;
+    buscarTransbordos({ origen, destino, fecha }).then(
+      (o) => vivo && setTransbordos(o),
+      () => vivo && setTransbordos([]),
+    );
+    return () => {
+      vivo = false;
+    };
+  }, [trenes, origen, destino, fecha]);
 
   // Calendario con el precio más barato de cada día, como el de Renfe.
   useEffect(() => {
@@ -174,7 +189,7 @@ export function Resultados() {
                 <li key={f}>
                   <Link to={enlaceFecha(f)} aria-current={d === 0 ? "date" : undefined}>
                     <span>{texto}</span>
-                    <strong>{p === undefined ? "…" : p === null ? "Sin plazas" : `desde ${euros.format(p)}`}</strong>
+                    <strong>{p === undefined ? "…" : p === null ? "Sin directos" : `desde ${euros.format(p)}`}</strong>
                   </Link>
                 </li>
               );
@@ -230,7 +245,41 @@ export function Resultados() {
           ))}
         </ol>
       )}
-      {trenes?.length === 0 && !desconocidas.length && (
+      {trenes?.length === 0 && transbordos === null && <p className="cargando">Buscando opciones con transbordo…</p>}
+      {transbordos && transbordos.length > 0 && (
+        <section aria-labelledby="con-transbordo">
+          <h2 id="con-transbordo">No hay trenes directos: opciones con transbordo</h2>
+          <ol className="transbordos">
+            {transbordos.map((o) => {
+              const [a, b] = o.tramos;
+              const q = new URLSearchParams({ origen, destino, fecha, a: a.id, b: b.id, pasajeros: String(pasajeros) });
+              return (
+                <li key={`${a.id}|${b.id}`} className="transbordo tarjeta">
+                  <div className="transbordo__horas">
+                    <time dateTime={a.salida}>{a.salida.slice(11, 16)}</time>
+                    <span>{textoDuracion(o.duracionMin)}</span>
+                    <time dateTime={b.llegada}>{b.llegada.slice(11, 16)}</time>
+                  </div>
+                  <p className="transbordo__ruta">
+                    <span className="tren__tipo">{a.tipo}</span> {a.numero || a.linea} hasta {a.destino.nombre} ({a.llegada.slice(11, 16)})
+                    <br />
+                    <strong>Transbordo en {o.transbordo.nombre}: {textoDuracion(o.esperaMin)} de espera</strong>
+                    <br />
+                    <span className="tren__tipo">{b.tipo}</span> {b.numero || b.linea} sale a las {b.salida.slice(11, 16)}
+                  </p>
+                  <div className="tren__compra">
+                    <span className="tren__precio">{euros.format(o.precio)}</span>
+                    <Link className="boton" to={`/transbordo?${q}`}>
+                      Elegir
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
+      {trenes?.length === 0 && transbordos?.length === 0 && !desconocidas.length && (
         <div className="aviso vacio">
           <p>No hay trenes para este trayecto ese día. Prueba con otra estación o con otro día.</p>
           <Link className="boton boton--secundario" to={enlaceDia(1)}>
@@ -289,7 +338,7 @@ export function Resultados() {
                 {abierto === t.id && (
                   <ul className="tarifas" id={`tarifas-${i}`} aria-label={`Tarifas del ${nombreDeTren(t)}`}>
                     {TARIFAS.map((ta) => {
-                      const q = new URLSearchParams({ pasajeros: String(pasajeros), tarifa: ta.id, ...Object.fromEntries(extra) });
+                      const q = new URLSearchParams({ origen, destino, pasajeros: String(pasajeros), tarifa: ta.id, ...Object.fromEntries(extra) });
                       return (
                         <li key={ta.id} className={`tarifa cristal tarifa--${ta.id}`}>
                           <h3>{ta.nombre}</h3>

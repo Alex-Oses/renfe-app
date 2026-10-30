@@ -130,6 +130,14 @@ export interface Pasajero {
   tipo?: TipoViajero; // sin tipo = adulto
 }
 
+export interface OpcionTransbordo {
+  tramos: [Tren, Tren];
+  transbordo: { id: string; nombre: string };
+  esperaMin: number;
+  duracionMin: number;
+  precio: number; // suma por plaza
+}
+
 export interface NuevaReserva {
   trenId: string;
   asientos: string[]; // ids de Asiento
@@ -168,6 +176,7 @@ export interface Billete {
   asiento: Asiento;
   pasajero: Pasajero;
   usuarioId?: string; // dueño del billete; sin sesión, undefined
+  emitido?: string; // con API: permite reconocer los tramos de un mismo transbordo
   qr: string; // contenido firmado (Ed25519 en la API real); el frontend solo lo pinta
 }
 
@@ -390,6 +399,7 @@ export interface NuevaReservaApi {
   origenId: string;
   destinoId: string;
   pasajeros: PasajeroApi[]; // de 1 a 6: una butaca por pasajero
+  asientos?: string[]; // butacas elegidas: "coche-asiento"
 }
 
 export interface BilleteEmitidoApi {
