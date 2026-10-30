@@ -1,5 +1,5 @@
 ---
-actualizado: 2026-10-29
+actualizado: 2026-10-30
 tags: [estado]
 ---
 
@@ -11,7 +11,7 @@ tags: [estado]
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
 | Alex | PO + Frontend | 🟢 | La web ya usa los datos reales de la API: buscador con `/estaciones`, resultados con `/trenes`, mapa con recorrido y paradas del GTFS estático, retraso de GTFS-RT (incluido «Sin datos») y login facial con el cuerpo del contrato. `lint`, `test` y build en verde, sin commit todavía ([[2026-10-29-alex-mapa-datos-reales]]). Además: Dependabot sin PRs, títulos de PR flexibles y revisión obligatoria de todo el equipo (3 aprobaciones, PR #81) | Para la app: BD (Marina) y facial (Rubén). El facial sigue en 1024 (Human) y el ADR pide 512 | 2026-10-29 |
-| Rubén | Backend + chatbot | 🟢 | Chatbot Gemini operativo; el chat demo mantiene conversación básica y puede buscar trayectos simulados; entorno local configurado contra la API en `localhost:3100`, con Supabase Cloud y BD comprobadas | El chatbot real superó el timeout local de 8 s en una consulta de Tarragona a Barcelona; revisar latencia de Gemini/API antes de la demo | 2026-10-29 |
+| Rubén | Backend + chatbot | 🟢 | Chatbot con contexto en `.md`, memoria por conversación, pasos en vivo por SSE, Markdown y tarjetas de tren (1 + «Mostrar más», máximo 8) en la web. Lint limpio y 137 + 101 + 38 tests en verde ([[2026-10-30-ruben-chatbot-web-trenes-pasos]]) | Falta probar el chat en la app Expo (usa el endpoint JSON); la latencia de Gemini sigue siendo el riesgo de la demo | 2026-10-30 |
 | Marina | SM + Base de datos | 🟢 | **Supabase Cloud validada**: proyecto `hqwwucagvlhnlqrspwvh` (eu-west-1), 4 migraciones con `db push`, catálogo AV/LD cargado por el session pooler y `gtfs:verificar` en verde (1 035 estaciones / 668 rutas / 8 908 viajes / 71 781 horarios, feed 29/10). Los 3 PRs (#72, #73, #74) ya están mergeados. Siguiente: `DATABASE_URL` en Render ([[supabase-nube]]) | Nada por mi parte. Render sigue en 503 hasta que Kevin/Alex pongan `DATABASE_URL` | 2026-10-29 |
 | Kevin | DevOps + despliegue + Docker | 🟢 | CI revisada y en verde (excepción para Dependabot + `pnpm test:ramas`): PR **#75** abierta, `CI / ok` y `PR / reglas` ✅, falta aprobación. API viva en Render sin base de datos. Siguiente: en cuanto exista Supabase Cloud ([[supabase-nube]]) rellenar las variables de Render; y Docker (D10 de [[ADR-005-app-movil-expo]]) | `DATABASE_URL` bloqueada hasta que Marina cree Supabase Cloud | 2026-10-28 |
 
