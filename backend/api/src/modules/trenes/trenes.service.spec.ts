@@ -1,6 +1,6 @@
 import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { BdService } from '../../common/bd/bd.service.js';
-import { TrenesService } from './trenes.service.js';
+import { sinViajesDuplicados, TrenesService, unirTramos } from './trenes.service.js';
 
 const fila = {
   feed: 'avld',
@@ -208,5 +208,46 @@ describe('TrenesService.detalle', () => {
     await expect(
       servicio.detalle('avld', '3097L23537C1', '2026-11-02'),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+});
+
+describe('sinViajesDuplicados', () => {
+  it('quita el mismo tren publicado con dos trip_id', () => {
+    const filas = [
+      { viaje_id: 'A1', numero: '03073', sale: '07:27:00' },
+      { viaje_id: 'A2', numero: '03073', sale: '07:27:00' },
+      { viaje_id: 'B1', numero: '03081', sale: '07:57:00' },
+      { viaje_id: 'C1', numero: null, sale: '07:57:00' },
+    ];
+    expect(sinViajesDuplicados(filas).map((f) => f.viaje_id)).toEqual(['A1', 'B1', 'C1']);
+  });
+});
+
+describe('recorrido del viaje', () => {
+  const parada = { feed: 'avld', viaje_id: 'T1', nombre_corto: 'AVE', nombre: 'X', tipo_servicio: 'ave', secuencia: 1, estacion_id: 'A', estacion_nombre: 'A', llega: null, sale: '07:00:00' };
+  const con = (recorrido: unknown) =>
+    new TrenesService({
+      consultar: async (sql: string) => ({ rows: sql.includes('tramos_via') ? [recorrido] : [parada] }),
+    } as unknown as BdService);
+
+  it('usa la forma de shapes.txt si el viaje la tiene', async () => {
+    const v = await con({ forma: [[1, 1], [2, 2]], tramos: [[[9, 9], [8, 8]]] }).detalle('avld', 'T1', '2026-11-02');
+    expect(v.recorrido).toEqual([[1, 1], [2, 2]]);
+  });
+
+  it('si no, encadena los tramos por las vías sin repetir las uniones', async () => {
+    const v = await con({ forma: null, tramos: [[[1, 1], [1.5, 1.2], [2, 2]], [[2, 2], [3, 3]]] }).detalle('avld', 'T1', '2026-11-02');
+    expect(v.recorrido).toEqual([[1, 1], [1.5, 1.2], [2, 2], [3, 3]]);
+  });
+
+  it('sin geometría (o si la consulta falla) devuelve null y el detalle sigue', async () => {
+    const servicio = new TrenesService({
+      consultar: async (sql: string) => {
+        if (sql.includes('tramos_via')) throw new Error('relation "tramos_via" does not exist');
+        return { rows: [parada] };
+      },
+    } as unknown as BdService);
+    expect((await servicio.detalle('avld', 'T1', '2026-11-02')).recorrido).toBeNull();
+    expect(unirTramos([])).toEqual([]);
   });
 });

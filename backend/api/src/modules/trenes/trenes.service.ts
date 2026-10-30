@@ -45,11 +45,14 @@ export interface TrenDetalle {
   llegada: string;
   retrasoSeg: number | null;
   paradas: Parada[];
+  /** Trazado real [lat, lon] para el mapa; `null` si no hay geometría (se dibuja parada a parada). */
+  recorrido: [number, number][] | null;
 }
 
 interface FilaParada {
   feed: string;
   viaje_id: string;
+  numero: string | null;
   nombre_corto: string | null;
   nombre: string;
   tipo_servicio: string | null;
@@ -63,6 +66,7 @@ interface FilaParada {
 interface FilaTren {
   feed: string;
   viaje_id: string;
+  numero: string | null;
   nombre_corto: string | null;
   nombre: string;
   tipo_servicio: string | null;
@@ -82,6 +86,7 @@ interface FilaTren {
 const SQL_BUSCAR = `
   select v.feed,
          v.id as viaje_id,
+         v.numero,
          r.nombre_corto,
          r.nombre,
          r.tipo_servicio,
@@ -122,10 +127,25 @@ const lineaDe = (fila: { nombre_corto: string | null; nombre: string }) =>
 const tipoDe = (tipoServicio: string | null) => tipoServicio?.toUpperCase() ?? 'DESCONOCIDO';
 const numeroDe = (nombreCorto: string | null) => nombreCorto?.match(/(\d+)\s*$/)?.[1] ?? null;
 
+// El feed de Renfe publica a veces el mismo tren con dos trip_id activos el mismo día
+// (p. ej. 0307312026-10-28 y 0307322026-10-28): se queda el primero por número y salida.
+export function sinViajesDuplicados<T extends { numero: string | null; sale: string; viaje_id: string }>(
+  filas: T[],
+): T[] {
+  const vistos = new Set<string>();
+  return filas.filter((f) => {
+    const clave = `${f.numero ?? f.viaje_id}|${f.sale}`;
+    if (vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
+  });
+}
+
 // Todas las paradas del viaje, en orden. El viaje tiene que circular ese día.
 const SQL_DETALLE = `
   select v.feed,
          v.id as viaje_id,
+         v.numero,
          r.nombre_corto,
          r.nombre,
          r.tipo_servicio,
@@ -176,8 +196,9 @@ export class TrenesService {
       throw new ServiceUnavailableException('La base de datos no está disponible');
     }
 
+    const unicas = sinViajesDuplicados(filas);
     return {
-      datos: filas.map((fila) => {
+      datos: unicas.map((fila) => {
         const clave = `${fila.feed}:${fila.viaje_id}:${fecha}`;
         return {
           id: clave,
@@ -186,7 +207,7 @@ export class TrenesService {
           fecha,
           linea: lineaDe(fila),
           tipo: tipoDe(fila.tipo_servicio),
-          numero: numeroDe(fila.nombre_corto),
+          numero: fila.numero ?? numeroDe(fila.nombre_corto),
           origen: { id: fila.origen_id, nombre: fila.origen_nombre },
           destino: { id: fila.destino_id, nombre: fila.destino_nombre },
           salida: intervaloAIso(fecha, fila.sale),
@@ -198,7 +219,7 @@ export class TrenesService {
           plazasLibres: plazasSimuladas(clave),
         };
       }),
-      total: filas.length > 0 ? Number(filas[0].total) : 0,
+      total: filas.length > 0 ? Number(filas[0].total) - (filas.length - unicas.length) : 0,
     };
   }
 
@@ -216,6 +237,7 @@ export class TrenesService {
 
     const primera = filas[0]!;
     const ultima = filas.at(-1)!;
+    const recorrido = await this.recorrido(feed, tripId);
 
     return {
       feed: primera.feed,
@@ -223,7 +245,7 @@ export class TrenesService {
       fecha,
       linea: lineaDe(primera),
       tipo: tipoDe(primera.tipo_servicio),
-      numero: numeroDe(primera.nombre_corto),
+      numero: primera.numero ?? numeroDe(primera.nombre_corto),
       origen: { id: primera.estacion_id, nombre: primera.estacion_nombre },
       destino: { id: ultima.estacion_id, nombre: ultima.estacion_nombre },
       // GTFS exige hora de llegada o de salida en cada parada: la que falte se toma de la otra.
@@ -237,6 +259,55 @@ export class TrenesService {
         sale: fila.sale === null ? null : intervaloAIso(fecha, fila.sale),
         retrasoSeg: null,
       })),
+      recorrido,
     };
   }
+
+  // Forma de shapes.txt (Cercanías) o, si no hay, los tramos por las vías de OSM entre paradas
+  // seguidas; donde falte un tramo, línea recta entre esas dos paradas. Un fallo aquí no tumba el detalle.
+  private async recorrido(feed: string, tripId: string): Promise<[number, number][] | null> {
+    try {
+      const { rows } = await this.bd.consultar<{ forma: Punto[] | null; tramos: Punto[][] | null }>(SQL_RECORRIDO, [feed, tripId]);
+      const { forma, tramos } = rows[0] ?? { forma: null, tramos: null };
+      if (forma?.length) return forma;
+      return tramos?.length ? unirTramos(tramos) : null;
+    } catch {
+      return null;
+    }
+  }
 }
+
+type Punto = [number, number];
+
+/** Encadena tramos sin repetir el punto de unión (el final de uno es el principio del siguiente). */
+export function unirTramos(tramos: Punto[][]): Punto[] {
+  const salida: Punto[] = [];
+  for (const tramo of tramos) {
+    for (const p of tramo) {
+      const ultimo = salida.at(-1);
+      if (!ultimo || ultimo[0] !== p[0] || ultimo[1] !== p[1]) salida.push(p);
+    }
+  }
+  return salida;
+}
+
+const SQL_RECORRIDO = `
+  with viaje as (
+    select forma_id from viajes where feed = $1 and id = $2
+  ),
+  paradas as (
+    select h.secuencia, h.estacion_id,
+           lead(h.estacion_id) over (order by h.secuencia) as siguiente
+      from horarios h
+     where h.feed = $1 and h.viaje_id = $2
+  )
+  select (select f.puntos from formas f join viaje v on f.feed = $1 and f.id = v.forma_id) as forma,
+         (select jsonb_agg(
+                   coalesce(t.puntos, jsonb_build_array(jsonb_build_array(eo.lat, eo.lon),
+                                                        jsonb_build_array(ed.lat, ed.lon)))
+                   order by p.secuencia)
+            from paradas p
+            join estaciones eo on eo.id = p.estacion_id
+            join estaciones ed on ed.id = p.siguiente
+            left join tramos_via t on t.origen_id = p.estacion_id and t.destino_id = p.siguiente) as tramos
+`;

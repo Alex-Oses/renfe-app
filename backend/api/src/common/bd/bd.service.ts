@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Pool, type QueryResult, type QueryResultRow } from 'pg';
+import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
 
 export type EstadoBd = 'ok' | 'no configurada' | 'error';
 
@@ -35,6 +35,27 @@ export class BdService implements OnModuleDestroy {
   ): Promise<QueryResult<T>> {
     if (!this.pool) throw new Error('DATABASE_URL no configurada');
     return this.pool.query<T>(sql, valores);
+  }
+
+  /**
+   * Transacción de una sola conexión: reserva y emisión de billetes tienen que
+   * ir juntas o no ir. Si `fn` lanza, se hace `rollback` y se propaga el error.
+   */
+  async transaccion<T>(fn: (cliente: PoolClient) => Promise<T>): Promise<T> {
+    if (!this.pool) throw new Error('DATABASE_URL no configurada');
+
+    const cliente = await this.pool.connect();
+    try {
+      await cliente.query('begin');
+      const resultado = await fn(cliente);
+      await cliente.query('commit');
+      return resultado;
+    } catch (error) {
+      await cliente.query('rollback').catch(() => undefined);
+      throw error;
+    } finally {
+      cliente.release();
+    }
   }
 
   async onModuleDestroy(): Promise<void> {

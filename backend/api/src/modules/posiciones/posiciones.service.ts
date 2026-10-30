@@ -1,10 +1,18 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FEEDS, type Feed } from '../../common/gtfs/feeds.js';
 import { instanteAIso } from '../../common/gtfs/tiempo.js';
+import { BdService } from '../../common/bd/bd.service.js';
 import type { PosicionesDto } from './dto/posiciones.dto.js';
+import { enriquecer, type Enriquecida } from './enriquecer.js';
 
-export interface Posicion {
+export interface PosicionRt {
   feed: Feed;
   vehicleId: string | null;
   tripId: string;
@@ -13,9 +21,12 @@ export interface Posicion {
   rumbo: number | null;
   velocidadKmh: number | null;
   estado: string | null;
+  paradaActual: string | null;
   retrasoSeg: number | null;
   actualizado: string;
 }
+
+export type Posicion = Enriquecida<PosicionRt>;
 
 interface FeedRtJson {
   header?: { timestamp?: string | number };
@@ -24,9 +35,20 @@ interface FeedRtJson {
       trip?: { tripId?: string };
       position?: { latitude?: number; longitude?: number; bearing?: number; speed?: number };
       currentStatus?: string;
+      stopId?: string;
       vehicle?: { id?: string };
     };
   }[];
+}
+
+interface FeedRetrasosJson {
+  entity?: { tripUpdate?: { trip?: { tripId?: string }; delay?: number } }[];
+}
+
+interface Fuente {
+  feed: Feed;
+  posiciones: string;
+  retrasos: string;
 }
 
 interface Instantanea {
@@ -35,9 +57,14 @@ interface Instantanea {
   expira: number;
 }
 
-const URLS: Record<Feed, string> = {
+const URLS_POSICIONES: Record<Feed, string> = {
   avld: 'https://gtfsrt.renfe.com/vehicle_positions_LD.json',
   cercanias: 'https://gtfsrt.renfe.com/vehicle_positions.json',
+};
+
+const URLS_RETRASOS: Record<Feed, string> = {
+  avld: 'https://gtfsrt.renfe.com/trip_updates_LD.json',
+  cercanias: 'https://gtfsrt.renfe.com/trip_updates.json',
 };
 
 const ESPERA_MAXIMA_MS = 5_000;
@@ -47,7 +74,10 @@ export class PosicionesService {
   private instantanea: Instantanea | null = null;
   private enCurso: Promise<Instantanea> | null = null;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    @Optional() private readonly bd?: BdService,
+  ) {}
 
   async obtener({ bbox, feed }: PosicionesDto): Promise<{ datos: Posicion[]; actualizado: string }> {
     const { datos, actualizado } = await this.instantaneaActual();
@@ -70,6 +100,17 @@ export class PosicionesService {
     };
   }
 
+  /**
+   * Última posición conocida de un viaje. El `tripId` de GTFS-RT es el `trip_id` del GTFS estático,
+   * así que se busca tal cual: no hay que cruzarlo con nada.
+   */
+  async posicionDe(feed: Feed, tripId: string): Promise<Posicion> {
+    const { datos } = await this.instantaneaActual();
+    const posicion = datos.find((candidata) => candidata.feed === feed && candidata.tripId === tripId);
+    if (!posicion) throw new NotFoundException('Ese viaje no está circulando ahora');
+    return posicion;
+  }
+
   /** Snapshot en memoria: se refresca como mucho cada `TTL`, y una sola descarga a la vez. */
   private async instantaneaActual(): Promise<Instantanea> {
     if (this.instantanea && Date.now() < this.instantanea.expira) return this.instantanea;
@@ -82,8 +123,11 @@ export class PosicionesService {
 
   private async refrescar(): Promise<Instantanea> {
     try {
-      const feeds = await Promise.all(this.fuentes().map(([feed, url]) => this.descargar(feed, url)));
-      const datos = feeds.flatMap((feed) => feed.datos);
+      const feeds = await Promise.all(this.fuentes().map((fuente) => this.descargar(fuente)));
+      const datos = await enriquecer(
+        feeds.flatMap((feed) => feed.datos),
+        this.bd,
+      );
       // El `actualizado` del conjunto es el del feed más antiguo: es el que se queda corto.
       const actualizado = feeds.map((feed) => feed.actualizado).sort()[0]!;
 
@@ -100,16 +144,17 @@ export class PosicionesService {
     }
   }
 
-  private async descargar(feed: Feed, url: string): Promise<{ datos: Posicion[]; actualizado: string }> {
-    const respuesta = await fetch(url, { signal: AbortSignal.timeout(ESPERA_MAXIMA_MS) });
-    if (!respuesta.ok) throw new Error(`${feed}: HTTP ${respuesta.status}`);
+  private async descargar(fuente: Fuente): Promise<{ datos: PosicionRt[]; actualizado: string }> {
+    const [cuerpo, retrasos] = await Promise.all([
+      this.leer<FeedRtJson>(fuente.feed, fuente.posiciones),
+      this.retrasos(fuente),
+    ]);
 
-    const cuerpo = (await respuesta.json()) as FeedRtJson;
     const actualizado = instanteAIso(
       new Date(Number(cuerpo.header?.timestamp ?? Date.now() / 1000) * 1000),
     );
 
-    const datos: Posicion[] = [];
+    const datos: PosicionRt[] = [];
     for (const { vehicle } of cuerpo.entity ?? []) {
       const posicion = vehicle?.position;
       // Hay vehículos sin posición publicada; no se inventan coordenadas.
@@ -118,7 +163,7 @@ export class PosicionesService {
       }
 
       datos.push({
-        feed,
+        feed: fuente.feed,
         vehicleId: vehicle.vehicle?.id ?? null,
         tripId: vehicle.trip.tripId,
         lat: posicion.latitude,
@@ -126,8 +171,9 @@ export class PosicionesService {
         rumbo: posicion.bearing === undefined ? null : Math.round(posicion.bearing),
         velocidadKmh: posicion.speed === undefined ? null : Math.round(posicion.speed * 3.6),
         estado: vehicle.currentStatus ?? null,
-        // El retraso vive en `trip_updates`, que no se lee aquí: es `null`, no un cero engañoso.
-        retrasoSeg: null,
+        paradaActual: vehicle.stopId ?? null,
+        // Puede ser negativo: el tren va adelantado, no es un dato inválido.
+        retrasoSeg: retrasos.get(vehicle.trip.tripId) ?? null,
         actualizado,
       });
     }
@@ -135,14 +181,38 @@ export class PosicionesService {
     return { datos, actualizado };
   }
 
-  /** Pares feed→URL de los feeds configurados. Una variable vacía desactiva ese feed. */
-  private fuentes(): [Feed, string][] {
-    return FEEDS.map(
-      (feed): [Feed, string] => [
+  /** Retraso publicado por viaje, en segundos. Se cruza por `tripId`, que es el mismo en los dos feeds. */
+  private async retrasos(fuente: Fuente): Promise<Map<string, number>> {
+    const porViaje = new Map<string, number>();
+    try {
+      const cuerpo = await this.leer<FeedRetrasosJson>(fuente.feed, fuente.retrasos);
+      for (const { tripUpdate } of cuerpo.entity ?? []) {
+        const tripId = tripUpdate?.trip?.tripId;
+        if (tripId && typeof tripUpdate.delay === 'number') porViaje.set(tripId, tripUpdate.delay);
+      }
+    } catch {
+      // El retraso es un extra: si su feed falla, el mapa se sirve igual con `retrasoSeg: null`.
+      // shortcut: un fallo deja sin retraso a todo el feed hasta el siguiente sondeo.
+    }
+    return porViaje;
+  }
+
+  private async leer<T>(feed: Feed, url: string): Promise<T> {
+    const respuesta = await fetch(url, { signal: AbortSignal.timeout(ESPERA_MAXIMA_MS) });
+    if (!respuesta.ok) throw new Error(`${feed}: HTTP ${respuesta.status}`);
+    return (await respuesta.json()) as T;
+  }
+
+  /** Feeds configurados. Una variable vacía usa la URL pública de Renfe. */
+  private fuentes(): Fuente[] {
+    return FEEDS.map((feed) => {
+      const clave = feed.toUpperCase();
+      return {
         feed,
-        this.config.get<string>(`GTFS_RT_URL_${feed.toUpperCase()}`) || URLS[feed],
-      ],
-    );
+        posiciones: this.config.get<string>(`GTFS_RT_URL_${clave}`) || URLS_POSICIONES[feed],
+        retrasos: this.config.get<string>(`GTFS_RT_URL_RETRASOS_${clave}`) || URLS_RETRASOS[feed],
+      };
+    });
   }
 
   private ttl(): number {

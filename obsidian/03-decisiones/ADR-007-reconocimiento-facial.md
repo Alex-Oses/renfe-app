@@ -1,0 +1,129 @@
+---
+fecha: 2026-10-28
+estado: aceptado
+autor: Rubén
+tags: [adr, facial, auth, seguridad]
+---
+
+# ADR-007 — Reconocimiento facial: ArcFace 512, lógica en la base de datos y JWT propio
+
+Sustituye **solo la parte de reconocimiento facial** de [[ADR-004-web-primero-vercel-render]]. El resto
+de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
+
+> El 28/10 el equipo descartó el servidor Python: el vector lo calcula el dispositivo y Postgres decide.
+> Si [[ADR-005-app-movil-expo]] (D7) o [[ADR-006-tornos-faciales-futuro]] dicen otra cosa, **manda este
+> ADR**.
+
+## Contexto
+
+- El inicio de sesión facial es **obligatorio** en la entrega.
+- ADR-004 lo resolvió con Human en el navegador y la comparación en el cliente, contra una plantilla
+  en `localStorage`. Funciona, pero la plantilla la puede cambiar cualquiera desde las herramientas del
+  navegador y no hay ni una regla en el servidor.
+- La entrega principal será una **app móvil**, así que el facial tiene que funcionar fuera del navegador.
+- Requisito del equipo: **ninguna lógica de negocio en el frontend** y **nada se conecta a la base de
+  datos directamente**.
+- Nunca se guardan fotos: solo el vector ([[modelo-datos]] §3.2 y §9).
+
+## Decisión
+
+1. **Modelo ArcFace de 512 dimensiones**, el mismo en la web y en la app. Es el estándar de facto, tiene
+   benchmarks publicados y umbrales documentados, y coincide con el `vector(512)` que ya está en el
+   modelo de datos: **no hay que cambiar el esquema**.
+2. **No se tira Human.** Se queda para detección, malla facial, antispoof y liveness. Solo se sustituye
+   su paso de `description` por ArcFace. Así el alineado a 112×112 usa los puntos que Human ya calcula
+   y no hay que montar un detector propio.
+3. **El dispositivo calcula el vector; el servidor decide todo lo demás.** Postgres no puede ejecutar un
+   modelo, así que calcular el embedding es la única pieza que no vive en la base de datos. El frontend
+   no conoce el umbral, no decide nada y no puede leer la plantilla.
+4. **Toda la lógica de negocio en funciones de Postgres** (`registrar_cara`, `verificar_cara`),
+   `security definer`, con `execute` solo para `service_role`. También el `reset` de la plantilla es
+   una función (`resetear_cara`) que comprueba el rol `admin` dentro de Postgres.
+5. **La tabla es de Marina, no mía.** `embeddings_faciales` (FK a `perfiles`) la crea ella en
+   `20261028120100_identidad.sql`; mi migración va **después** (`20261028120300_...`) y solo añade
+   `config_cara`, las tres funciones y el valor `admin` en el CHECK de `perfiles.rol`. Una sola
+   definición de cada tabla: no hay versión duplicada ni `create table` repetido.
+6. **JWT propio**, firmado por la API (HS256 con el secreto compartido de Supabase), igual que el del
+   login con contraseña. Un solo formato de token y un solo guard.
+7. **La contraseña la gestiona Supabase Auth.** La app habla con la API de Auth, nunca con Postgres.
+8. **Una sola plantilla por usuario y no se puede cambiar.** El `reset` solo lo puede hacer un `admin`.
+9. **Se elimina `backend/face-service/`** y `FACE_SERVICE_URL` del `.env.example`.
+
+## Alternativas descartadas
+
+- **Servicio Python (InsightFace + FastAPI)**: no cabe en los 512 MB del plan gratuito de Render, ya lo
+  descartaba ADR-004, añade un despliegue y un `Dockerfile` más, y obliga a mandar fotos por la red.
+- **`onnxruntime-node` dentro de la API**: factible, pero mete 100–200 MB de runtime en el servicio
+  gratuito y arriesga el despliegue que sostiene toda la demo.
+- **Human 1024 (`faceres`)**: es el más cómodo porque funciona hoy, pero no tiene benchmarks y obliga a
+  `vector(1024)`. Peor: si la app acabara usando ArcFace, web y app no serían compatibles y el usuario
+  registrado en una no podría entrar en la otra.
+- **Servicio gestionado (Azure Face, AWS, Google)**: cuentas, tarjetas y cuotas, y una dependencia de un
+  tercero en la demo. Choca con «gratis 100 %».
+- **Admin API de Supabase para emitir la sesión**: obliga a `service_role` y a un ida y vuelta extra
+  (`generate_link` → `verifyOtp`). Hoy el único consumidor del token es nuestra API, así que no compensa.
+
+## Consecuencias
+
+- **El coste del alineado se evita en su mayor parte.** Human ya da detección y puntos faciales: solo hay
+  que recortar, deformar a 112×112 con los 5 puntos de referencia de ArcFace y pasar el ONNX. Estimación:
+  ~1 día en la web. En la app, si reutiliza la web en un webview, cero.
+- **La web deja de tener facial hasta ese cambio.** Las plantillas de `localStorage` no valen: hay que
+  volver a registrarse. Y está bien, porque esas plantillas eran falsificables.
+- **El vector se puede reutilizar entre modelos sin dar falsos negativos**: la columna `modelo` lo
+  detecta y la verificación devuelve `modelo_distinto` en vez de decir «no eres tú».
+- **Seguridad aceptada y declarada**: el vector lo calcula el cliente, así que alguien puede saltarse la
+  cámara y reenviar uno capturado. Mitigación: TLS, que el vector solo sirva junto al email y que el
+  facial sea **alternativa** a la contraseña, nunca el único factor.
+- **El umbral es dato, no código**: una fila en `config_cara`. Se mide con ~10 intentos propios y ~10
+  ajenos, y se pone entre el máximo ajeno y el mínimo propio, con margen.
+- **La migración va después de la de Marina y depende de ella**: `embeddings_faciales` y `perfiles` las
+  crea su `20261028120100_identidad.sql`. La mía (`20261028120300_...`) añade `config_cara`, las tres
+  funciones y el valor `admin` en el CHECK de `perfiles.rol`. El rol del `reset` se lee de
+  `perfiles.rol`, que es donde vive según [[modelo-datos]] §3.1.
+- **Sin refresco de token**: el JWT facial dura 12 h y después hay que volver a mirar a la cámara. No hay
+  `refresh_token` porque no lo emite Supabase Auth. Tampoco se puede revocar un token suelto.
+
+## Pendiente
+
+- **Alex**: OK a cambiar `description` de Human por ArcFace en la web (es su área), y decidir si la app
+  reutiliza la web en webview o monta el modelo nativo.
+- **Kevin**: `backend/face-service/` ya está borrado, junto con su servicio en `docker-compose.yml`, su
+  línea en `CODEOWNERS`, el bloque de `dependabot.yml`, la etiqueta de `labeler.yml` y
+  `FACE_SERVICE_URL` del `.env.example`. Solo queda que lo revise y que borre la etiqueta `face` en
+  GitHub si quiere.
+- **Marina**: abrir el PR de `feat/db-migracion-catalogo-gtfs` (no tiene) y revisar el
+  `alter table perfiles` de mi migración, que amplía su `perfiles_rol_check` para admitir `admin`. Si
+  prefiere meterlo en la suya, mi línea sobra y se borra. Falta también saber si el proyecto de Supabase
+  firma los JWT con HS256 o con claves asimétricas.
+- **Rubén**: medir el umbral con una ejecución real y ajustar `config_cara`.
+- **Rubén / Alex**: **elegir el fichero ONNX concreto** de ArcFace 512. `config_cara.modelo` vale hoy
+  `arcface/buffalo_l`, que es un identificador provisional: el modelo de reconocimiento de referencia
+  (ResNet50 entrenado con ArcFace) pesa demasiado para cargarlo en el navegador, así que hay que
+  encontrar una variante móvil o cuantizada de 512 dimensiones y medirla. **Si cambia el modelo, cambia
+  el valor de `config_cara.modelo` y todo el mundo se vuelve a registrar** (la verificación devuelve
+  `modelo_distinto` en vez de un falso negativo).
+
+## Ficheros
+
+- `backend/database/supabase/migrations/20261028120300_reconocimiento_facial.sql`
+- [[endpoints]]: `POST /auth/cara/registrar`, `POST /auth/cara/verificar` y `POST /auth/cara/reset`
+- Este ADR
+
+## Actualización 2026-10-29 (Alex): modelo elegido y web conectada
+
+- **Fichero ONNX:** `w600k_mbf.onnx` (MobileFaceNet entrenado con ArcFace, 512 dimensiones, 13,6 MB) del
+  paquete `buffalo_s` de la release oficial v0.7 de InsightFace. SHA-256
+  `9cc6e4a75f0e2bf0b1aed94578f144d15175f357bdc05e815e5c4a02b319eb4f`. Se sirve desde
+  `frontend/web/public/modelos/arcface-w600k-mbf.onnx` con `onnxruntime-web` (backend `wasm`).
+- **`config_cara.modelo` = `arcface/w600k_mbf`** (migración `20261029130000_modelo_cara_w600k_mbf.sql`).
+  Las plantillas guardadas con `arcface/buffalo_l` dejan de valer: hay que volver a registrar la cara.
+- **Web:** Human ya no calcula `description`; da la malla (468 puntos) y el liveness/antispoof. Los 5 puntos
+  de ArcFace salen de la malla, se alinea a 112×112 con una semejanza (Umeyama) y se pasa el ONNX
+  (`frontend/web/src/paginas/cuenta/arcface.ts`).
+- **Medido en navegador** con recortes de una foto (no con cámara): misma persona con otro encuadre,
+  coseno 0,979 y 0,998; personas distintas, entre −0,10 y 0,07. Contra la API local: misma cara → 200 con
+  token; otras → 401. **Falta medir el umbral con la cámara y fotos distintas de la misma persona.**
+- **Licencia:** los modelos de InsightFace son solo para uso no comercial/investigación. Vale para el
+  proyecto de clase; para un uso real habría que cambiarlo.
+

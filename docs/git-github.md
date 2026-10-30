@@ -38,11 +38,11 @@ bash scripts/configurar-github.sh Alex-Oses/renfe-app
 Hace todo esto:
 - `develop` como rama por defecto.
 - Merges: **squash** (PRs a develop) y **merge commit** (develop → main); rebase-merge desactivado; borrar ramas al mergear; auto-merge permitido.
-- Protección de `main` y `develop`: PR obligatorio, 1 aprobación, revisión de CODEOWNERS, descartar aprobaciones al hacer push, checks `CI / ok` y `PR / reglas` obligatorios y actualizados, conversaciones resueltas, sin force push ni borrado.
+- Protección de `main` y `develop`: PR obligatorio, **3 aprobaciones (todo el equipo)**, revisión de CODEOWNERS, descartar aprobaciones al hacer push, última aprobación distinta de quien empujó, checks `CI / ok` y `PR / reglas` obligatorios y actualizados, conversaciones resueltas, sin force push ni borrado y aplicado también a los admins.
 - Labels por área y milestones `Sprint 0` … `Sprint 7`.
 
 > Los checks obligatorios solo aparecen en GitHub después de que la CI se haya ejecutado una vez. Si el script falla en la protección por eso, abre un PR de prueba, deja que pase la CI y vuelve a lanzar el script.
-> Como admin, Alex puede saltarse la protección en emergencias (`enforce_admins: false`). No lo uses por costumbre.
+> La protección se aplica también a los admins (`enforce_admins: true`): nadie puede saltársela. Para cambiar la política, edita `scripts/configurar-github.sh` y vuelve a ejecutarlo.
 
 ## 4. Invitar al equipo
 
@@ -63,7 +63,7 @@ Comprueba que `.github/CODEOWNERS` tiene los usuarios correctos.
 
 ## 6. Secretos de GitHub Actions (más adelante, Kevin)
 
-Settings → Secrets and variables → Actions: `SUPABASE_*`, `STRIPE_SECRET_KEY` (test), `ANTHROPIC_API_KEY`. Nunca en el código ni en el vault.
+Settings → Secrets and variables → Actions: `SUPABASE_*`, `STRIPE_SECRET_KEY` (test), `GEMINI_API_KEY`. Nunca en el código ni en el vault.
 
 ## 7. Cada miembro del equipo
 

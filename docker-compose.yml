@@ -1,30 +1,76 @@
-# Docker Compose del monorepo (responsable: Kevin).
-# PLACEHOLDER: los Dockerfile existen pero las apps aún no tienen código,
-# así que `docker compose up` no funcionará hasta el Sprint 1.
-# Supabase local se levanta aparte con la CLI: `supabase start` (ver backend/database/README.md).
+# Despliegue en el servidor asignado (opción A, ADR-009): base de datos y API en
+# la misma máquina. Runbook: deploy/README.md.
+#
+# Lo importante:
+#   - La base de datos NO se publica. Solo se llega a ella por la red interna de
+#     Docker (`db:5432`).
+#   - La API se publica solo en 127.0.0.1: delante va nginx o un túnel. Cambia
+#     `API_PUBLICO` si el 3010 está ocupado en el host.
+#   - `DATABASE_URL_DOCKER` manda sobre la BD del compose. Así se puede apuntar a
+#     un Supabase (Cloud o self-hosted) sin tocar este fichero.
+
+name: renfe
 
 services:
-  api:
-    build: ./backend/api
-    env_file: .env
-    ports:
-      - "3000:3000"
-    depends_on:
-      - face-service
-
-  gtfs-worker:
-    build: ./backend/gtfs-worker
-    env_file: .env
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: postgres
     volumes:
-      - gtfs-data:/app/data
+      - db-data:/var/lib/postgresql/data
+      # Solo se lee al crear el volumen: roles de Supabase, auth.users, auth.uid().
+      - ./deploy/postgres:/docker-entrypoint-initdb.d:ro
+      # Las migraciones, dentro del contenedor, para aplicarlas con psql sin
+      # instalar nada en el host.
+      - ./backend/database/supabase/migrations:/migraciones:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  face-service:
-    build: ./backend/face-service
+  api:
+    build:
+      context: .
+      dockerfile: backend/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     env_file: .env
+    environment:
+      # En producción `CORS_ORIGINS` es obligatorio: si falta, la API no arranca.
+      NODE_ENV: production
+      API_PORT: "3000"
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres}
     ports:
-      - "8001:8001"
+      - "127.0.0.1:${API_PUBLICO:-3010}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
-  # La app Expo se ejecuta fuera de Docker (pnpm dev:mobile) para usar Expo Go en el móvil.
+  # Job, no servidor: `docker compose run --rm gtfs-worker`.
+  gtfs-worker:
+    build:
+      context: .
+      dockerfile: backend/gtfs-worker/Dockerfile
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres}
+    volumes:
+      # El zip del feed se reutiliza entre ejecuciones (~15 MB).
+      - gtfs-data:/repo/backend/gtfs-worker/data
 
 volumes:
+  db-data:
   gtfs-data:

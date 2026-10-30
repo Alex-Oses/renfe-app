@@ -171,6 +171,7 @@ export function posicionesEn(ahora: number): PosicionTren[] {
       lon: a.lon + (b.lon - a.lon) * f,
       rumbo: Math.round(rumbo(a, b)),
       retrasoMin,
+      retrasoSeg: retrasoMin * 60,
       progreso,
       proximaParada: siguiente.nombre,
       llegadaProxima: paradas.find((x) => !x.pasada)?.llegada,

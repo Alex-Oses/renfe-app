@@ -5,5 +5,6 @@ import { EstacionesService } from './estaciones.service.js';
 @Module({
   controllers: [EstacionesController],
   providers: [EstacionesService],
+  exports: [EstacionesService],
 })
 export class EstacionesModule {}

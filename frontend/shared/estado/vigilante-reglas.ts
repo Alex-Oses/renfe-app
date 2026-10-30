@@ -8,11 +8,6 @@ export type AvisoClave = NuevoAviso & { clave: string };
 const MIN = 60_000;
 const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
-function semilla(texto: string): number {
-  let h = 2166136261;
-  for (const c of texto) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-  return h >>> 0;
-}
 
 // (a) Trenes seguidos: aviso de llegada una vez por seguimiento y aviso cuando cambia el retraso.
 export function reglasSeguimientos(segs: Seguimiento[], pos: PosicionTren[], ahora: number, retrasoPrevio: Map<string, number>): AvisoClave[] {
@@ -48,26 +43,20 @@ export function reglasSeguimientos(segs: Seguimiento[], pos: PosicionTren[], aho
   return out;
 }
 
-// (b) Trenes reservados. Novedades SIMULADAS y deterministas por billete: el simulado de billetes
-// y el de tiempo real usan ids distintos, así que no se pueden cruzar.
-// Con la API real esto se sustituye por el TripUpdate de GTFS-RT del viaje del billete
-// (trip_id del tren): stop_time_update[].departure.delay / 60 para el retraso de la estación de
-// origen y los cambios de vía que publique la API; el "embarque abierto" se mantiene por hora.
-export function novedadesBillete(b: Billete, ahora: number): AvisoClave[] {
+// (b) Trenes reservados: retraso REAL del viaje del billete (el de /posiciones, mismo id `feed:tripId`)
+// y «embarque abierto» por hora. Cada cambio de retraso es un aviso nuevo.
+export function novedadesBillete(b: Billete, ahora: number, pos: PosicionTren[] = []): AvisoClave[] {
   const salida = Date.parse(b.tren.salida);
   const faltan = (salida - ahora) / MIN;
-  if (faltan < 0 || faltan > 180) return []; // solo billetes de las próximas 3 h
-  const r = semilla(b.id);
+  if (faltan < -240 || faltan > 180) return []; // de 3 h antes de salir hasta 4 h después (va en el tren)
   const titulo = `${b.tren.tipo} ${b.tren.numero} de las ${hora(b.tren.salida)}`;
   const enlace = `/billetes/${encodeURIComponent(b.id)}`;
   const out: AvisoClave[] = [];
-  if (r % 3 === 0) {
-    const min = 5 + (r % 20);
-    out.push({ clave: `bil-retraso:${b.id}`, tipo: "retraso", grave: min >= 15, titulo, texto: `Sale con un retraso previsto de ${min} min.`, enlace });
-  } else if (r % 3 === 1) {
-    out.push({ clave: `bil-via:${b.id}`, tipo: "cambio", titulo, texto: `Cambio de vía: ahora sale por la vía ${1 + (r % 14)}.`, enlace });
-  }
-  if (faltan <= 20)
+  const p = b.tren.id ? pos.find((x) => x.trenId === b.tren.id) : undefined;
+  const min = p?.retrasoSeg != null ? Math.round(p.retrasoSeg / 60) : null;
+  if (min !== null && min >= 3)
+    out.push({ clave: `bil-retraso:${b.id}:${min}`, tipo: "retraso", grave: min >= 15, titulo, texto: `Tu tren va con ${min} min de retraso.`, enlace });
+  if (faltan >= 0 && faltan <= 20)
     out.push({ clave: `bil-embarque:${b.id}`, tipo: "info", titulo, texto: `Embarque abierto en ${b.tren.origen.nombre}.`, enlace });
   return out;
 }

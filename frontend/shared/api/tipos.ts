@@ -6,7 +6,11 @@ export interface Estacion {
   ciudad: string;
   lat: number;
   lon: number;
+  // Las estaciones van unificadas entre feeds; `feeds` dice en cuáles está (contrato de /estaciones).
+  feeds?: Feed[];
 }
+
+export type Feed = "cercanias" | "avld";
 
 // "Larga Distancia": tren del feed AVE/LD en tiempo real, del que Renfe no dice si es AVE, Alvia, etc.
 export type TipoTren = "AVE" | "Avlo" | "Alvia" | "Intercity" | "Media Distancia" | "Cercanías" | "Larga Distancia";
@@ -23,9 +27,12 @@ export interface Tren {
   numero: string;
   origen: EstacionTren;
   destino: EstacionTren;
-  feed?: "cercanias" | "avld";
+  feed?: Feed;
   tripId?: string;
   fecha?: string; // AAAA-MM-DD
+  linea?: string; // "AVE 02070" o "C-4" (contrato); en simulado, undefined
+  numParadas?: number;
+  duracionMin?: number;
   retrasoSeg?: number | null;
   salida: string; // ISO 8601 con offset
   llegada: string;
@@ -38,6 +45,68 @@ export interface BusquedaTrenes {
   destino: string;
   fecha: string; // AAAA-MM-DD
 }
+
+// --- Formas del contrato antes de adaptarlas a la UI (obsidian/02-contratos-api/endpoints.md) ---
+
+// GET /trenes: `tipo` es rutas.tipo_servicio en mayúsculas ("AVE", "ALVIA"…) y `numero` puede ser null.
+export interface TrenApi {
+  id: string; // "feed:tripId:fecha"
+  feed: Feed;
+  tripId: string;
+  fecha: string;
+  linea: string;
+  tipo: string;
+  numero: string | null;
+  origen: EstacionTren;
+  destino: EstacionTren;
+  salida: string;
+  llegada: string;
+  duracionMin: number;
+  numParadas: number;
+  retrasoSeg: number | null;
+  precioDesde: number;
+  plazasLibres: number;
+}
+
+export interface ParadaApi {
+  seq: number;
+  estacion: EstacionTren;
+  llega: string | null; // null en la primera parada
+  sale: string | null; // null en la última
+  retrasoSeg: number | null;
+}
+
+// GET /trenes/:feed/:tripId?fecha=
+export interface TrenDetalleApi {
+  feed: Feed;
+  tripId: string;
+  fecha: string;
+  linea: string;
+  tipo: string;
+  numero: string | null;
+  origen: EstacionTren;
+  destino: EstacionTren;
+  salida: string;
+  llegada: string;
+  retrasoSeg: number | null;
+  paradas: ParadaApi[];
+  recorrido?: [number, number][] | null; // trazado real [lat, lon] (shapes o vías de OSM)
+}
+
+// Parada ya adaptada. El detalle solo da id y nombre de la estación: las coordenadas se piden a
+// /estaciones, así que pueden faltar y entonces la parada no se puede pintar en el mapa.
+export interface ParadaViaje {
+  seq: number;
+  estacionId: string;
+  nombre: string;
+  llega: string | null;
+  sale: string | null;
+  retrasoSeg: number | null;
+  lat?: number;
+  lon?: number;
+}
+
+export type TrenDetalle = Tren & { paradas: ParadaViaje[]; recorrido?: [number, number][] | null };
 
 // --- Reservas y billetes (simulado: Renfe no publica asientos ni precios) ---
 
@@ -117,6 +186,8 @@ export interface Usuario {
 
 export interface Sesion {
   token: string;
+  // Solo lo devuelve /auth/login y /auth/registro (token de Supabase Auth). El facial no lo tiene.
+  refreshToken?: string | null;
   usuario: Usuario;
 }
 
@@ -135,10 +206,15 @@ export interface PosicionTren {
   lon: number;
   rumbo: number; // grados, 0 = norte; NaN si la fuente no lo da (el mapa lo calcula al moverse)
   retrasoMin: number;
+  // Retraso de GTFS-RT tal cual: puede ser negativo (tren adelantado) y null si no hay dato.
+  // `retrasoMin` se queda para la vista del billete; el mapa usa este.
+  retrasoSeg: number | null;
   progreso: number; // 0..1 del trayecto
   proximaParada: string; // "" si no se conoce
   llegadaProxima?: string; // ISO, hora prevista en la próxima parada (con retraso)
   llegadaDestino?: string; // ISO, hora prevista en el destino (con retraso)
+  salida?: string; // ISO, hora de salida del viaje, si se conoce el GTFS estático
+  llegada?: string; // ISO, hora de llegada al destino, si se conoce el GTFS estático
   linea?: string; // Cercanías: C-1, R2…
   actualizado: string; // ISO
   ruta: [number, number][]; // [lat, lon] del recorrido completo, para pintar la línea
@@ -283,4 +359,85 @@ export interface Abono {
   precio: number;
   creado: string;
   qr: string;
+}
+
+// --- Formas del contrato de cuenta, reservas y billetes (API real) ---
+
+// POST /auth/registro y /auth/login: mismo shape, más el refreshToken de Supabase Auth.
+// El facial (/auth/cara/verificar) no devuelve refreshToken: dura 12 h y se vuelve a mirar.
+export interface SesionApi extends Sesion {
+  refreshToken: string | null;
+}
+
+export interface RespuestaChatbot {
+  respuesta: string;
+  conversationId: string;
+  herramientas: string[];
+}
+
+// POST /reservas: la API elige la butaca, así que el frontend no manda los asientos elegidos.
+export interface PasajeroApi {
+  nombre: string; // nombre completo ("Lucía Pérez Gómez")
+  documento: string; // se guarda entero; el QR solo lleva los 4 últimos
+}
+
+export interface NuevaReservaApi {
+  feed: Feed;
+  viajeId: string; // trip_id de GTFS
+  fecha: string; // AAAA-MM-DD
+  origenId: string;
+  destinoId: string;
+  pasajeros: PasajeroApi[]; // de 1 a 6: una butaca por pasajero
+}
+
+export interface BilleteEmitidoApi {
+  id: string;
+  qr: string;
+  coche: number;
+  asiento: string; // "12A"
+  clase: string; // "Turista" | "Confort"
+  precio: number;
+}
+
+// POST /reservas: nace pagada (el pago es simulado) y con un billete por pasajero.
+export interface ReservaApi {
+  id: string;
+  localizador: string;
+  estado: "pagada";
+  total: number;
+  creada: string; // ISO con offset
+  billetes: BilleteEmitidoApi[];
+}
+
+// GET /billetes: lo justo para pintar el billete; el viajero y el documento salen del QR firmado.
+export interface BilleteApi {
+  id: string;
+  localizador: string;
+  feed?: string; // viaje del billete (para cruzarlo con /posiciones)
+  viajeId?: string;
+  estado: string; // valido | usado | anulado | caducado
+  tipo: string; // AVE, ALVIA… en mayúsculas
+  numero: string | null;
+  salida: string; // ISO con offset
+  llegada: string;
+  origen: Pick<Estacion, "id" | "nombre">;
+  destino: Pick<Estacion, "id" | "nombre">;
+  coche: number;
+  asiento: string; // "12A"
+  clase: string; // "Turista" | "Confort"
+  precio: number;
+  emitido: string;
+  expira: string;
+  qr: string; // RNF1.…
+}
+
+// GET /billetes/:id/qr (idempotente: devuelve el token ya guardado).
+export interface QrBilleteApi {
+  id: string;
+  qr: string;
+}
+
+// POST /billetes/validar: `primeraValidacion` viene como null, no como undefined.
+export interface ResultadoValidacionApi extends Omit<ResultadoValidacion, "primeraValidacion"> {
+  primeraValidacion: string | null;
 }

@@ -197,10 +197,9 @@
   flex: 1;
 }
 
+/* Nombres de ciudad enteros: la línea parte en dos antes que cortar con «…». */
 .mapa-tren__info > * {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .mapa-tren__info span {
@@ -229,6 +228,12 @@
 .retraso--alto {
   background: #fde3ea;
   color: #a1123f;
+}
+
+.retraso--sin-datos {
+  background: var(--niebla, #eff3f6);
+  color: var(--gris, #6b6b6b);
+  font-weight: 600;
 }
 
 /* Marcador del tren: Leaflet mueve el contenedor; la flecha gira dentro. */
@@ -301,6 +306,13 @@
 .leaflet-tooltip.parada-etiqueta--pasada {
   opacity: 0.6 !important;
   font-weight: 400;
+}
+
+/* Salida y llegada del recorrido: se ven por encima del resto de paradas. */
+.leaflet-tooltip.parada-etiqueta--extremo {
+  padding: 3px 10px;
+  font-size: 0.82rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
 }
 
 /* Leyenda plegable sobre el mapa */

@@ -13,7 +13,7 @@ El repositorio está dividido en **tres zonas que no se mezclan**:
 | Carpeta | Qué es | Responsable |
 |---|---|---|
 | [`frontend/`](frontend/README.md) | 📱 App móvil/web (Expo + React Native). Todo lo que ve el usuario. | **Alex** |
-| [`backend/`](backend/README.md) | ⚙️ API (NestJS), base de datos (Supabase), worker de datos Renfe (GTFS) y servicio facial (Python). | **Rubén** (API), **Marina** (BD + GTFS), **Kevin** (face service, Stripe) |
+| [`backend/`](backend/README.md) | ⚙️ API (NestJS), base de datos (Supabase) y worker de datos Renfe (GTFS). | **Rubén** (API), **Marina** (BD + GTFS), **Kevin** (Stripe) |
 | [`obsidian/`](obsidian/README.md) | 🧠 Vault de Obsidian: memoria compartida del equipo y de las IAs (estado, contratos de API, decisiones, handoffs). | **Todos** (lo mantiene Marina como Scrum Master) |
 
 Además, en la raíz:
@@ -37,8 +37,7 @@ renfe-app/
 ├── backend/
 │   ├── api/               # API NestJS (Rubén)
 │   ├── database/          # Supabase: migraciones, seeds, políticas (Marina)
-│   ├── gtfs-worker/       # Ingesta GTFS + GTFS-RT de Renfe (Marina)
-│   └── face-service/      # Reconocimiento facial, Python FastAPI (Kevin)
+│   └── gtfs-worker/       # Ingesta GTFS + GTFS-RT de Renfe (Marina)
 ├── obsidian/              # Vault compartido (abrir esta carpeta en Obsidian)
 ├── docs/                  # Guías del proyecto
 ├── scripts/               # Utilidades del monorepo
@@ -52,7 +51,7 @@ renfe-app/
 
 ## 🚀 Primeros pasos
 
-1. Lee [`docs/primeros-pasos.md`](docs/primeros-pasos.md) (requisitos: Node 22, pnpm 9, Docker, Python 3.12, Obsidian).
+1. Lee [`docs/primeros-pasos.md`](docs/primeros-pasos.md) (requisitos: Node 22, pnpm 9, Docker, Obsidian).
 2. Abre la carpeta `obsidian/` como vault en Obsidian.
 3. Lee [`obsidian/01-estado/estado-equipo.md`](obsidian/01-estado/estado-equipo.md) para saber en qué punto está el proyecto.
 4. Si vas a trabajar con una IA, no tienes que configurar nada: Claude Code y OpenCode leen el vault solos (ver [`docs/agentes-ia.md`](docs/agentes-ia.md)).
@@ -68,7 +67,7 @@ Subir el repo a GitHub por primera vez: [`docs/git-github.md`](docs/git-github.m
 | Alex | Product Owner + Frontend | `frontend/` | Claude Code |
 | Rubén | Backend + chatbot | `backend/api/` | OpenCode |
 | Marina | Scrum Master + Base de datos | `backend/database/`, `backend/gtfs-worker/` | OpenCode |
-| Kevin | DevOps + Stripe + face service | `docker-compose.yml`, `.github/`, `backend/face-service/` | OpenCode |
+| Kevin | DevOps + Stripe | `docker-compose.yml`, `.github/` | OpenCode |
 
 Comunicación en **Slack**, código y tareas en **GitHub**, contexto para las IAs en **Obsidian**. Detalles en [`docs/slack.md`](docs/slack.md).
 

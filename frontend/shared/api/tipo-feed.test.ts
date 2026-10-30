@@ -18,4 +18,10 @@ describe("unoPorVehiculo", () => {
     const r = unoPorVehiculo([p("00631", "a"), p("00631", "b"), p("03091", "c"), p(null, "d"), p(null, "e")]);
     expect(r.map((x) => x.tripId)).toEqual(["a", "c", "d", "e"]);
   });
+  it("de los tramos encadenados de un vehículo se queda el que está en curso", () => {
+    const tramo = (tripId: string, proxima: boolean, llega: string) =>
+      ({ ...p("04186", tripId), proximaParada: proxima ? { id: "1", nombre: "X", llegada: llega } : null, llegadaDestino: llega });
+    const r = unoPorVehiculo([tramo("terminado", false, "2026-10-29T08:55:00+01:00"), tramo("en-curso", true, "2026-10-29T11:28:00+01:00")]);
+    expect(r.map((x) => x.tripId)).toEqual(["en-curso"]);
+  });
 });

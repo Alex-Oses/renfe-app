@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AlNavegar } from "./componentes/AlNavegar";
 import { Cabecera } from "./componentes/Cabecera";
+import { Chatbot } from "./componentes/Chatbot";
 import { Pie } from "./componentes/Pie";
 import { ProveedorAvisos } from "./estado/avisos";
 import { ProveedorSesion } from "./estado/sesion";
@@ -60,6 +61,7 @@ function App() {
         </Suspense>
       </main>
       <Pie />
+      <Chatbot />
     </>
   );
 }

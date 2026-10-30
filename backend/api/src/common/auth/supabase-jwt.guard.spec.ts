@@ -61,4 +61,5 @@ describe('SupabaseJwtGuard', () => {
       guardCon(undefined).canActivate(contexto('Bearer cualquier-cosa')),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
 });

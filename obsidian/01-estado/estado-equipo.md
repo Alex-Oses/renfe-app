@@ -1,5 +1,5 @@
 ---
-actualizado: 2026-10-27
+actualizado: 2026-10-29
 tags: [estado]
 ---
 
@@ -10,15 +10,16 @@ tags: [estado]
 
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
-| Alex | PO + Frontend | 🟢 | Lógica común en `@renfe/shared` (web + futura app), mejora de la UI de la web y decisiones de la app en [[ADR-005-app-movil-expo]] | Para la app: BD (Marina) y facial (Rubén) | 2026-10-28 |
-| Rubén | Backend + chatbot | 🟢 | `GET /estaciones` (#26), `GET /trenes` (#33), `GET /posiciones` (GTFS-RT real, probado) y `GET /trenes/:feed/:tripId` hechos. Siguiente: `/incidencias` | Necesita migraciones de Marina para validar el SQL; `/trenes/:feed/:tripId/posicion` bloqueado por el `tripId` de GTFS-RT | 2026-10-27 |
-| Marina | SM + Base de datos | 🟢 | Supabase local validado en VM Linux; contrato de [[modelo-datos]] cerrado salvo la duda de Kevin sobre Stripe | — | 2026-10-26 |
-| Kevin | DevOps + Stripe + face | ⚪ | Pendiente: CI, Docker Compose real, protección de ramas | Esperando repo en GitHub | 2026-10-26 |
+| Alex | PO + Frontend | 🟢 | `pnpm docker:local` (`docker-compose.local.yml`) levanta API, web (:5173) y app móvil web (:8081) contra Supabase local; mapa con recorrido real (shapes de Cercanías y vías de OSM para AV/LD/MD). PR desde `feat/infra-compose-completo` ([[2026-10-30-alex-compose-completo-y-recorridos]]) | Probar Expo Go en móvil; recorridos en Supabase Cloud (Marina) | 2026-10-30 |
+| Rubén | Backend + chatbot | 🟢 | Chatbot Gemini operativo y autenticación actualizada para usar JWT propio de la API con 12 h de caducidad; nuevo acceso flotante del chat preparado en la PR frontend; Supabase Cloud queda como transición y el objetivo final es Supabase self-hosted en Docker | El puerto público lo tiene que abrir el administrador; falta preparar la migración al servidor Docker; secretos de despliegue fuera del repositorio | 2026-10-29 |
+| Marina | SM + Base de datos | 🟢 | **Supabase Cloud validada**: proyecto `hqwwucagvlhnlqrspwvh` (eu-west-1), 4 migraciones con `db push`, catálogo AV/LD cargado por el session pooler y `gtfs:verificar` en verde (1 035 estaciones / 668 rutas / 8 908 viajes / 71 781 horarios, feed 29/10). Los 3 PRs (#72, #73, #74) ya están mergeados. Siguiente: `DATABASE_URL` en Render ([[supabase-nube]]) | Nada por mi parte. Render sigue en 503 hasta que Kevin/Alex pongan `DATABASE_URL` | 2026-10-29 |
+| Kevin | DevOps + despliegue + Docker | 🟢 | CI revisada y en verde (excepción para Dependabot + `pnpm test:ramas`): PR **#75** abierta, `CI / ok` y `PR / reglas` ✅, falta aprobación. API viva en Render sin base de datos. Siguiente: en cuanto exista Supabase Cloud ([[supabase-nube]]) rellenar las variables de Render; y Docker (D10 de [[ADR-005-app-movil-expo]]) | `DATABASE_URL` bloqueada hasta que Marina cree Supabase Cloud | 2026-10-28 |
 
 ## Bloqueos globales
 - **Historial reescrito el 27/10: todos tenéis que borrar vuestra copia y clonar de nuevo** (ver [[2026-10-27-alex-reescritura-historial-y-vercel]]).
-- Migraciones de Marina solo en su PC: sin ellas no hay Supabase en la nube (ver riesgo en [[sprint-actual]]).
-- API desplegada en Render (https://renfe-api.onrender.com) **sin base de datos**: `/estaciones` y `/trenes` dan 503 hasta que Marina suba las migraciones y se rellene `DATABASE_URL` en Render.
+- 🟢 **Supabase Cloud operativa desde el 29/10** (`hqwwucagvlhnlqrspwvh`, eu-west-1): esquema y catálogo AV/LD cargados y verificados. Ya no depende de la VM de Marina ([[supabase-nube]]).
+- API desplegada en Render (https://renfe-api.onrender.com) **sin base de datos**: `/estaciones` y `/trenes` dan 503 hasta que se rellene `DATABASE_URL` (session pooler) en el panel de Render.
+- 🟢 **La app móvil ya tiene plan** ([[ADR-005-app-movil-expo]], 28/10): Expo para iOS y Android, y la web queda como demo y plan B. El facial está decidido en [[ADR-007-reconocimiento-facial]]: **sin servidor Python**, el vector lo calcula el dispositivo y la decisión la toma Postgres.
 
 ## Próximos hitos
 - **Entrega final: 06/11/2026.** Congelación de código el 04/11. Plan en [[sprint-actual]].

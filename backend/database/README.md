@@ -56,7 +56,26 @@ Linux de Azure: `db:start`, Studio/API/PostgreSQL, `seed.sql` y `db:stop`.
 - Nunca edites una migración ya mergeada en `develop`: crea otra nueva.
 - No commitees `.temp/` ni `.branches/` (los ignora `supabase/.gitignore`).
 
-## Pendiente (Sprint 0)
+## Migraciones
 
-- Cerrar las preguntas abiertas de `../obsidian/02-contratos-api/modelo-datos.md` §10.2.
-- Primera migración: extensión `vector` + tablas del contrato.
+Orden y contenido en [`supabase/migrations/README.md`](supabase/migrations/README.md).
+
+La **primera migración ya está escrita** (extensiones + identidad + catálogo GTFS) y
+**todavía no se ha aplicado** en ningún entorno: ni en Supabase local ni en la nube.
+
+```bash
+# En la VM Linux (Docker bloqueado en el portátil corporativo)
+pnpm db:start      # o: supabase start --workdir backend/database
+pnpm db:reset      # aplica las 3 migraciones + seed.sql
+```
+
+Decisiones del SQL y qué mirar en la revisión:
+`obsidian/05-areas/migracion-catalogo-gtfs.md`.
+
+## Pendiente
+
+- Aplicar las migraciones en la VM y validar que `pnpm db:reset` termina en verde.
+- Proyecto de Supabase en la nube y `DATABASE_URL` en Render.
+- Importar el feed `avld` (ver `obsidian/05-areas/plan-ingesta-gtfs.md`).
+- Segunda migración: tiempo real (`posiciones_trenes`, `incidencias`) y reserva/pago/billete.
+- Kevin: cerrar `modelo-datos` §10.2 (campos del webhook de Stripe) antes de implementar el pago. No bloquea nada de lo anterior.
