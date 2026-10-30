@@ -6,6 +6,7 @@ para: todos
 rama: feat/mobile-web-completa
 pr: https://github.com/Alex-Oses/renfe-app/pull/17
 tags: [handoff]
+estado: cerrado
 ---
 
 # Handoff — Sincronización de PRs y vault

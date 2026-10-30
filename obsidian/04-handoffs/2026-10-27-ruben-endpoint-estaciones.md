@@ -6,6 +6,7 @@ para: Marina, todos
 rama: feat/api-estaciones
 pr: pendiente
 tags: [handoff]
+estado: cerrado
 ---
 
 # Handoff — `GET /estaciones` implementado contra el modelo de datos

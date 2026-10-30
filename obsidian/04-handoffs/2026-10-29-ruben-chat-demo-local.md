@@ -6,6 +6,7 @@ para: Alex, Marina, Kevin
 rama: fix/mobile-chat-demo-local
 pr: pendiente
 tags: [handoff, frontend, chatbot, demo]
+estado: cerrado
 ---
 
 # Handoff — Chat demo y timeout local

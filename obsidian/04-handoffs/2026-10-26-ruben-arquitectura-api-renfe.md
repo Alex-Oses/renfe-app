@@ -6,6 +6,7 @@ para: todos
 rama: (sin rama todavía; cambios locales sobre develop)
 pr: —
 tags: [handoff]
+estado: cerrado
 ---
 
 # Handoff — Arquitectura y plan de la API de Renfe

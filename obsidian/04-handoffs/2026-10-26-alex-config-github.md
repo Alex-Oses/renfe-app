@@ -6,6 +6,7 @@ para: todos
 rama: docs/vault-gemini-dailys
 pr: (ver PR de esta rama)
 tags: [handoff, github]
+estado: cerrado
 ---
 
 # Handoff — Configuración de GitHub cerrada

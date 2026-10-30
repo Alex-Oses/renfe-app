@@ -6,6 +6,7 @@ para: Rubén, Marina, Kevin
 rama: feat/api-auth-billetes-abonos (encima de feat/db-billetes-abonos)
 pr: (pendiente)
 tags: [handoff, api, base-datos, billetes, abonos]
+estado: abierto
 ---
 
 # Handoff — Migración y API de cuenta, reservas, billetes y abonos

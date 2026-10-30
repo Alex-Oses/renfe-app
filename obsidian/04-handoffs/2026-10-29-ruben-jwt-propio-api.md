@@ -6,6 +6,7 @@ para: Alex, Marina, Kevin
 rama: feat/api-chatbot
 pr: pendiente
 tags: [handoff, api, auth, jwt]
+estado: abierto
 ---
 
 # Handoff — JWT propio de la API

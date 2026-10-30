@@ -6,6 +6,7 @@ para: [Alex, Rubén, Kevin]
 rama: docs/db-contrato-feeds-reales
 pr: (pendiente de abrir)
 tags: [handoff, contrato, base-datos, gtfs]
+estado: cerrado
 ---
 
 # Handoff — Contrato v2 revisado contra los feeds reales

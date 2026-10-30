@@ -6,6 +6,7 @@ para: todos
 rama: (sin repo todavía)
 pr: —
 tags: [handoff, contexto]
+estado: obsoleto
 ---
 
 # Handoff — Contexto inicial del proyecto (léelo primero)

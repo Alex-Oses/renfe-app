@@ -6,6 +6,7 @@ para: todos
 rama: feat/mobile-detalles-y-navegacion
 pr: (ver PR de esta rama)
 tags: [handoff]
+estado: cerrado
 ---
 
 # Handoff — Mapa con trenes reales de Renfe, tarifas en forma de tren y navegación

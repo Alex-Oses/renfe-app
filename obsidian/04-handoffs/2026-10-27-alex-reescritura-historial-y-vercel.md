@@ -6,6 +6,7 @@ para: todos
 rama: docs/vault-reescritura-y-vercel
 pr: (ver PR de esta rama)
 tags: [handoff, git, vercel]
+estado: cerrado
 ---
 
 # Handoff — Historial reescrito, web local subida y Vercel

@@ -6,6 +6,7 @@ para: todos
 rama: feat/mobile-web-completa
 pr: (ver PR de esta rama)
 tags: [handoff, frontend, web]
+estado: obsoleto
 ---
 
 # Handoff — Web completa con datos simulados

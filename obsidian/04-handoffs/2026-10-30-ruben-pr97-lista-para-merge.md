@@ -5,7 +5,8 @@ area: api
 para: Alex, Kevin
 rama: fix/mobile-chat-demo-local
 pr: "#97"
-tags: [handoff, chatbot, integracion]
+tags: [handoff, chatbot, integracion]
+estado: obsoleto
 ---
 
 # Handoff — PR #97 lista para merge

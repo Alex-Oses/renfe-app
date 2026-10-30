@@ -6,6 +6,7 @@ para: todos
 rama: feat/mobile-estilo-cristal
 pr: (ver PR de esta rama)
 tags: [handoff]
+estado: abierto
 ---
 
 # Handoff — Estilo cristal líquido en la web

@@ -6,6 +6,7 @@ para: Rubén, Marina
 rama: feat/mobile-billete-revisor-admin
 pr: (ver PR de esta rama)
 tags: [handoff, contrato, revisor]
+estado: abierto
 ---
 
 # Handoff — Billete nuevo, QR firmado, modo revisor y panel de admin preparado

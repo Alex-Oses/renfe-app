@@ -6,6 +6,7 @@ para: Alex, Kevin
 rama: fix/mobile-chat-demo-local
 pr: "#97"
 tags: [handoff, chatbot, frontend, api]
+estado: cerrado
 ---
 
 # Handoff — Chatbot con contexto, memoria, pasos en vivo y tarjetas de trenes

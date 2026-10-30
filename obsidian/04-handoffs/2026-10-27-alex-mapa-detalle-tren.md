@@ -6,6 +6,7 @@ para: Rubén
 rama: feat/mobile-mapa-detalle-tren
 pr: (ver PR de esta rama)
 tags: [handoff, contrato]
+estado: cerrado
 ---
 
 # Handoff — Detalle del tren en el mapa (campos nuevos para /posiciones)

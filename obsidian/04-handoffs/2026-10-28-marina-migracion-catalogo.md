@@ -6,6 +6,7 @@ para: todos
 rama: feat/db-migracion-catalogo-gtfs
 pr: (pendiente de abrir)
 tags: [handoff, base-datos, migracion, gtfs]
+estado: cerrado
 ---
 
 # Handoff — Primera migración: extensiones, identidad y catálogo GTFS

@@ -6,6 +6,7 @@ para: Alex, Marina, Kevin
 rama: feat/mobile-chat-ia
 pr: pendiente
 tags: [handoff, frontend, chatbot]
+estado: cerrado
 ---
 
 # Handoff — Acceso flotante al chatbot
