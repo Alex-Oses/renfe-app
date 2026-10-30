@@ -24,6 +24,7 @@ vigilarApi();
 
 // Las páginas pesadas (mapa, cámara, QR) se cargan solo al entrar en ellas.
 const Reserva = lazy(() => import("./paginas/reserva/Reserva"));
+const ReservaTransbordo = lazy(() => import("./paginas/reserva/ReservaTransbordo"));
 const MisBilletes = lazy(() => import("./paginas/MisBilletes"));
 const Billete = lazy(() => import("./paginas/Billete"));
 const Acceder = lazy(() => import("./paginas/Acceder"));
@@ -51,6 +52,7 @@ function App() {
             <Route path="/" element={<Inicio />} />
             <Route path="/trenes" element={<Resultados />} />
             <Route path="/reserva/:trenId" element={<Reserva />} />
+            <Route path="/transbordo" element={<ReservaTransbordo />} />
             <Route path="/billetes" element={<MisBilletes />} />
             <Route path="/billetes/:id" element={<Billete />} />
             <Route path="/acceder" element={<Acceder />} />

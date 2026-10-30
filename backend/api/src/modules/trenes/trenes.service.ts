@@ -171,6 +171,82 @@ const SQL_DETALLE = `
 
 const SQL_ESTACIONES = 'select id from estaciones where id = any($1::text[])';
 
+const aTren = (fila: FilaTren, fecha: string): Tren => {
+        const clave = `${fila.feed}:${fila.viaje_id}:${fecha}`;
+        return {
+          id: clave,
+          feed: fila.feed,
+          tripId: fila.viaje_id,
+          fecha,
+          linea: lineaDe(fila),
+          tipo: tipoDe(fila.tipo_servicio),
+          numero: fila.numero ?? numeroDe(fila.nombre_corto),
+          origen: { id: fila.origen_id, nombre: fila.origen_nombre },
+          destino: { id: fila.destino_id, nombre: fila.destino_nombre },
+          salida: intervaloAIso(fecha, fila.sale),
+          llegada: intervaloAIso(fecha, fila.llega),
+          duracionMin: duracionMin(fila.sale, fila.llega),
+          numParadas: Number(fila.num_paradas),
+          retrasoSeg: null,
+          precioDesde: precioSimulado(
+            fila.tipo_servicio,
+            kmTrayecto(fila.km_lat_o, fila.km_lon_o, fila.km_lat_d, fila.km_lon_d),
+            `${fila.feed}:${fila.viaje_id}:${fecha}:${fila.origen_id}:${fila.destino_id}`,
+          ),
+          plazasLibres: plazasSimuladas(clave),
+        };
+};
+
+export interface OpcionTransbordo {
+  tramos: [Tren, Tren];
+  transbordo: { id: string; nombre: string };
+  esperaMin: number;
+  duracionMin: number;
+  precio: number;
+}
+
+// Una opción por primer tren: el enlace que antes llega. `$3` es la fecha que usa SERVICIO_ACTIVO.
+const COLUMNAS_TRAMO = `
+         v.feed, v.id as viaje_id, v.numero, r.nombre_corto, r.nombre, r.tipo_servicio,
+         o.estacion_id as origen_id, eo.nombre as origen_nombre,
+         d.estacion_id as destino_id, ed.nombre as destino_nombre,
+         eo.lat as km_lat_o, eo.lon as km_lon_o, ed.lat as km_lat_d, ed.lon as km_lon_d,
+         o.sale::text as sale, d.llega::text as llega,
+         (d.secuencia - o.secuencia + 1)::text as num_paradas, '0' as total,
+         o.sale as sale_i, d.llega as llega_i`;
+const ENTRE_PARADAS = `
+    from horarios o
+    join horarios d on d.feed = o.feed and d.viaje_id = o.viaje_id and d.secuencia > o.secuencia
+    join viajes v on v.feed = o.feed and v.id = o.viaje_id
+    join rutas r on r.feed = v.feed and r.id = v.ruta_id
+    join estaciones eo on eo.id = o.estacion_id
+    join estaciones ed on ed.id = d.estacion_id`;
+const SQL_TRANSBORDOS = `
+  with ida as (
+    select ${COLUMNAS_TRAMO} ${ENTRE_PARADAS}
+     where o.estacion_id = $1 and d.estacion_id <> $2
+       and o.sale is not null and d.llega is not null and o.recoge and d.deja and ${SERVICIO_ACTIVO}
+  ), sigue as (
+    select ${COLUMNAS_TRAMO} ${ENTRE_PARADAS}
+     where d.estacion_id = $2 and o.estacion_id <> $1
+       and o.sale is not null and d.llega is not null and o.recoge and d.deja and ${SERVICIO_ACTIVO}
+  ), opciones as (
+    select distinct on (a.viaje_id) to_jsonb(a) as a, to_jsonb(b) as b, a.sale_i, b.llega_i
+      from ida a
+      join sigue b
+        on b.origen_id = a.destino_id
+       and b.viaje_id <> a.viaje_id
+       and b.sale_i between a.llega_i + interval '15 minutes' and a.llega_i + interval '3 hours'
+     order by a.viaje_id, b.llega_i, a.llega_i desc
+  )
+  select a, b from opciones order by llega_i - sale_i, sale_i limit $4
+`;
+
+const minutosDe = (hora: string) => {
+  const [h, m] = hora.split(':').map(Number);
+  return h! * 60 + m!;
+};
+
 @Injectable()
 export class TrenesService {
   constructor(private readonly bd: BdService) {}
@@ -203,33 +279,37 @@ export class TrenesService {
 
     const unicas = sinViajesDuplicados(filas);
     return {
-      datos: unicas.map((fila) => {
-        const clave = `${fila.feed}:${fila.viaje_id}:${fecha}`;
-        return {
-          id: clave,
-          feed: fila.feed,
-          tripId: fila.viaje_id,
-          fecha,
-          linea: lineaDe(fila),
-          tipo: tipoDe(fila.tipo_servicio),
-          numero: fila.numero ?? numeroDe(fila.nombre_corto),
-          origen: { id: fila.origen_id, nombre: fila.origen_nombre },
-          destino: { id: fila.destino_id, nombre: fila.destino_nombre },
-          salida: intervaloAIso(fecha, fila.sale),
-          llegada: intervaloAIso(fecha, fila.llega),
-          duracionMin: duracionMin(fila.sale, fila.llega),
-          numParadas: Number(fila.num_paradas),
-          retrasoSeg: null,
-          precioDesde: precioSimulado(
-            fila.tipo_servicio,
-            kmTrayecto(fila.km_lat_o, fila.km_lon_o, fila.km_lat_d, fila.km_lon_d),
-            `${fila.feed}:${fila.viaje_id}:${fecha}:${fila.origen_id}:${fila.destino_id}`,
-          ),
-          plazasLibres: plazasSimuladas(clave),
-        };
-      }),
+      datos: unicas.map((fila) => aTren(fila, fecha)),
       total: filas.length > 0 ? Number(filas[0].total) - (filas.length - unicas.length) : 0,
     };
+  }
+
+  async transbordos({ origen, destino, fecha, limit }: BuscarTrenesDto): Promise<{
+    datos: OpcionTransbordo[];
+    total: number;
+  }> {
+    let filas: { a: FilaTren; b: FilaTren }[];
+    try {
+      ({ rows: filas } = await this.bd.consultar<{ a: FilaTren; b: FilaTren }>(SQL_TRANSBORDOS, [
+        origen,
+        destino,
+        fecha,
+        limit,
+      ]));
+    } catch {
+      throw new ServiceUnavailableException('La base de datos no está disponible');
+    }
+    const datos = filas.map(({ a, b }) => {
+      const tramos: [Tren, Tren] = [aTren(a, fecha), aTren(b, fecha)];
+      return {
+        tramos,
+        transbordo: { id: a.destino_id, nombre: a.destino_nombre },
+        esperaMin: minutosDe(b.sale) - minutosDe(a.llega),
+        duracionMin: minutosDe(b.llega) - minutosDe(a.sale),
+        precio: Math.round((tramos[0].precioDesde + tramos[1].precioDesde) * 100) / 100,
+      };
+    });
+    return { datos, total: datos.length };
   }
 
   async detalle(feed: string, tripId: string, fecha: string): Promise<TrenDetalle> {

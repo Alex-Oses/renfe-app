@@ -27,6 +27,13 @@ export class TrenesController {
     return this.trenes.buscar(filtros);
   }
 
+  @Get('transbordos')
+  @ApiOperation({ summary: 'Opciones con un transbordo entre dos estaciones para una fecha' })
+  @ApiOkResponse({ description: 'Opciones de dos tramos, de menor a mayor duración' })
+  transbordos(@Query() filtros: BuscarTrenesDto) {
+    return this.trenes.transbordos(filtros);
+  }
+
   @Get(':feed/:tripId')
   @ApiOperation({ summary: 'Detalle de un viaje: paradas y horas' })
   @ApiOkResponse({ description: 'Paradas del viaje en orden' })

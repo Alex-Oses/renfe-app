@@ -12,6 +12,7 @@ import type {
   Estacion,
   IntentoPago,
   NuevaReserva,
+  OpcionTransbordo,
   NuevoAbono,
   ParadaViaje,
   PosicionTren,
@@ -367,6 +368,15 @@ export async function buscarEstaciones(q: string, feed?: "cercanias" | "avld"): 
 export async function buscarTrenes(b: BusquedaTrenes): Promise<Tren[]> {
   if (!BASE) return simular(() => trenes.buscarTrenes(b));
   return (await datos<TrenApi>(`/trenes?${new URLSearchParams({ ...b })}`)).map(aTren);
+}
+
+// GET /trenes/transbordos: sin API no hay opciones (el simulado solo tiene viajes directos).
+export async function buscarTransbordos(b: BusquedaTrenes): Promise<OpcionTransbordo[]> {
+  if (!BASE) return [];
+  const opciones = await datos<Omit<OpcionTransbordo, "tramos"> & { tramos: [TrenApi, TrenApi] }>(
+    `/trenes/transbordos?${new URLSearchParams({ ...b })}`,
+  );
+  return opciones.map((o) => ({ ...o, tramos: [aTren(o.tramos[0]), aTren(o.tramos[1])] }));
 }
 
 // GET /trenes/:feed/:tripId?fecha=  (detalle: paradas, horas y retraso por parada)

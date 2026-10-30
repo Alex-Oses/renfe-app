@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { misBilletes, usaDatosSimulados } from "@renfe/shared/api/cliente";
-import type { Billete } from "@renfe/shared/api/tipos";
-import { agrupar, type Viaje } from "./billetes/agrupar";
+import { misAbonos, misBilletes, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import type { Abono, Billete } from "@renfe/shared/api/tipos";
+import { agrupar, unirTransbordos, type Viaje } from "./billetes/agrupar";
+import { TarjetaAbono } from "./billetes/TarjetaAbono";
 import { fecha, hora } from "./reserva/formato";
 import RetrasoVivo from "./billetes/RetrasoVivo";
 import "./billetes.css";
@@ -15,12 +16,15 @@ export default function MisBilletes() {
   const { sesion } = useSesion();
   const { pathname, search } = useLocation();
   const [billetes, setBilletes] = useState<Billete[] | null>(null);
+  const [abonos, setAbonos] = useState<Abono[]>([]);
   const [error, setError] = useState("");
   // Con la API real /billetes exige sesión (401 sin token): sin sesión no se piden datos.
   const conSesion = usaDatosSimulados || Boolean(sesion);
   useEffect(() => {
     if (!conSesion) return;
     misBilletes().then(setBilletes, (e: Error) => setError(e.message));
+    // Los abonos son un extra de la página: si fallan, los billetes se siguen viendo.
+    misAbonos().then(setAbonos, () => setAbonos([]));
   }, [conSesion]);
 
   if (!conSesion) return <Navigate to={`/acceder?volver=${encodeURIComponent(pathname + search)}`} replace />;
@@ -28,13 +32,25 @@ export default function MisBilletes() {
   if (!billetes) return <p className="contenedor seccion cargando">Cargando tus billetes…</p>;
 
   const ahora = new Date().toISOString().slice(0, 19);
-  const viajes = agrupar(billetes);
+  const viajes = unirTransbordos(agrupar(billetes));
   const proximos = viajes.filter((v) => v.billetes[0].tren.llegada >= ahora);
   const pasados = viajes.filter((v) => v.billetes[0].tren.llegada < ahora).reverse();
 
   return (
     <div className="contenedor seccion billetes">
       <h1>Mis billetes</h1>
+      {abonos.length > 0 && (
+        <section aria-labelledby="mis-abonos">
+          <h2 id="mis-abonos">Mis abonos</h2>
+          <ul className="abonos-tarjetas">
+            {abonos.map((a) => (
+              <li key={a.id}>
+                <TarjetaAbono abono={a} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {billetes.length === 0 ? (
         <div className="billetes__vacio">
           <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
@@ -87,7 +103,8 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
   const { tren, localizador, qr } = viaje.billetes[0];
   const n = viaje.billetes.length;
   const idT = `viaje-${viaje.reservaId}`;
-  const destino = ciudadDe(tren.destino);
+  const ultimo = viaje.enlace?.billetes[0].tren ?? tren;
+  const destino = ciudadDe(ultimo.destino);
   const foto = fotoDeRuta(slug(destino));
   const [qrSvg, setQrSvg] = useState("");
   useEffect(() => {
@@ -123,6 +140,12 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
           {ciudadDe(tren.origen)} <span aria-hidden="true">→</span>
           <span className="sr-solo"> a </span> {destino}
         </h3>
+        {viaje.enlace && (
+          <p className="ticket__transbordo">
+            <strong>Con transbordo en {tren.destino.nombre}</strong>: {Math.round((Date.parse(ultimo.salida) - Date.parse(tren.llegada)) / 60_000)} min de espera.{" "}
+            Sigue en {ultimo.tipo} {ultimo.numero}, sale a las {hora(ultimo.salida)}.
+          </p>
+        )}
         <dl className="ticket__datos">
           <div>
             <dt>Fecha</dt>
@@ -134,7 +157,7 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
           </div>
           <div>
             <dt>Llegada</dt>
-            <dd>{hora(tren.llegada)}</dd>
+            <dd>{hora(ultimo.llegada)}</dd>
           </div>
           <div>
             <dt>Tren</dt>
@@ -146,14 +169,14 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
         <div className="ticket__pie">
           {qrSvg && <span className="ticket__qr" aria-hidden="true" dangerouslySetInnerHTML={{ __html: qrSvg }} />}
           <ul className="ticket__viajeros" aria-label={`${n} ${n === 1 ? "viajero" : "viajeros"}`}>
-            {viaje.billetes.map((b: Billete) => (
+            {[...viaje.billetes, ...(viaje.enlace?.billetes ?? [])].map((b: Billete) => (
               <li key={b.id}>
                 <Link to={`/billetes/${encodeURIComponent(b.id)}`} className="ticket__viajero">
                   <span>
                     {b.pasajero.nombre} {b.pasajero.apellidos}
                   </span>
                   <span className="ticket__asiento">
-                    Coche {b.asiento.coche} · {b.asiento.fila}
+                    {viaje.enlace && `${b.tren.tipo} ${b.tren.numero} · `}Coche {b.asiento.coche} · {b.asiento.fila}
                     {b.asiento.letra}
                   </span>
                   <span className="sr-solo">. Abrir billete</span>
@@ -167,8 +190,9 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
       <div className="ticket__talon">
         <span className="ticket__etiqueta">Localizador</span>
         <span className="ticket__loc">{localizador}</span>
+        {viaje.enlace && <span className="ticket__loc">{viaje.enlace.billetes[0].localizador}</span>}
         <span className="ticket__etiqueta">
-          Total {viaje.billetes.reduce((suma, b) => suma + b.asiento.precio, 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+          Total {[...viaje.billetes, ...(viaje.enlace?.billetes ?? [])].reduce((suma, b) => suma + b.asiento.precio, 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
         </span>
         <svg className="ticket__barras" viewBox={`0 0 ${localizador.length * 12} 40`} preserveAspectRatio="none" aria-hidden="true">
           {barras(localizador).map((b) => (

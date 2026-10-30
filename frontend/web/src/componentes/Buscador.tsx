@@ -67,6 +67,8 @@ export function Buscador({ inicial, compacto }: Props) {
   const [descuento, setDescuento] = useState<string>(inicial?.descuento ?? descuentoGuardado());
   const [giro, setGiro] = useState(0);
   const [error, setError] = useState("");
+  // Primero el origen: el destino se abre al elegirlo de la lista o si ya viene de una búsqueda anterior.
+  const origenListo = !!origenElegido || (!!origen.trim() && [nombreDe(inicial?.origen), nombreDe(inicial?.destino)].includes(origen));
 
   async function resolver(texto: string, elegida: Estacion | null): Promise<Estacion | undefined> {
     // Se sigue usando la estación elegida mientras el texto no cambie.
@@ -152,7 +154,8 @@ export function Buscador({ inicial, compacto }: Props) {
             setDestinoElegido(null);
           }}
           onElegir={setDestinoElegido}
-          placeholder="Estación de destino"
+          placeholder={origenListo ? "Estación de destino" : "Elige antes el origen"}
+          deshabilitado={!origenListo}
         />
       </div>
 

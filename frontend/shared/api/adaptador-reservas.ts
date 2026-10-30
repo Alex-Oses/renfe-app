@@ -160,6 +160,7 @@ export function billeteDeApi(api: BilleteApi): Billete {
     },
     asiento: asientoDeApi(api.asiento, api.coche, api.clase, api.precio),
     pasajero: { nombre, apellidos, documento: qr.doc ?? "", email: "" },
+    emitido: api.emitido,
     qr: api.qr,
   };
 }

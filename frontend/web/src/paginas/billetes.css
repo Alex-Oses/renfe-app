@@ -824,3 +824,82 @@ a.nav-grupo__paso:hover {
   background: rgb(255 255 255 / 0.9);
   color: var(--morado-oscuro);
 }
+
+.ticket__transbordo {
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--frambuesa, #d62d61);
+  background: var(--color-resalte, #fbe3ec);
+  border-radius: 6px;
+}
+
+.abonos-tarjetas {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+}
+
+.abono-tarjeta {
+  display: grid;
+  gap: 0.5rem;
+  min-height: 13rem;
+  padding: 1.25rem;
+  border-radius: var(--radio-grande, 20px);
+  color: #fff;
+  background: linear-gradient(135deg, #81005e, #4d0038);
+}
+
+.abono-tarjeta--avant-mensual { background: linear-gradient(135deg, #a3123f, #6b0a29); }
+.abono-tarjeta--cercanias-recurrente { background: linear-gradient(135deg, #b81f50, #81005e); }
+.abono-tarjeta--bono-10 { background: linear-gradient(135deg, #3b3b4f, #1f1f2b); }
+.abono-tarjeta--inactiva { filter: grayscale(0.85); opacity: 0.8; }
+
+.abono-tarjeta h3 {
+  margin: 0;
+  color: inherit;
+  font-size: 1.15rem;
+}
+
+.abono-tarjeta__cabeza,
+.abono-tarjeta__pie {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.abono-tarjeta__cabeza { align-items: center; }
+.abono-tarjeta__pie { align-items: end; margin-top: auto; }
+.abono-tarjeta__marca { font-weight: 800; font-size: 1.1rem; }
+
+.abono-tarjeta__tipo {
+  padding: 0.15rem 0.6rem;
+  border: 1px solid rgb(255 255 255 / 0.6);
+  border-radius: var(--radio-pildora, 999px);
+  font-size: 0.8rem;
+}
+
+.abono-tarjeta__ruta { margin: 0; }
+
+.abono-tarjeta dl {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+}
+
+.abono-tarjeta dl div { display: flex; gap: 0.5rem; }
+.abono-tarjeta dt { font-size: 0.85rem; opacity: 0.85; }
+.abono-tarjeta dd { margin: 0; font-weight: 600; font-size: 0.85rem; }
+
+.abono-tarjeta__qr {
+  flex: none;
+  width: 5.5rem;
+  height: 5.5rem;
+  padding: 0.35rem;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.abono-tarjeta__qr svg { display: block; }

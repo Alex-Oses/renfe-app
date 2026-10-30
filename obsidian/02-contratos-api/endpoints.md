@@ -292,6 +292,12 @@ Notas:
 - La fecha se resuelve con `calendarios` + `calendario_excepciones` en la misma consulta, y `recoge`/
   `deja` excluyen las paradas técnicas.
 
+## GET /trenes/transbordos — añadido (Alex, 2026-10-30)
+
+Mismos parámetros que `GET /trenes`. Devuelve `{ datos: Opcion[], total }` con un transbordo como máximo, en la misma
+estación, con entre 15 min y 3 h de espera. `Opcion`: `{ tramos: [Tren, Tren], transbordo: { id, nombre }, esperaMin,
+duracionMin, precio }`. `precio` es la suma por plaza. Cada tramo se compra con su propio `POST /reservas`.
+
 ## GET /trenes/:feed/:tripId
 
 Descripción: detalle de un viaje: paradas, horas y retraso por parada.
