@@ -39,6 +39,9 @@ pnpm install
 pnpm dev:api        # desde la raíz del monorepo
 ```
 
+La API carga el `.env` del directorio de trabajo y, si no existe, el `.env` de la raíz del
+monorepo. No es necesario crear un `.env` adicional dentro de `backend/api`.
+
 - `GET /health` → estado del servicio
 - `GET /docs` → Swagger · `GET /docs-json` → OpenAPI
 
