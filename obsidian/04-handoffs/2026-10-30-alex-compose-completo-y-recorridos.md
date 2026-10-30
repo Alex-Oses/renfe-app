@@ -14,7 +14,8 @@ tags: [handoff, docker, gtfs, mapa]
 - `pnpm docker:local` (`docker-compose.local.yml`; el `docker-compose.yml` es el del servidor de Kevin) levanta API (:3000), web (:5173) y la app Expo exportada a web (:8081), todo contra Supabase local (`pnpm db:start`). Nuevo `frontend/Dockerfile` (un solo Dockerfile con `APP=web|mobile`, nginx).
 - Integradas en la rama la app móvil funcional (`feat/mobile-app-funcional`), la API de billetes/abonos, el docker local y el recorrido real (`feat/gtfs-recorridos`).
 - Recorrido real en el mapa: Cercanías usa `shapes.txt` (tabla `formas`); AV/LD/MD usa tramos por las vías de OSM (`tramos_via`, `pnpm --filter @renfe/gtfs-worker vias`). Comprobado: Madrid-Chamartín → Badajoz devuelve 418 puntos por las vías.
-- `pnpm local` ya calcula los tramos y levanta los tres servicios.
+- `pnpm local` ya calcula los tramos y levanta los tres servicios, y genera `JWT_SECRET`.
+- Fusionado `origin/develop`. El `.dockerignore` raíz excluía `**/*.md` y la API se caía al arrancar porque el chatbot lee `RENFE_CONTEXT.md` y `RENFE_GUARDRAILS.md`: añadida la excepción `!backend/api/src/modules/chatbot/**/*.md`. Ese fallo también afecta a `develop`.
 
 ## Qué queda
 - ~720 tramos AV/LD/MD sin vía conectada en OSM siguen en línea recta.
@@ -23,7 +24,7 @@ tags: [handoff, docker, gtfs, mapa]
 
 ## Bloqueos / preguntas para otros
 - Marina: aplicar en Supabase Cloud la migración `20261029140000_recorridos.sql` y cargar `formas`/`tramos_via` cuando toque desplegar.
-- Kevin: revisa el compose nuevo (zona tuya).
+- Kevin: revisa el compose nuevo y la excepción del `.dockerignore` raíz (zona tuya).
 
 ## Cambios en contratos
 Ninguno nuevo: `recorrido` en el detalle del tren ya estaba en [[endpoints]]; tablas `formas` y `tramos_via` en la migración de recorridos.
