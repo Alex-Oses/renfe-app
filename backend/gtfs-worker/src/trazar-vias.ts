@@ -18,7 +18,8 @@ const DIR_DATOS = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
 // Overpass está incompleta y deja fuera regiones enteras (p. ej. Tarragona).
 const CONSULTA_OSM =
   '[out:json][timeout:800][maxsize:1073741824];' +
-  'way["railway"="rail"]["service"!~"yard|siding|spur|crossover"](35.8,-9.6,43.9,4.5);out body;>;out skel qt;';
+  // Sin filtrar por `service`: agujas y vías de estación son las que conectan la red (p. ej. Chamartín con la AV).
+  'way["railway"="rail"](35.8,-9.6,43.9,4.5);out body;>;out skel qt;';
 // El servidor principal suele ir saturado: se prueban espejos públicos en orden.
 const SERVIDORES = [
   "https://overpass-api.de/api/interpreter",
