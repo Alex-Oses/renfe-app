@@ -149,6 +149,8 @@ export default function Resultados() {
       pathname: "/pasajero",
       params: {
         trenId: tren.id,
+        origen,
+        destino,
         pasajeros: String(pasajeros),
         adultos: String(adultos),
         ninos: String(ninos),

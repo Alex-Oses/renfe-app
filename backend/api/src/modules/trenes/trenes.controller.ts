@@ -27,12 +27,33 @@ export class TrenesController {
     return this.trenes.buscar(filtros);
   }
 
+  @Get('transbordos')
+  @ApiOperation({ summary: 'Opciones con un transbordo entre dos estaciones para una fecha' })
+  @ApiOkResponse({ description: 'Opciones de dos tramos, de menor a mayor duración' })
+  transbordos(@Query() filtros: BuscarTrenesDto) {
+    return this.trenes.transbordos(filtros);
+  }
+
   @Get(':feed/:tripId')
   @ApiOperation({ summary: 'Detalle de un viaje: paradas y horas' })
   @ApiOkResponse({ description: 'Paradas del viaje en orden' })
   @ApiNotFoundResponse({ description: 'Ese viaje no circula en esa fecha' })
   detalle(@Param() { feed, tripId }: ParametrosTrenDto, @Query() { fecha }: DetalleTrenDto) {
     return this.trenes.detalle(feed, tripId, fecha);
+  }
+
+  @Get(':feed/:tripId/asientos')
+  @ApiOperation({ summary: 'Mapa de butacas del viaje con su ocupación real' })
+  @ApiOkResponse({ description: '`{ datos: Butaca[], total }`' })
+  @ApiNotFoundResponse({ description: 'El viaje no existe' })
+  asientos(
+    @Param('feed') feed: string,
+    @Param('tripId') tripId: string,
+    @Query('fecha') fecha: string,
+    @Query('origen') origen?: string,
+    @Query('destino') destino?: string,
+  ) {
+    return this.trenes.asientos(feed, tripId, fecha, origen, destino);
   }
 
   @Get(':feed/:tripId/posicion')

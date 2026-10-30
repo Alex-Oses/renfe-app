@@ -106,6 +106,23 @@ export function aDetalleTren(d: TrenDetalleApi): TrenDetalle {
   };
 }
 
+// El detalle trae el viaje entero: la reserva tiene que ser del tramo buscado (Madrid a Zaragoza en un tren a Barcelona).
+export function soloTramo(t: TrenDetalle, origen?: string | null, destino?: string | null): TrenDetalle {
+  const o = t.paradas.find((p) => p.estacionId === origen);
+  const d = t.paradas.find((p) => p.estacionId === destino);
+  if (!o || !d || o.seq >= d.seq) return t;
+  const salida = o.sale ?? o.llega ?? t.salida;
+  const llegada = d.llega ?? d.sale ?? t.llegada;
+  return {
+    ...t,
+    origen: { id: o.estacionId, nombre: o.nombre },
+    destino: { id: d.estacionId, nombre: d.nombre },
+    salida,
+    llegada,
+    duracionMin: Math.round((Date.parse(llegada) - Date.parse(salida)) / 60_000),
+  };
+}
+
 // Hora prevista en una parada: GTFS exige llegada o salida, así que se usa la que haya.
 export const horaDeParada = (p: Pick<ParadaViaje, "llega" | "sale">): string | null => p.llega ?? p.sale;
 

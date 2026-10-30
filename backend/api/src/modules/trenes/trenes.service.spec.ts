@@ -12,6 +12,10 @@ const fila = {
   origen_nombre: 'Madrid-Puerta de Atocha',
   destino_id: '71801',
   destino_nombre: 'Barcelona-Sants',
+  km_lat_o: 40.4,
+  km_lon_o: -3.69,
+  km_lat_d: 41.38,
+  km_lon_d: 2.14,
   sale: '07:15:00',
   llega: '09:40:00',
   num_paradas: '3',
@@ -23,6 +27,21 @@ const dto = (extra: Record<string, unknown> = {}) =>
 
 const servicioCon = (consultar: (sql: string, valores: unknown[]) => Promise<unknown>) =>
   new TrenesService({ consultar } as unknown as BdService);
+
+describe('TrenesService.transbordos', () => {
+  it('suma precio y calcula espera y duración total', async () => {
+    const a = { ...fila, destino_id: '04040', destino_nombre: 'Zaragoza', sale: '07:00:00', llega: '08:30:00' };
+    const b = { ...fila, viaje_id: 'otro', origen_id: '04040', origen_nombre: 'Zaragoza', sale: '09:00:00', llega: '10:15:00' };
+    const servicio = servicioCon(async () => ({ rows: [{ a, b }] }));
+
+    const { datos } = await servicio.transbordos(dto());
+
+    expect(datos[0]!.transbordo).toEqual({ id: '04040', nombre: 'Zaragoza' });
+    expect(datos[0]!.esperaMin).toBe(30);
+    expect(datos[0]!.duracionMin).toBe(195);
+    expect(datos[0]!.precio).toBeCloseTo(datos[0]!.tramos[0].precioDesde + datos[0]!.tramos[1].precioDesde);
+  });
+});
 
 describe('TrenesService', () => {
   it('mapea el viaje al contrato', async () => {

@@ -2,7 +2,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { semilla } from "./logica";
-import { Campo, emailValido, Exito, Herramienta, Selector, useEnvio } from "./comun";
+import { Campo, emailValido, Exito, Herramienta, LOCALIZADOR, Selector, useEnvio } from "./comun";
 
 type Def = {
   nombre: string;
@@ -16,7 +16,7 @@ type Def = {
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 const estaciones = ESTACIONES.map((e) => e.nombre);
-const LOC: Def = { nombre: "loc", etiqueta: "Localizador", validar: (v) => (/^[A-Z0-9]{6}$/i.test(v) ? null : "El localizador tiene 6 letras o números.") };
+const LOC: Def = { nombre: "loc", etiqueta: "Localizador", validar: (v) => (LOCALIZADOR.test(v.trim()) ? null : "El localizador tiene 6 letras o números, con o sin «R-» delante.") };
 const NOMBRE: Def = { nombre: "nombre", etiqueta: "Nombre y apellidos", validar: (v) => (v.trim().length >= 3 ? null : "Escribe tu nombre.") };
 const EMAIL: Def = { nombre: "email", etiqueta: "Email", tipo: "email", validar: (v) => (emailValido(v) ? null : "Escribe un email válido.") };
 const TEL: Def = { nombre: "tel", etiqueta: "Teléfono", tipo: "tel", ayuda: "9 cifras, empieza por 6, 7, 8 o 9", validar: (v) => (/^[6-9]\d{8}$/.test(v.replace(/\s/g, "")) ? null : "Teléfono español de 9 cifras.") };

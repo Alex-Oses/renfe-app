@@ -12,6 +12,7 @@ import type {
   Estacion,
   IntentoPago,
   NuevaReserva,
+  OpcionTransbordo,
   NuevoAbono,
   ParadaViaje,
   PosicionTren,
@@ -39,7 +40,7 @@ import {
   sinProducto,
 } from "./adaptador-trenes";
 import { cuerpoLogin, cuerpoRegistro } from "./adaptador-cuenta";
-import { billeteDeApi, cuerpoReserva, reservaDeApi, validacionDeApi } from "./adaptador-reservas";
+import { billeteDeApi, claseDeApi, cuerpoReserva, reservaDeApi, reservaDeBilletes, validacionDeApi } from "./adaptador-reservas";
 import { cuerpoRegistrarCara, cuerpoVerificarCara, validarEmbedding } from "./cara";
 import { recordarEstaciones } from "./estaciones-memoria";
 import { parsearEventos } from "./flujo-chatbot";
@@ -369,6 +370,15 @@ export async function buscarTrenes(b: BusquedaTrenes): Promise<Tren[]> {
   return (await datos<TrenApi>(`/trenes?${new URLSearchParams({ ...b })}`)).map(aTren);
 }
 
+// GET /trenes/transbordos: sin API no hay opciones (el simulado solo tiene viajes directos).
+export async function buscarTransbordos(b: BusquedaTrenes): Promise<OpcionTransbordo[]> {
+  if (!BASE) return [];
+  const opciones = await datos<Omit<OpcionTransbordo, "tramos"> & { tramos: [TrenApi, TrenApi] }>(
+    `/trenes/transbordos?${new URLSearchParams({ ...b })}`,
+  );
+  return opciones.map((o) => ({ ...o, tramos: [aTren(o.tramos[0]), aTren(o.tramos[1])] }));
+}
+
 // GET /trenes/:feed/:tripId?fecha=  (detalle: paradas, horas y retraso por parada)
 export async function obtenerTren(id: string, fecha?: string): Promise<TrenDetalle> {
   if (!BASE) return { ...(await simular(() => trenes.obtenerTren(id))), paradas: [] };
@@ -376,17 +386,16 @@ export async function obtenerTren(id: string, fecha?: string): Promise<TrenDetal
   return aDetalleTren(detalle);
 }
 
-// GET /trenes/:feed/:tripId/asientos?fecha=  (contrato: «propuesto», la API todavía no lo tiene)
-// La API real asigna la butaca al crear la reserva, así que con API se pinta la misma plantilla
-// local con los precios del tren para poder elegir: lo elegido es una preferencia, no una garantía.
-export const obtenerAsientos = (tren: Tren): Promise<Asiento[]> =>
-  BASE
-    ? simular(() => reservas.plantillaAsientos(tren.id, tren.precioDesde), 0)
-    : simular(() => reservas.obtenerAsientos(tren.id));
+// GET /trenes/:feed/:tripId/asientos?fecha=&origen=&destino=  (ocupación real del viaje)
+export async function obtenerAsientos(tren: Tren): Promise<Asiento[]> {
+  if (!BASE) return simular(() => reservas.obtenerAsientos(tren.id));
+  const filtro = new URLSearchParams({ origen: tren.origen.id, destino: tren.destino.id });
+  const lista = await datos<Omit<Asiento, "clase"> & { clase: string }>(`${rutaViaje(tren.id, "/asientos")}&${filtro}`);
+  return lista.map((a) => ({ ...a, clase: claseDeApi(a.clase) }));
+}
 
 // POST /reservas
-// La API asigna la butaca y crea la reserva ya pagada (el pago es simulado): los asientos elegidos
-// en la web son una preferencia que el contrato todavía no admite.
+// Crea la reserva ya pagada (el pago es simulado) con las butacas elegidas; sin ellas (transbordo) las asigna la API.
 export async function crearReserva(tren: Tren, r: NuevaReserva): Promise<Reserva> {
   if (!BASE) return simular(() => reservas.crearReserva(r), 600);
   const creada = await pedir<ReservaApi>("/reservas", "POST", cuerpoReserva(tren, r));
@@ -406,8 +415,20 @@ export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
 // GET /billetes
 export const misBilletes = async (): Promise<Billete[]> =>
   BASE
-    ? (await datos<BilleteApi>("/billetes")).map(billeteDeApi)
+    ? (await datos<BilleteApi>("/billetes")).filter((b) => b.estado !== "anulado").map(billeteDeApi)
     : simular(() => reservas.misBilletes());
+
+// Admite el localizador con o sin el prefijo "R-" de la API. Solo encuentra reservas propias: hace falta sesión.
+export async function buscarReservaPorLocalizador(localizador: string): Promise<Reserva | undefined> {
+  const limpio = localizador.trim().toUpperCase();
+  const buscado = limpio.startsWith("R-") ? limpio : `R-${limpio}`;
+  const billetes = (await datos<BilleteApi>("/billetes")).filter((b) => b.localizador === buscado);
+  return billetes.length ? reservaDeBilletes(billetes) : undefined;
+}
+
+// POST /reservas/:localizador/cancelar
+export const cancelarReserva = (localizador: string): Promise<{ penalizacion: number; reembolso: number }> =>
+  pedir(`/reservas/${encodeURIComponent(localizador)}/cancelar`, "POST");
 
 // GET /billetes/:id/qr  (la API devuelve `{ id, qr }`: el billete se completa con GET /billetes)
 export async function obtenerBillete(id: string): Promise<Billete> {

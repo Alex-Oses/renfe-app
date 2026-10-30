@@ -65,7 +65,7 @@ const billeteApi: BilleteApi = {
 };
 
 describe("cuerpoReserva", () => {
-  it("parte el id del tren y manda un pasajero por butaca, sin asientos", () => {
+  it("parte el id del tren y manda un pasajero por butaca, con las butacas elegidas", () => {
     const cuerpo = cuerpoReserva(tren, nueva);
     expect(cuerpo).toEqual({
       feed: "avld",
@@ -77,8 +77,8 @@ describe("cuerpoReserva", () => {
         { nombre: "Lucía Pérez Gómez", documento: "12345678Z" },
         { nombre: "Marta Pérez Gómez", documento: "87654321X" },
       ],
+      asientos: nueva.asientos,
     });
-    expect(cuerpo).not.toHaveProperty("asientos");
   });
 
   it("rechaza un tren sin feed, viaje y fecha", () => {

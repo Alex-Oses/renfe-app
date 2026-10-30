@@ -1,5 +1,6 @@
 // Piezas compartidas por los widgets: campo accesible, búsqueda de reserva y confirmación.
 import { useId, useState, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import { buscarReservaPorLocalizador, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Reserva } from "@renfe/shared/api/tipos";
 import { expediente } from "./logica";
 import "./herramientas.css";
@@ -50,6 +51,7 @@ export function Exito({ children }: { children: ReactNode }) {
 }
 
 export const espera = (ms = 400) => new Promise((r) => setTimeout(r, ms));
+export const LOCALIZADOR = /^(R-)?[A-Z0-9]{6}$/i;
 export const emailValido = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 
 // shortcut: lee el almacén de simulado-reservas (clave "anden-reservas") porque no exporta búsqueda por localizador; usar la API cuando exista GET /reservas?localizador=.
@@ -68,19 +70,31 @@ export function BuscaReserva({ conEmail, filtro, onReserva }: { conEmail?: boole
   const [email, setEmail] = useState("");
   const [errores, setErrores] = useState<{ loc?: string; email?: string; general?: string }>({});
   const [enviando, setEnviando] = useState(false);
+  // Con API la reserva ya es del usuario con sesión: el email solo hace falta en el simulado.
+  const pideEmail = conEmail && usaDatosSimulados;
 
   async function enviar(e: FormEvent) {
     e.preventDefault();
     const err: typeof errores = {};
-    if (!/^[A-Z0-9]{6}$/i.test(loc.trim())) err.loc = "El localizador tiene 6 letras o números.";
-    if (conEmail && !emailValido(email)) err.email = "Escribe un email válido.";
+    if (!LOCALIZADOR.test(loc.trim())) err.loc = "El localizador tiene 6 letras o números, con o sin «R-» delante.";
+    if (pideEmail && !emailValido(email)) err.email = "Escribe un email válido.";
     setErrores(err);
     if (Object.keys(err).length) return;
     setEnviando(true);
-    await espera();
+    let r: Reserva | undefined;
+    if (usaDatosSimulados) {
+      await espera();
+      r = reservaPorLocalizador(loc);
+    } else {
+      try {
+        r = await buscarReservaPorLocalizador(loc);
+      } catch {
+        setEnviando(false);
+        return setErrores({ general: "Inicia sesión para consultar tus reservas." });
+      }
+    }
     setEnviando(false);
-    const r = reservaPorLocalizador(loc);
-    if (!r || (conEmail && !r.pasajeros.some((p) => p.email.toLowerCase() === email.trim().toLowerCase())))
+    if (!r || (pideEmail && !r.pasajeros.some((p) => p.email.toLowerCase() === email.trim().toLowerCase())))
       return setErrores({ general: "No encontramos ninguna reserva con esos datos. Revisa el localizador del email de compra." });
     const motivo = filtro?.(r);
     if (motivo) return setErrores({ general: motivo });
@@ -89,8 +103,8 @@ export function BuscaReserva({ conEmail, filtro, onReserva }: { conEmail?: boole
 
   return (
     <form className="herr__form" onSubmit={enviar} noValidate>
-      <Campo etiqueta="Localizador" value={loc} onChange={(e) => setLoc(e.target.value.toUpperCase())} maxLength={6} autoComplete="off" error={errores.loc} required />
-      {conEmail && <Campo etiqueta="Email de la compra" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" error={errores.email} required />}
+      <Campo etiqueta="Localizador" value={loc} onChange={(e) => setLoc(e.target.value.toUpperCase())} maxLength={8} autoComplete="off" error={errores.loc} required />
+      {pideEmail && <Campo etiqueta="Email de la compra" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" error={errores.email} required />}
       <button className="boton" disabled={enviando}>{enviando ? "Buscando…" : "Buscar reserva"}</button>
       {errores.general && <p className="herr__error" role="alert">{errores.general}</p>}
     </form>

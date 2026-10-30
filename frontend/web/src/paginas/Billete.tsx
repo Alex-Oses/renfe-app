@@ -130,6 +130,10 @@ export default function Billete() {
             <dt>Clase</dt>
             <dd>{b.asiento.clase}</dd>
           </div>
+          <div>
+            <dt>Precio</dt>
+            <dd>{b.asiento.precio.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</dd>
+          </div>
           <div className="pase__ancho">
             <dt>Viajero</dt>
             <dd>

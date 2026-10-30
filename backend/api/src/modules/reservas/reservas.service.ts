@@ -14,15 +14,49 @@ import {
   claseVisible,
   enmascararDocumento,
   etiquetaAsiento,
+  numeroDeAsiento,
   numeroVisible,
   referencia,
   tipoVisible,
 } from '../../common/formato.js';
 import { PREFIJO_BILLETE, firmar } from '../../common/qr/firma.js';
 import { BdService } from '../../common/bd/bd.service.js';
-import { precioSimulado } from '../../common/simulado/precio.js';
+import { kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
+import { CorreoService, htmlDeCorreo } from '../../common/correo/correo.service.js';
 import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import type { CrearReservaDto } from './dto/crear-reserva.dto.js';
+
+export interface ReservaCancelada {
+  localizador: string;
+  estado: 'cancelada';
+  total: number;
+  penalizacion: number;
+  reembolso: number;
+}
+
+interface FilaCancelable {
+  id: string;
+  referencia: string;
+  estado: string;
+  importe_centimos: number;
+  fecha: string;
+  clase: string;
+  usados: number;
+}
+
+// Mismos porcentajes que la web (herramientas/logica.ts): Turista se muestra como Básico, Confort como Elige.
+const PENALIZACION_POR_CLASE: Record<string, number> = { turista: 100, preferente: 30 };
+
+const euros = (n: number) => n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+
+const SQL_RESERVA_PROPIA = `
+  select r.id, r.referencia, r.estado, r.importe_centimos, r.fecha_servicio::text as fecha,
+         (select b.clase from billetes b where b.reserva_id = r.id limit 1) as clase,
+         (select count(*)::int from billetes b where b.reserva_id = r.id and b.estado = 'usado') as usados
+    from reservas r
+   where r.referencia = $1 and r.usuario_id = $2
+   for update of r
+`;
 
 export interface BilleteEmitido {
   id: string;
@@ -50,6 +84,10 @@ interface FilaViaje {
   llega: string;
   origen_nombre: string;
   destino_nombre: string;
+  lat_o: number;
+  lon_o: number;
+  lat_d: number;
+  lon_d: number;
 }
 
 interface FilaReserva {
@@ -75,7 +113,8 @@ const SQL_VIAJE = `
          o.sale::text as sale,
          d.llega::text as llega,
          eo.nombre as origen_nombre,
-         ed.nombre as destino_nombre
+         ed.nombre as destino_nombre,
+         eo.lat as lat_o, eo.lon as lon_o, ed.lat as lat_d, ed.lon as lon_d
     from viajes v
     join rutas r on r.feed = v.feed and r.id = v.ruta_id
     join horarios o on o.feed = v.feed and o.viaje_id = v.id
@@ -136,6 +175,17 @@ const SQL_ASIENTOS = `
    limit $4
 `;
 
+const SQL_ASIENTOS_ELEGIDOS = `
+  select a.id, a.coche, a.numero, a.clase
+    from asientos a
+    join unnest($4::int[], $5::int[]) as e(coche, numero) on e.coche = a.coche and e.numero = a.numero
+   where a.feed = $1
+     and a.viaje_id = $2
+     and a.fecha_servicio = $3::date
+     and a.reserva_id is null
+   for update of a
+`;
+
 const SQL_OCUPAR = `
   update asientos
      set reserva_id = $1
@@ -154,6 +204,7 @@ export class ReservasService {
   constructor(
     private readonly bd: BdService,
     private readonly config: ConfigService,
+    private readonly correo: CorreoService,
   ) {}
 
   async crear(usuarioId: string, dto: CrearReservaDto): Promise<ReservaCreada> {
@@ -171,12 +222,119 @@ export class ReservasService {
     }
 
     try {
-      return await this.bd.transaccion((cliente) =>
+      const creada = await this.bd.transaccion((cliente) =>
         this.crearEn(cliente, usuarioId, dto, secreto),
       );
+      void this.avisarCompra(usuarioId, creada, dto);
+      return creada;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new ServiceUnavailableException('La base de datos no está disponible');
+    }
+  }
+
+  async cancelar(usuarioId: string, localizador: string): Promise<ReservaCancelada> {
+    try {
+      const cancelada = await this.bd.transaccion((cliente) =>
+        this.cancelarEn(cliente, usuarioId, localizador),
+      );
+      void this.avisarCancelacion(usuarioId, cancelada);
+      return cancelada;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new ServiceUnavailableException('La base de datos no está disponible');
+    }
+  }
+
+  private butacasElegidas(ids: string[], plazas: number): { coches: number[]; numeros: number[] } {
+    const butacas = ids.map((id) => {
+      const [coche, etiqueta] = id.split('-');
+      return { coche: Number(coche), numero: numeroDeAsiento(etiqueta ?? '') };
+    });
+    const validas = butacas.every((b) => b.coche >= 1 && b.coche <= 3 && b.numero !== null);
+    if (ids.length !== plazas || new Set(ids).size !== plazas || !validas) {
+      throw new BadRequestException('Elige una butaca distinta y válida por pasajero');
+    }
+    return { coches: butacas.map((b) => b.coche), numeros: butacas.map((b) => b.numero!) };
+  }
+
+  private async cancelarEn(
+    cliente: PoolClient,
+    usuarioId: string,
+    localizador: string,
+  ): Promise<ReservaCancelada> {
+    const { rows } = await cliente.query<FilaCancelable>(SQL_RESERVA_PROPIA, [localizador, usuarioId]);
+    const reserva = rows[0];
+    if (!reserva) throw new NotFoundException('No hay ninguna reserva tuya con ese localizador');
+    if (reserva.estado === 'cancelada') throw new ConflictException('Esa reserva ya está cancelada');
+    if (reserva.fecha < hoyMadrid()) throw new BadRequestException('El viaje ya ha pasado');
+    if (reserva.usados > 0) throw new ConflictException('Algún billete ya se ha usado');
+
+    await cliente.query(`update reservas set estado = 'cancelada' where id = $1`, [reserva.id]);
+    await cliente.query(`update billetes set estado = 'anulado' where reserva_id = $1`, [reserva.id]);
+    await cliente.query('update asientos set reserva_id = null where reserva_id = $1', [reserva.id]);
+
+    const penalizacion = PENALIZACION_POR_CLASE[reserva.clase] ?? 100;
+    return {
+      localizador: reserva.referencia,
+      estado: 'cancelada',
+      total: reserva.importe_centimos / 100,
+      penalizacion,
+      reembolso: Math.round(reserva.importe_centimos * (100 - penalizacion)) / 10000,
+    };
+  }
+
+  private async emailDe(usuarioId: string): Promise<string | undefined> {
+    const { rows } = await this.bd.consultar<{ email: string | null }>(
+      'select email from auth.users where id = $1',
+      [usuarioId],
+    );
+    return rows[0]?.email ?? undefined;
+  }
+
+  // Después de confirmar la transacción y sin esperar: el correo no retrasa ni tumba la compra.
+  private async avisarCompra(usuarioId: string, r: ReservaCreada, dto: CrearReservaDto): Promise<void> {
+    try {
+      const para = await this.emailDe(usuarioId);
+      if (!para) return;
+      const lineas = [
+        `Localizador: ${r.localizador}`,
+        `Fecha: ${dto.fecha}`,
+        ...r.billetes.map(
+          (b, i) =>
+            `${dto.pasajeros[i]!.nombre}: coche ${b.coche}, asiento ${b.asiento}, ${b.clase}, ${euros(b.precio)}`,
+        ),
+        `Total pagado: ${euros(r.total)}`,
+      ];
+      await this.correo.enviar({
+        para,
+        asunto: `Tu billete de tren: localizador ${r.localizador}`,
+        html: htmlDeCorreo('Compra confirmada', lineas),
+        texto: lineas.join('\n'),
+      });
+    } catch {
+      // Sin correo sigue habiendo billete: se ve en «Mis billetes».
+    }
+  }
+
+  private async avisarCancelacion(usuarioId: string, c: ReservaCancelada): Promise<void> {
+    try {
+      const para = await this.emailDe(usuarioId);
+      if (!para) return;
+      const lineas = [
+        `Localizador: ${c.localizador}`,
+        `Importe de la reserva: ${euros(c.total)}`,
+        `Penalización: ${c.penalizacion} %`,
+        `Reembolso: ${euros(c.reembolso)}`,
+      ];
+      await this.correo.enviar({
+        para,
+        asunto: `Reserva ${c.localizador} cancelada`,
+        html: htmlDeCorreo('Reserva cancelada', lineas),
+        texto: lineas.join('\n'),
+      });
+    } catch {
+      // La cancelación ya está hecha aunque el correo falle.
     }
   }
 
@@ -207,8 +365,11 @@ export class ReservasService {
 
     const plazas = dto.pasajeros.length;
     const precioCentimos = Math.round(
-      precioSimulado(`${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`) *
-        100,
+      precioSimulado(
+        viaje.tipo_servicio,
+        kmTrayecto(viaje.lat_o, viaje.lon_o, viaje.lat_d, viaje.lon_d),
+        `${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`,
+      ) * 100,
     );
     const totalCentimos = precioCentimos * plazas;
 
@@ -224,14 +385,22 @@ export class ReservasService {
     ]);
     const reserva = reservas[0]!;
 
-    const { rows: libres } = await cliente.query<FilaAsiento>(SQL_ASIENTOS, [
-      dto.feed,
-      dto.viajeId,
-      dto.fecha,
-      plazas,
-    ]);
+    const elegidas = dto.asientos?.length ? this.butacasElegidas(dto.asientos, plazas) : null;
+    const { rows: libres } = elegidas
+      ? await cliente.query<FilaAsiento>(SQL_ASIENTOS_ELEGIDOS, [
+          dto.feed,
+          dto.viajeId,
+          dto.fecha,
+          elegidas.coches,
+          elegidas.numeros,
+        ])
+      : await cliente.query<FilaAsiento>(SQL_ASIENTOS, [dto.feed, dto.viajeId, dto.fecha, plazas]);
     if (libres.length < plazas) {
-      throw new ConflictException('No quedan butacas libres para ese viaje');
+      throw new ConflictException(
+        elegidas
+          ? 'Alguna de las butacas elegidas acaba de ocuparse: elige otra'
+          : 'No quedan butacas libres para ese viaje',
+      );
     }
 
     const { rows: ocupados } = await cliente.query<FilaAsiento>(SQL_OCUPAR, [
