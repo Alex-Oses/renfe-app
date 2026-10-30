@@ -4,7 +4,7 @@ autor: Rubén
 area: vault
 para: Alex, Marina, Kevin
 rama: docs/vault-handoffs-y-objetivo-infra
-pr: pendiente
+pr: "#101"
 tags: [handoff, vault, infraestructura, triaje]
 estado: abierto
 ---
