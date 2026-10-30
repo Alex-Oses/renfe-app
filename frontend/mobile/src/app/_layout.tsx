@@ -63,6 +63,7 @@ export default function RootLayout() {
         <Stack.Screen name="comprar-abono" options={{ headerShown: false }} />
         <Stack.Screen name="abono/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="revisor" options={{ headerShown: false }} />
+        <Stack.Screen name="chatbot" options={{ headerShown: false }} />
       </Stack>
     </>
   );
