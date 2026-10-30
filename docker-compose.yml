@@ -1,6 +1,6 @@
 # Docker Compose del monorepo (responsable: Kevin).
 # La BD es Supabase local, que levanta la CLI con Docker: `pnpm db:start` (puertos 54321 API/Auth y 54322 Postgres).
-# Luego: `docker compose up --build api` → API en http://localhost:3000 contra esa BD.
+# Luego: `docker compose up --build` → API en :3000, web en :5173 y app móvil (web) en :8081.
 
 services:
   api:
@@ -27,7 +27,28 @@ services:
     volumes:
       - gtfs-data:/app/data
 
-  # La app Expo se ejecuta fuera de Docker (pnpm dev:mobile) para usar Expo Go en el móvil.
+  # Web (Vite) en http://localhost:5173, contra la API de arriba.
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        APP: web
+    depends_on: [api]
+    ports:
+      - "5173:80"
+
+  # App Expo exportada a web en http://localhost:8081. En el móvil con Expo Go se sigue usando
+  # `pnpm dev:mobile` fuera de Docker, con EXPO_PUBLIC_API_URL=http://<IP del PC>:3000.
+  mobile:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        APP: mobile
+    depends_on: [api]
+    ports:
+      - "8081:80"
 
 volumes:
   gtfs-data:
