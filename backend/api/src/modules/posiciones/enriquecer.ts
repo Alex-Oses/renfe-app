@@ -49,19 +49,23 @@ interface FilaViaje {
   sig_id: string | null;
   sig_nombre: string | null;
   sig_llega: string | null;
+  hora_id: string | null;
+  hora_nombre: string | null;
+  hora_llega: string | null;
 }
 
 // Un viaje por trip_id. La parada actual es un stop_id del feed: se traduce con estacion_feeds.
 // `sig_*` es la parada siguiente a la actual (para cuando el tren está parado en ella).
 const SQL = `
-  with p(viaje_id, stop_id) as (select * from unnest($2::text[], $3::text[]))
+  with p(viaje_id, stop_id, retraso) as (select * from unnest($2::text[], $3::text[], $4::int[]))
   select distinct on (v.id)
          v.id as viaje_id, v.numero, r.nombre_corto,
          v.origen_id, eo.nombre as origen_nombre, v.destino_id, ed.nombre as destino_nombre,
          v.llegada::text as llegada,
          h.llega::text as h_llega, h.sale::text as h_sale,
          h.estacion_id as h_estacion_id, eh.nombre as h_estacion_nombre,
-         sig.estacion_id as sig_id, es.nombre as sig_nombre, sig.llega::text as sig_llega
+         sig.estacion_id as sig_id, es.nombre as sig_nombre, sig.llega::text as sig_llega,
+         hora.estacion_id as hora_id, ehora.nombre as hora_nombre, hora.llega::text as hora_llega
     from p
     join viajes v on v.feed = $1 and v.id = p.viaje_id
     join rutas r on r.feed = v.feed and r.id = v.ruta_id
@@ -79,6 +83,16 @@ const SQL = `
        limit 1
     ) sig on true
     left join estaciones es on es.id = sig.estacion_id
+    -- Sin parada actual: la próxima es la primera cuya hora (con el retraso) aún no ha pasado.
+    left join lateral (
+      select h3.estacion_id, h3.llega
+        from horarios h3
+       where h3.feed = v.feed and h3.viaje_id = v.id
+         and coalesce(h3.llega, h3.sale) > $5::interval - make_interval(secs => p.retraso)
+       order by h3.secuencia
+       limit 1
+    ) hora on true
+    left join estaciones ehora on ehora.id = hora.estacion_id
    order by v.id, h.secuencia
 `;
 
@@ -124,6 +138,11 @@ function conRetraso(fecha: string, intervalo: string | null, retrasoSeg: number 
   return retrasoSeg ? instanteAIso(new Date(Date.parse(iso) + retrasoSeg * 1000)) : iso;
 }
 
+/** Hora de Madrid como intervalo GTFS ("HH:MM:SS"). shortcut: no suma 24 h a los trenes que salieron ayer. */
+function horaMadrid(ahora: Date): string {
+  return instanteAIso(ahora).slice(11, 19);
+}
+
 const VACIO: Omit<CamposViaje, 'retrasoFuente' | 'estadoHorario'> = {
   nombre: null,
   linea: null,
@@ -149,6 +168,8 @@ export async function enriquecer<T extends Enriquecible>(
           feed,
           lista.map((p) => p.tripId),
           lista.map((p) => p.paradaActual ?? ''),
+          lista.map((p) => p.retrasoSeg ?? 0),
+          horaMadrid(ahora),
         ]);
         for (const fila of rows) filas.set(`${feed}:${fila.viaje_id}`, fila);
       } catch {
@@ -171,9 +192,12 @@ export async function enriquecer<T extends Enriquecible>(
     const fecha = fechaServicio(fila.llegada, ahora);
     // Parado en una estación: la próxima es la siguiente. En camino: la próxima es la parada actual.
     const parado = p.estado === 'STOPPED_AT';
-    const prox = parado
-      ? fila.sig_id && { id: fila.sig_id, nombre: fila.sig_nombre ?? '', llega: fila.sig_llega }
-      : fila.h_estacion_id && { id: fila.h_estacion_id, nombre: fila.h_estacion_nombre ?? '', llega: fila.h_llega };
+    const prox =
+      (fila.h_estacion_id === null
+        ? fila.hora_id && { id: fila.hora_id, nombre: fila.hora_nombre ?? '', llega: fila.hora_llega }
+        : parado
+          ? fila.sig_id && { id: fila.sig_id, nombre: fila.sig_nombre ?? '', llega: fila.sig_llega }
+          : { id: fila.h_estacion_id, nombre: fila.h_estacion_nombre ?? '', llega: fila.h_llega }) || null;
     return {
       ...p,
       ...estado,

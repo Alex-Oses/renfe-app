@@ -22,3 +22,5 @@ scripts
 .env.*
 
 **/*.md
+# El chatbot lee su contexto de estos .md al arrancar
+!backend/api/src/modules/chatbot/**/*.md

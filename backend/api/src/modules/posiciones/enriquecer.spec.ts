@@ -56,6 +56,9 @@ describe('enriquecer', () => {
     sig_id: null,
     sig_nombre: null,
     sig_llega: null,
+    hora_id: '71801',
+    hora_nombre: 'BARCELONA-SANTS',
+    hora_llega: '09:14:00',
   };
   const bd = (filas: unknown[]) =>
     ({ estado: async () => 'ok', consultar: async () => ({ rows: filas }) }) as unknown as BdService;
@@ -78,6 +81,12 @@ describe('enriquecer', () => {
     const parado = { ...fila, h_sale: '09:16:00', sig_id: '04040', sig_nombre: 'ZARAGOZA', sig_llega: '10:00:00' };
     const [p] = await enriquecer([{ ...posicion('T1', 0), estado: 'STOPPED_AT' }], bd([parado]), AHORA);
     expect(p!.proximaParada).toEqual({ id: '04040', nombre: 'ZARAGOZA', llegada: '2026-10-29T10:00:00+01:00' });
+  });
+
+  it('sin parada actual, la próxima sale del horario', async () => {
+    const sinParada = { ...fila, h_estacion_id: null, h_estacion_nombre: null, h_llega: null, h_sale: null, hora_id: '04040', hora_nombre: 'ZARAGOZA', hora_llega: '10:00:00' };
+    const [p] = await enriquecer([{ ...posicion('T1', 120), paradaActual: null }], bd([sinParada]), AHORA);
+    expect(p!.proximaParada).toEqual({ id: '04040', nombre: 'ZARAGOZA', llegada: '2026-10-29T10:02:00+01:00' });
   });
 
   it('el retraso de Renfe manda sobre la estimación', async () => {

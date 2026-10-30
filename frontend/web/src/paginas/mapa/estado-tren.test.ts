@@ -88,6 +88,7 @@ describe("ciudadCorta", () => {
     expect(ciudadCorta("SAN SEBASTIÁN-DONOSTIA")).toBe("SAN SEBASTIÁN");
     expect(ciudadCorta("A CORUÑA")).toBe("A CORUÑA");
     expect(ciudadCorta("LA ROBLA")).toBe("LA ROBLA");
-    expect(ciudadCorta("SANTIAGO DE COMPOSTELA-DANIEL CASTELAO")).toBe("SANTIAGO");
+    expect(ciudadCorta("SANTIAGO DE COMPOSTELA-DANIEL CASTELAO")).toBe("SANTIAGO DE COMPOSTELA");
+    expect(ciudadCorta("Jardines de Hércules")).toBe("Jardines de Hércules");
   });
 });

@@ -45,6 +45,8 @@ export interface TrenDetalle {
   llegada: string;
   retrasoSeg: number | null;
   paradas: Parada[];
+  /** Trazado real [lat, lon] para el mapa; `null` si no hay geometría (se dibuja parada a parada). */
+  recorrido: [number, number][] | null;
 }
 
 interface FilaParada {
@@ -235,6 +237,7 @@ export class TrenesService {
 
     const primera = filas[0]!;
     const ultima = filas.at(-1)!;
+    const recorrido = await this.recorrido(feed, tripId);
 
     return {
       feed: primera.feed,
@@ -256,6 +259,55 @@ export class TrenesService {
         sale: fila.sale === null ? null : intervaloAIso(fecha, fila.sale),
         retrasoSeg: null,
       })),
+      recorrido,
     };
   }
+
+  // Forma de shapes.txt (Cercanías) o, si no hay, los tramos por las vías de OSM entre paradas
+  // seguidas; donde falte un tramo, línea recta entre esas dos paradas. Un fallo aquí no tumba el detalle.
+  private async recorrido(feed: string, tripId: string): Promise<[number, number][] | null> {
+    try {
+      const { rows } = await this.bd.consultar<{ forma: Punto[] | null; tramos: Punto[][] | null }>(SQL_RECORRIDO, [feed, tripId]);
+      const { forma, tramos } = rows[0] ?? { forma: null, tramos: null };
+      if (forma?.length) return forma;
+      return tramos?.length ? unirTramos(tramos) : null;
+    } catch {
+      return null;
+    }
+  }
 }
+
+type Punto = [number, number];
+
+/** Encadena tramos sin repetir el punto de unión (el final de uno es el principio del siguiente). */
+export function unirTramos(tramos: Punto[][]): Punto[] {
+  const salida: Punto[] = [];
+  for (const tramo of tramos) {
+    for (const p of tramo) {
+      const ultimo = salida.at(-1);
+      if (!ultimo || ultimo[0] !== p[0] || ultimo[1] !== p[1]) salida.push(p);
+    }
+  }
+  return salida;
+}
+
+const SQL_RECORRIDO = `
+  with viaje as (
+    select forma_id from viajes where feed = $1 and id = $2
+  ),
+  paradas as (
+    select h.secuencia, h.estacion_id,
+           lead(h.estacion_id) over (order by h.secuencia) as siguiente
+      from horarios h
+     where h.feed = $1 and h.viaje_id = $2
+  )
+  select (select f.puntos from formas f join viaje v on f.feed = $1 and f.id = v.forma_id) as forma,
+         (select jsonb_agg(
+                   coalesce(t.puntos, jsonb_build_array(jsonb_build_array(eo.lat, eo.lon),
+                                                        jsonb_build_array(ed.lat, ed.lon)))
+                   order by p.secuencia)
+            from paradas p
+            join estaciones eo on eo.id = p.estacion_id
+            join estaciones ed on ed.id = p.siguiente
+            left join tramos_via t on t.origen_id = p.estacion_id and t.destino_id = p.siguiente) as tramos
+`;
