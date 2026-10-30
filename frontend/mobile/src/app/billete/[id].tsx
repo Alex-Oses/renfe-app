@@ -218,6 +218,7 @@ export default function VerBillete() {
           {dato("Coche", String(asiento.coche))}
           {dato("Asiento", `${asiento.fila}${asiento.letra}`)}
           {dato("Clase", asiento.clase)}
+          {dato("Precio", asiento.precio.toLocaleString("es-ES", { style: "currency", currency: "EUR" }))}
           {dato("Viajero", `${pasajero.nombre} ${pasajero.apellidos}`, true)}
         </View>
 

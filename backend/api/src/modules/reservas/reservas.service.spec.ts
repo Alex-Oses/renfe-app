@@ -7,6 +7,7 @@ import {
 import type { ConfigService } from '@nestjs/config';
 import { verificar } from '../../common/qr/firma.js';
 import { BdService } from '../../common/bd/bd.service.js';
+import type { CorreoService } from '../../common/correo/correo.service.js';
 import { ReservasService } from './reservas.service.js';
 
 const SECRETO = 'secreto-de-pruebas-con-mas-de-32-caracteres';
@@ -75,6 +76,7 @@ const servicioCon = (
         fn(crearCliente(opciones)),
     } as unknown as BdService,
     { get: (clave: string) => entorno[clave] } as unknown as ConfigService,
+    { enviar: async () => undefined } as unknown as CorreoService,
   );
 
 const dto = (extra: Record<string, unknown> = {}) =>

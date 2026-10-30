@@ -3,7 +3,7 @@ import { BdService } from '../../common/bd/bd.service.js';
 import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import { duracionMin, intervaloAIso } from '../../common/gtfs/tiempo.js';
 import type { BuscarTrenesDto } from './dto/buscar-trenes.dto.js';
-import { plazasSimuladas, precioSimulado } from './simulado.js';
+import { kmTrayecto, plazasSimuladas, precioSimulado } from './simulado.js';
 
 export interface Tren {
   id: string;
@@ -74,6 +74,10 @@ interface FilaTren {
   origen_nombre: string;
   destino_id: string;
   destino_nombre: string;
+  km_lat_o: number;
+  km_lon_o: number;
+  km_lat_d: number;
+  km_lon_d: number;
   sale: string;
   llega: string;
   num_paradas: string;
@@ -94,6 +98,7 @@ const SQL_BUSCAR = `
          eo.nombre as origen_nombre,
          d.estacion_id as destino_id,
          ed.nombre as destino_nombre,
+         eo.lat as km_lat_o, eo.lon as km_lon_o, ed.lat as km_lat_d, ed.lon as km_lon_d,
          o.sale::text as sale,
          d.llega::text as llega,
          (select count(*)
@@ -215,7 +220,11 @@ export class TrenesService {
           duracionMin: duracionMin(fila.sale, fila.llega),
           numParadas: Number(fila.num_paradas),
           retrasoSeg: null,
-          precioDesde: precioSimulado(clave),
+          precioDesde: precioSimulado(
+            fila.tipo_servicio,
+            kmTrayecto(fila.km_lat_o, fila.km_lon_o, fila.km_lat_d, fila.km_lon_d),
+            `${fila.feed}:${fila.viaje_id}:${fecha}:${fila.origen_id}:${fila.destino_id}`,
+          ),
           plazasLibres: plazasSimuladas(clave),
         };
       }),

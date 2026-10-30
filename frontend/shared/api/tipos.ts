@@ -142,7 +142,7 @@ export interface NuevaReserva {
 
 export interface Reserva {
   id: string;
-  localizador: string; // 6 caracteres, como los de Renfe
+  localizador: string; // 6 caracteres en el simulado; la API añade el prefijo "R-"
   tren: Tren;
   asientos: Asiento[];
   pasajeros: Pasajero[];

@@ -1,7 +1,7 @@
 // Precio y plazas son simulados (Renfe solo publica GTFS). Deterministas a
 // propósito: la misma búsqueda devuelve siempre lo mismo, para que la demo y
 // los tests no cambien en cada llamada.
-export { precioSimulado } from '../../common/simulado/precio.js';
+export { kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
 
 function semilla(texto: string): number {
   let hash = 2166136261;
