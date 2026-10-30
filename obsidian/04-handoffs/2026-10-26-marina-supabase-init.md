@@ -6,6 +6,7 @@ para: todos
 rama: chore/db-supabase-init
 pr: (pendiente de abrir)
 tags: [handoff, supabase, base-datos]
+estado: cerrado
 ---
 
 # Handoff — Supabase local inicializado

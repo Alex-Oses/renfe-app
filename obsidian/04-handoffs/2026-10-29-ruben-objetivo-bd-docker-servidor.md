@@ -6,6 +6,7 @@ para: Marina, Kevin, Alex
 rama: feat/api-chatbot
 pr: pendiente
 tags: [handoff, supabase, docker, despliegue, database]
+estado: abierto
 ---
 
 # Handoff — objetivo final de base de datos en Docker

@@ -45,8 +45,9 @@ Request:
 { "mensaje": "¿Qué trenes hay de Madrid a Barcelona mañana?" }
 ```
 
-`mensaje` debe tener entre 1 y 2000 caracteres. `conversationId` es opcional y opaco; el servidor no
-persiste conversaciones y solo lo devuelve para que el cliente pueda correlacionar la respuesta.
+`mensaje` debe tener entre 1 y 2000 caracteres. `conversationId` es opcional y opaco; si se reenvía,
+el servidor recuerda los **4 últimos intercambios** de esa conversación (30 min, en el proceso: se
+pierde al reiniciar la API). Sin `conversationId` empieza una conversación nueva.
 
 Response 200:
 
@@ -54,11 +55,32 @@ Response 200:
 {
   "respuesta": "He encontrado 3 trenes...",
   "conversationId": "c-...",
-  "herramientas": ["buscar_trenes"]
+  "herramientas": ["buscar_trenes"],
+  "trenes": []
 }
 ```
 
+`trenes` trae hasta 8 viajes de `buscar_trenes` en ese turno (misma forma que `GET /trenes`), para
+que el cliente pueda pintar la lista y enlazar a la reserva. La web muestra el primero y despliega el
+resto con «Mostrar más».
+
 Errores: `400` mensaje inválido · `503` proveedor de IA o datos no disponibles.
+
+## POST /chatbot/mensaje/flujo
+
+El mismo turno que `POST /chatbot/mensaje`, pero en **SSE** (`text/event-stream`), para que el cliente
+enseñe qué está haciendo la IA. Mismo request y misma autenticación (ninguna). El turno puede pasar de
+los 8 s de una petición normal, así que no se le pone timeout corto.
+
+Eventos, en orden:
+
+| `event` | `data` | Cuándo |
+|---|---|---|
+| `paso` | `{ "paso": "analizando" }` | Al empezar el turno |
+| `paso` | `{ "paso": "consultando", "herramienta": "buscar_trenes" }` | Antes de cada llamada a una herramienta |
+| `paso` | `{ "paso": "razonando" }` | Con los resultados de las herramientas, antes de la siguiente llamada al modelo |
+| `fin` | La misma respuesta 200 de arriba | Turno terminado |
+| `error` | `{ "mensaje": "..." }` | Turno fallido (mismo texto que daría el `400`/`503`) |
 
 ## Autenticación
 

@@ -1,5 +1,5 @@
 ---
-actualizado: 2026-10-29
+actualizado: 2026-10-30
 tags: [estado]
 ---
 
@@ -11,7 +11,7 @@ tags: [estado]
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
 | Alex | PO + Frontend | 🟢 | `pnpm docker:local` (`docker-compose.local.yml`) levanta API, web (:5173) y app móvil web (:8081) contra Supabase local; mapa con recorrido real (shapes de Cercanías y vías de OSM para AV/LD/MD). PR desde `feat/infra-compose-completo` ([[2026-10-30-alex-compose-completo-y-recorridos]]) | Probar Expo Go en móvil; recorridos en Supabase Cloud (Marina) | 2026-10-30 |
-| Rubén | Backend + chatbot | 🟢 | Chatbot Gemini operativo y autenticación actualizada para usar JWT propio de la API con 12 h de caducidad; nuevo acceso flotante del chat preparado en la PR frontend; Supabase Cloud queda como transición y el objetivo final es Supabase self-hosted en Docker | El puerto público lo tiene que abrir el administrador; falta preparar la migración al servidor Docker; secretos de despliegue fuera del repositorio | 2026-10-29 |
+| Rubén | Backend + chatbot | 🟡 | Chatbot con contexto en `.md`, memoria por conversación, pasos en vivo por SSE, Markdown y tarjetas de tren (1 + «Mostrar más», máximo 8) en la web. PR #97 integrada con `develop`, sin conflictos, CI en verde ([[2026-10-30-ruben-pr97-mergeada]]). PR documental #101 abierta para el triaje de handoffs y el objetivo de infraestructura | Falta revisión y aprobación de la PR #101; queda probar el chat en la app Expo y la latencia de Gemini sigue siendo el riesgo de la demo | 2026-10-30 |
 | Marina | SM + Base de datos | 🟢 | **Supabase Cloud validada**: proyecto `hqwwucagvlhnlqrspwvh` (eu-west-1), 4 migraciones con `db push`, catálogo AV/LD cargado por el session pooler y `gtfs:verificar` en verde (1 035 estaciones / 668 rutas / 8 908 viajes / 71 781 horarios, feed 29/10). Los 3 PRs (#72, #73, #74) ya están mergeados. Siguiente: `DATABASE_URL` en Render ([[supabase-nube]]) | Nada por mi parte. Render sigue en 503 hasta que Kevin/Alex pongan `DATABASE_URL` | 2026-10-29 |
 | Kevin | DevOps + despliegue + Docker | 🟢 | CI revisada y en verde (excepción para Dependabot + `pnpm test:ramas`): PR **#75** abierta, `CI / ok` y `PR / reglas` ✅, falta aprobación. API viva en Render sin base de datos. Siguiente: en cuanto exista Supabase Cloud ([[supabase-nube]]) rellenar las variables de Render; y Docker (D10 de [[ADR-005-app-movil-expo]]) | `DATABASE_URL` bloqueada hasta que Marina cree Supabase Cloud | 2026-10-28 |
 
@@ -20,6 +20,7 @@ tags: [estado]
 - 🟢 **Supabase Cloud operativa desde el 29/10** (`hqwwucagvlhnlqrspwvh`, eu-west-1): esquema y catálogo AV/LD cargados y verificados. Ya no depende de la VM de Marina ([[supabase-nube]]).
 - API desplegada en Render (https://renfe-api.onrender.com) **sin base de datos**: `/estaciones` y `/trenes` dan 503 hasta que se rellene `DATABASE_URL` (session pooler) en el panel de Render.
 - 🟢 **La app móvil ya tiene plan** ([[ADR-005-app-movil-expo]], 28/10): Expo para iOS y Android, y la web queda como demo y plan B. El facial está decidido en [[ADR-007-reconocimiento-facial]]: **sin servidor Python**, el vector lo calcula el dispositivo y la decisión la toma Postgres.
+- 🟡 **Servidor final bloqueado por red:** el administrador debe confirmar la apertura de puertos y autorizar proxy/TLS y DNS. La base de datos y la API deben quedar dockerizadas allí; Supabase Cloud y Render son transitorios y se retirarán solo después de validar el servidor ([[infraestructura-servidor]], [[ADR-009-supabase-self-hosted-en-servidor]]).
 
 ## Próximos hitos
 - **Entrega final: 06/11/2026.** Congelación de código el 04/11. Plan en [[sprint-actual]].

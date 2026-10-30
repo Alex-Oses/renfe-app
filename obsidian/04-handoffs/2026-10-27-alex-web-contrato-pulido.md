@@ -6,6 +6,7 @@ para: todos
 rama: feat/mobile-tipos-contrato-y-pulido
 pr: (ver PR de esta rama)
 tags: [handoff]
+estado: cerrado
 ---
 
 # Handoff — Web alineada con el contrato y pulido visual

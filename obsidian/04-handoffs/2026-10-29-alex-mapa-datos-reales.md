@@ -6,6 +6,7 @@ para: Rubén, Marina
 rama: feat/mobile-datos-reales-mapa
 pr:
 tags: [handoff, frontend, api, mapa]
+estado: abierto
 ---
 
 # Handoff — La web usa los datos reales de la API

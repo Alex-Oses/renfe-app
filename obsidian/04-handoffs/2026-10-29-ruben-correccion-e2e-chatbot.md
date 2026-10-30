@@ -6,6 +6,7 @@ para: Alex, Marina, Kevin
 rama: feat/api-chatbot
 pr: "#93"
 tags: [handoff, api, chatbot, tests]
+estado: cerrado
 ---
 
 # Handoff — Corrección e2e del chatbot

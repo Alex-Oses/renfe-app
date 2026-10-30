@@ -6,6 +6,7 @@ para: todos
 rama: ci/infra-dependabot-y-titulos-pr
 pr: 81
 tags: [handoff]
+estado: cerrado
 ---
 
 # Handoff — Dependabot, títulos de PR y revisión obligatoria del equipo

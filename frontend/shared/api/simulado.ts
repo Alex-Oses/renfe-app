@@ -3,6 +3,7 @@ import type { BusquedaTrenes, Estacion, TipoTren, Tren } from "./tipos";
 
 export const ESTACIONES: Estacion[] = [
   { id: "60000", nombre: "Madrid-Puerta de Atocha", ciudad: "Madrid", lat: 40.4066, lon: -3.6892 },
+  { id: "43000", nombre: "Tarragona", ciudad: "Tarragona", lat: 41.1189, lon: 1.2445 },
   { id: "17000", nombre: "Madrid-Chamartín-Clara Campoamor", ciudad: "Madrid", lat: 40.4722, lon: -3.6825 },
   { id: "71801", nombre: "Barcelona-Sants", ciudad: "Barcelona", lat: 41.3791, lon: 2.1404 },
   { id: "65000", nombre: "València Joaquín Sorolla", ciudad: "Valencia", lat: 39.4594, lon: -0.3836 },

@@ -1,11 +1,14 @@
 ---
-fecha: 2026-10-29
-estado: propuesto
+fecha: 2026-10-30
+estado: obsoleto
 autor: Rubén
 tags: [adr, infra, docker, despliegue]
 ---
 
 # ADR-009 — Despliegue en el servidor asignado (opción A)
+
+> ADR obsoleto: el destino final y la transición están consolidados en
+> [[ADR-009-supabase-self-hosted-en-servidor]]. No borrar este registro histórico.
 
 ## Contexto
 

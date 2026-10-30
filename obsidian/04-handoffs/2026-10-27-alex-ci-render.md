@@ -6,6 +6,7 @@ para: Kevin, Marina, Rubén
 rama: ci/infra-ci-y-render
 pr: (ver PR de esta rama)
 tags: [handoff, ci]
+estado: abierto
 ---
 
 # Handoff — CI real y blueprint de Render (descarga de Kevin)

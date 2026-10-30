@@ -10,7 +10,8 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { configurarApi } from "@renfe/shared/api/cliente";
+import { configurarApi, vigilarApi } from "@renfe/shared/api/cliente";
+import { AvisoRespaldo } from "@/AvisoRespaldo";
 import { restaurarSesion } from "@/sesion";
 import { colores, fuentes } from "@/tema";
 import { Vigilante } from "@/Vigilante";
@@ -20,8 +21,10 @@ export { ErrorBoundary } from "expo-router";
 // Sin EXPO_PUBLIC_API_URL, datos simulados; el mapa tira de la API de Render por defecto.
 configurarApi({
   api: process.env.EXPO_PUBLIC_API_URL,
+  respaldo: process.env.EXPO_PUBLIC_API_RESPALDO_URL,
   posiciones: process.env.EXPO_PUBLIC_POSICIONES_URL || "https://renfe-api.onrender.com",
 });
+vigilarApi();
 
 restaurarSesion();
 
@@ -43,6 +46,7 @@ export default function RootLayout() {
     <>
       <StatusBar style="dark" />
       <Vigilante />
+      <AvisoRespaldo />
       <Stack
         screenOptions={{
           headerTintColor: colores.marca,

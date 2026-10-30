@@ -6,6 +6,7 @@ para: Marina
 rama: feat/api-retrasos
 pr: "#47"
 tags: [handoff, db, gtfs, import, avld, trips]
+estado: cerrado
 ---
 
 # Handoff — dos hallazgos del GTFS estático real antes de importar

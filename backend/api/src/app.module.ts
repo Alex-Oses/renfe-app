@@ -1,3 +1,5 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BdModule } from './common/bd/bd.module.js';
@@ -12,9 +14,16 @@ import { ReservasModule } from './modules/reservas/reservas.module.js';
 import { TrenesModule } from './modules/trenes/trenes.module.js';
 import { ChatbotModule } from './modules/chatbot/chatbot.module.js';
 
+const directorioApi = dirname(fileURLToPath(import.meta.url));
+const entornoRaiz = resolve(directorioApi, '../../../.env');
+
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validarEntorno }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [resolve(process.cwd(), '.env'), entornoRaiz],
+      validate: validarEntorno,
+    }),
     BdModule,
     HealthModule,
     AuthModule,

@@ -6,6 +6,7 @@ para: Marina, Alex
 rama: feat/api-retrasos
 pr: 47
 tags: [handoff, facial, database]
+estado: abierto
 ---
 
 # Handoff — Reconocimiento facial: ADR, migración y endpoints listos

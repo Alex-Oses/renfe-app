@@ -1157,6 +1157,28 @@ a.mega__titulo:hover {
     cursor: pointer;
   }
 
+  .chatbot__acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .chatbot__nueva {
+    border: 1px solid rgb(255 255 255 / 0.6);
+    border-radius: var(--radio-pildora);
+    padding: 0.25rem 0.6rem;
+    background: rgb(255 255 255 / 0.14);
+    color: inherit;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .chatbot__nueva:hover {
+    background: rgb(255 255 255 / 0.28);
+  }
+
   .chatbot__mensajes {
     flex: 1;
     overflow-y: auto;
@@ -1172,7 +1194,20 @@ a.mega__titulo:hover {
     background: var(--blanco);
     color: var(--grafito);
     box-shadow: var(--sombra-1);
-    white-space: pre-wrap;
+  }
+
+  /* El Markdown del asistente llega en párrafos y listas: sin márgenes raros dentro de la burbuja. */
+  .chatbot__mensaje p,
+  .chatbot__mensaje ul {
+    margin: 0 0 0.45rem;
+  }
+
+  .chatbot__mensaje ul {
+    padding-left: 1.1rem;
+  }
+
+  .chatbot__mensaje > :last-child {
+    margin-bottom: 0;
   }
 
   .chatbot__mensaje--usuario {
@@ -1180,11 +1215,122 @@ a.mega__titulo:hover {
     border-radius: 1rem 1rem 0.25rem 1rem;
     background: var(--morado);
     color: var(--blanco);
+    white-space: pre-wrap;
   }
 
-  .chatbot__escribiendo {
+  .chatbot__trenes {
+    margin-top: 0.6rem;
+    border-top: 1px solid var(--linea);
+    padding-top: 0.5rem;
+  }
+
+  .chatbot__trenes ul {
+    margin: 0.5rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chatbot__mas {
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--morado);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .chatbot__mas:hover,
+  .chatbot__mas:focus-visible {
+    text-decoration: underline;
+  }
+
+  .chatbot__tren {
+    display: grid;
+    gap: 0.15rem;
+    margin-bottom: 0.4rem;
+    border: 1px solid var(--linea);
+    border-radius: var(--radio);
+    padding: 0.5rem 0.6rem;
+    background: var(--blanco);
+    color: inherit;
+    font-size: 0.8rem;
+    text-decoration: none;
+  }
+
+  .chatbot__tren:hover,
+  .chatbot__tren:focus-visible {
+    border-color: var(--morado);
+  }
+
+  .chatbot__tren-nombre {
+    font-weight: 700;
+  }
+
+  .chatbot__tren-precio {
+    color: var(--morado);
+    font-weight: 700;
+  }
+
+  .chatbot__pasos {
+    display: grid;
+    gap: 0.3rem;
+    margin: 0 0 0.7rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 1rem 1rem 1rem 0.25rem;
+    background: var(--blanco);
+    box-shadow: var(--sombra-1);
+  }
+
+  .chatbot__paso {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
     color: var(--gris);
-    font-style: italic;
+    font-size: 0.8rem;
+  }
+
+  /* La línea que une los puntos: de centro a centro, como las paradas de un trayecto. */
+  .chatbot__paso:not(:first-child)::before {
+    content: "";
+    position: absolute;
+    bottom: 50%;
+    left: 0.25rem;
+    width: 1px;
+    height: calc(100% + 0.3rem);
+    background: var(--linea);
+  }
+
+  .chatbot__paso--activo {
+    color: var(--grafito);
+    font-weight: 700;
+  }
+
+  .chatbot__punto {
+    flex: 0 0 0.5rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--linea);
+  }
+
+  .chatbot__paso--activo .chatbot__punto {
+    background: var(--frambuesa);
+    animation: chatbot-latido 1s ease-in-out infinite;
+  }
+
+  @keyframes chatbot-latido {
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chatbot__paso--activo .chatbot__punto {
+      animation: none;
+    }
   }
 
   .chatbot__error {
@@ -1670,4 +1816,13 @@ a.boton {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
+}
+
+.aviso-respaldo {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: #fde68a;
+  color: #451a03;
+  font-weight: 600;
+  text-align: center;
 }

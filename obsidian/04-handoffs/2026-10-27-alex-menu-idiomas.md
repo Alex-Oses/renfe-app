@@ -6,6 +6,7 @@ para: todos
 rama: feat/mobile-menu-idiomas
 pr: https://github.com/Alex-Oses/renfe-app/pull/37
 tags: [handoff]
+estado: obsoleto
 ---
 
 # Handoff — Menú completo, idiomas y avisos en la web

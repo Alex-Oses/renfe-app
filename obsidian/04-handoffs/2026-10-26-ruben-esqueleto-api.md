@@ -6,6 +6,7 @@ para: todos
 rama: feat/api-esqueleto-nest
 pr: pendiente
 tags: [handoff]
+estado: cerrado
 ---
 
 # Handoff — Esqueleto de la API (fase F0)

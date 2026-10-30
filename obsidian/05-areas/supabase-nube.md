@@ -1,6 +1,6 @@
 ---
 responsable: Marina
-estado: nube validada (pendiente Render)
+estado: transitoria validada (pendiente servidor)
 fecha: 2026-10-29
 tags: [area, supabase, despliegue, runbook]
 para: [Marina, Alex, Kevin]
@@ -13,7 +13,7 @@ prepara el entorno final self-hosted en Docker sobre el servidor asignado
 ([[ADR-009-supabase-self-hosted-en-servidor]]).
 
 > **Estado 29/10: la nube está lista como entorno transitorio.** Proyecto creado, `link` hecho, `db push` con las
-> **4 migraciones** aplicado, catálogo AV/LD cargado y `pnpm gtfs:verificar` **en verde**.
+> **7 migraciones versionadas** aplicado, catálogo AV/LD cargado y `pnpm gtfs:verificar` **en verde**.
 > Lo único que falta es poner `DATABASE_URL` en Render (Kevin/Alex): hoy `/health` sigue
 > devolviendo `"baseDatos":"no configurada"` y `/estaciones` da 503.
 
@@ -30,7 +30,7 @@ proxy y TLS. Hasta entonces, Cloud es la referencia compartida para desbloquear 
 | Región | **eu-west-1 (Irlanda)** — deducida del registro IPv6 `2a05:d018:…`; el panel manda si dice otra |
 | Host del **session pooler** | `aws-0-eu-west-1.pooler.supabase.com:5432` (si el panel muestra prefijo `aws-1`, usar ese) |
 | Usuario | `postgres.hqwwucagvlhnlqrspwvh` |
-| Migraciones aplicadas | **4**: `extensiones_y_funciones`, `identidad`, `catalogo_gtfs`, `reconocimiento_facial` |
+| Migraciones aplicadas | **7**: catálogo, identidad, facial, billetes/abonos, modelo facial y recorridos |
 | Catálogo AV/LD | **cargado y verificado** (conteos abajo) |
 | Contraseña / cadena con password | **solo** en el gestor de contraseñas y en Render. Nunca en Git ni en el vault |
 

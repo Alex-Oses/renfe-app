@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hoyMadrid, sumarDias } from '../../common/gtfs/tiempo.js';
 
 export interface GeminiTextPart {
   text: string;
@@ -52,11 +53,13 @@ export interface GeminiTool {
 @Injectable()
 export class GeminiProvider {
   private readonly context: string;
+  private readonly endpoints: string;
   private readonly guardrails: string;
 
   constructor(private readonly config: ConfigService) {
     const root = dirname(fileURLToPath(import.meta.url));
     this.context = cargarMarkdown(join(root, 'context', 'RENFE_CONTEXT.md'));
+    this.endpoints = cargarMarkdown(join(root, 'context', 'ENDPOINTS.md'));
     this.guardrails = cargarMarkdown(join(root, 'guardrails', 'RENFE_GUARDRAILS.md'));
   }
 
@@ -80,7 +83,7 @@ export class GeminiProvider {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           systemInstruction: {
-            parts: [{ text: construirPrompt(this.context, this.guardrails) }],
+            parts: [{ text: construirPrompt(this.context, this.endpoints, this.guardrails, hoyMadrid()) }],
           },
           contents,
           tools: [{ functionDeclarations: tools }],
@@ -112,12 +115,22 @@ function cargarMarkdown(ruta: string): string {
   }
 }
 
-function construirPrompt(contexto: string, guardrails: string): string {
+function construirPrompt(
+  contexto: string,
+  endpoints: string,
+  guardrails: string,
+  hoy: string,
+): string {
   return [
     '# GUARDRAILS — PRIORIDAD MÁXIMA',
     guardrails,
     '# CONTEXTO RENFE — FUENTE DE CONOCIMIENTO',
     contexto,
+    '# ENDPOINTS — QUÉ PUEDES CONSULTAR Y CÓMO',
+    endpoints,
+    '# FECHA',
+    // Sin esto el modelo inventa el año (responde «31 de octubre de 2024»).
+    `Hoy es ${hoy} y mañana ${sumarDias(hoy, 1)}, en hora de Madrid. Cuando el usuario diga «hoy», «mañana» o un día sin año, usa estas fechas como referencia y pide siempre la fecha en AAAA-MM-DD.`,
     '# REGLA OPERATIVA',
     'Tu única función es consultar las herramientas internas disponibles y transformar sus resultados en una respuesta útil para el usuario. No tienes navegación web ni acceso a Internet: no busques, abras ni cites información externa.',
   ].join('\n\n');

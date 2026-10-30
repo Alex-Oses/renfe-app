@@ -6,6 +6,7 @@ para: todos
 rama: docs/docs-subida-github
 pr: (ver PR de esta rama)
 tags: [handoff, github]
+estado: cerrado
 ---
 
 # Handoff — Repo subido a GitHub

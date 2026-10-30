@@ -1,8 +1,8 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { EstacionesService } from '../estaciones/estaciones.service.js';
 import { PosicionesService } from '../posiciones/posiciones.service.js';
-import { TrenesService } from '../trenes/trenes.service.js';
+import { TrenesService, type Tren } from '../trenes/trenes.service.js';
 import {
   GeminiProvider,
   type GeminiContent,
@@ -14,6 +14,19 @@ import { comprobarEntrada, comprobarRespuesta } from './guardrails.js';
 import type { MensajeChatbotDto } from './dto/mensaje-chatbot.dto.js';
 
 const MAX_ITERACIONES = 5;
+// `/posiciones` trae ~200 KB (miles de trenes): al modelo solo le sirve un resumen.
+const MAX_POSICIONES = 15;
+// Memoria de la conversación: los 4 últimos intercambios (usuario + asistente).
+const MAX_MENSAJES = 8;
+const VIDA_CONVERSACION_MS = 30 * 60_000;
+// Trenes que se devuelven al frontend para pintar la lista de resultados.
+const MAX_TRENES = 8;
+
+/** Progreso del turno, para que el frontend pueda enseñar qué está haciendo la IA. */
+export type PasoChatbot =
+  | { paso: 'analizando' }
+  | { paso: 'consultando'; herramienta: string }
+  | { paso: 'razonando' };
 
 const TOOLS: GeminiTool[] = [
   {
@@ -58,7 +71,7 @@ const TOOLS: GeminiTool[] = [
   },
   {
       name: 'consultar_posiciones',
-      description: 'Consulta las posiciones actuales publicadas por Renfe, opcionalmente filtradas por feed.',
+      description: 'Consulta las posiciones actuales publicadas por Renfe, opcionalmente filtradas por feed. Devuelve el total de trenes y una muestra.',
       parameters: {
       type: 'object',
       properties: {
@@ -66,10 +79,26 @@ const TOOLS: GeminiTool[] = [
       },
       },
   },
+  {
+      name: 'posicion_tren',
+      description: 'Posición actual de un viaje concreto que está circulando ahora. Saca el tripId de buscar_trenes o detalle_tren.',
+      parameters: {
+      type: 'object',
+      properties: {
+        feed: { type: 'string', enum: ['cercanias', 'avld'] },
+        tripId: { type: 'string' },
+      },
+      required: ['feed', 'tripId'],
+      },
+  },
 ];
 
 @Injectable()
 export class ChatbotService {
+  // shortcut: memoria en el proceso, por conversación y 30 min. Se pierde al reiniciar y no se
+  // comparte entre instancias; si el chatbot se escala, mover a Redis o a una tabla.
+  private readonly conversaciones = new Map<string, { mensajes: GeminiContent[]; expira: number }>();
+
   constructor(
     private readonly gemini: GeminiProvider,
     private readonly estaciones: EstacionesService,
@@ -77,11 +106,20 @@ export class ChatbotService {
     private readonly posiciones: PosicionesService,
   ) {}
 
-  async responder({ mensaje, conversationId }: MensajeChatbotDto) {
+  async responder(
+    { mensaje, conversationId }: MensajeChatbotDto,
+    alPaso?: (paso: PasoChatbot) => void,
+  ) {
     comprobarEntrada(mensaje);
     const id = conversationId ?? randomUUID();
-    const mensajes: GeminiContent[] = [{ role: 'user', parts: [{ text: mensaje.trim() }] }];
+    const historial = this.historial(id);
+    const pregunta: GeminiContent = { role: 'user', parts: [{ text: mensaje.trim() }] };
+    const mensajes: GeminiContent[] = [...historial, pregunta];
     const herramientas = new Set<string>();
+    // Lo último que ha encontrado `buscar_trenes`: el frontend lo pinta como resultados.
+    const trenes = new Map<string, Tren>();
+
+    alPaso?.({ paso: 'analizando' });
 
     for (let iteracion = 0; iteracion < MAX_ITERACIONES; iteracion += 1) {
       const respuesta = await this.gemini.completar(mensajes, TOOLS);
@@ -96,10 +134,13 @@ export class ChatbotService {
           .join('')
           .trim();
         if (!texto) throw new ServiceUnavailableException('El chatbot no generó una respuesta');
+        const contestacion = comprobarRespuesta(texto, herramientas.size > 0);
+        this.recordar(id, [...historial, pregunta, { role: 'model', parts: [{ text: contestacion }] }]);
         return {
-          respuesta: comprobarRespuesta(texto, herramientas.size > 0),
+          respuesta: contestacion,
           conversationId: id,
           herramientas: [...herramientas],
+          trenes: [...trenes.values()].slice(0, MAX_TRENES),
         };
       }
 
@@ -108,19 +149,44 @@ export class ChatbotService {
         role: 'user',
         parts: await Promise.all(
           usos.map(async (uso) => {
-            herramientas.add(uso.functionCall.name);
-            return {
-              functionResponse: {
-                name: uso.functionCall.name,
-                response: { resultado: await this.ejecutarHerramienta(uso.functionCall.name, uso.functionCall.args ?? {}) },
-              },
-            };
+            const nombre = uso.functionCall.name;
+            herramientas.add(nombre);
+            alPaso?.({ paso: 'consultando', herramienta: nombre });
+            const resultado = await this.ejecutarHerramienta(nombre, uso.functionCall.args ?? {});
+            if (nombre === 'buscar_trenes') {
+              for (const tren of (resultado as { datos: Tren[] }).datos) trenes.set(tren.id, tren);
+            }
+            return { functionResponse: { name: nombre, response: { resultado } } };
           }),
         ),
       });
+      alPaso?.({ paso: 'razonando' });
     }
 
     throw new ServiceUnavailableException('El chatbot ha superado el límite de consultas encadenadas');
+  }
+
+  /** Historial de solo texto: las llamadas a herramientas no se guardan (caducan con la respuesta). */
+  private historial(id: string): GeminiContent[] {
+    const conversacion = this.conversaciones.get(id);
+    if (!conversacion || conversacion.expira < Date.now()) {
+      this.conversaciones.delete(id);
+      return [];
+    }
+    return conversacion.mensajes;
+  }
+
+  private recordar(id: string, mensajes: GeminiContent[]): void {
+    if (this.conversaciones.size > 1000) {
+      const ahora = Date.now();
+      for (const [clave, valor] of this.conversaciones) {
+        if (valor.expira < ahora) this.conversaciones.delete(clave);
+      }
+    }
+    this.conversaciones.set(id, {
+      mensajes: mensajes.slice(-MAX_MENSAJES),
+      expira: Date.now() + VIDA_CONVERSACION_MS,
+    });
   }
 
   private ejecutarHerramienta(nombre: string, input: Record<string, unknown>): Promise<unknown> {
@@ -145,7 +211,21 @@ export class ChatbotService {
           fecha(input.fecha),
         );
       case 'consultar_posiciones':
-        return this.posiciones.obtener({ feed: feedOpcional(input.feed) });
+        return this.posiciones
+          .obtener({ feed: feedOpcional(input.feed) })
+          .then(({ datos, actualizado }) => ({
+            actualizado,
+            total: datos.length,
+            datos: datos.slice(0, MAX_POSICIONES),
+          }));
+      case 'posicion_tren':
+        return this.posiciones
+          .posicionDe(feed(input.feed), texto(input.tripId, 'tripId'))
+          // Que el tren no circule ahora es una respuesta, no un error del chatbot.
+          .catch((error: unknown) => {
+            if (error instanceof NotFoundException) return null;
+            throw error;
+          });
       default:
         throw new ServiceUnavailableException('El chatbot solicitó una herramienta no permitida');
     }

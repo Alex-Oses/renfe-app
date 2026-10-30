@@ -6,6 +6,7 @@ para: todos
 rama: feat/api-detalle-tren
 pr:
 tags: [handoff, api, trenes]
+estado: cerrado
 ---
 
 # Handoff — `GET /trenes/:feed/:tripId` (detalle del viaje)

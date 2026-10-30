@@ -6,6 +6,7 @@ para: todos
 rama: feat/api-chatbot
 pr: pendiente
 tags: [handoff, chatbot, api]
+estado: cerrado
 ---
 
 # Handoff — implementación del chatbot de consultas

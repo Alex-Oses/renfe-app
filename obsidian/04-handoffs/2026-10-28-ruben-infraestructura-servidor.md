@@ -6,6 +6,7 @@ para: Kevin, Marina, Alex
 rama: docs/vault-infraestructura-servidor
 pr: pendiente de abrir
 tags: [handoff, infra, docker, supabase]
+estado: abierto
 ---
 
 # Handoff — Auditoría de infraestructura del servidor

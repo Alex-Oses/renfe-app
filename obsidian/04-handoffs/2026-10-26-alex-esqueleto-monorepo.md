@@ -4,6 +4,7 @@ autor: Alex
 area: general
 para: todos
 tags: [handoff]
+estado: cerrado
 ---
 
 # Handoff — Esqueleto del monorepo

@@ -6,6 +6,7 @@ para: Marina
 rama: docs/api-respuestas-modelo-datos
 pr: pendiente de abrir a mano (en este PC no hay `gh`)
 tags: [handoff, contrato, base-datos]
+estado: cerrado
 ---
 
 # Handoff — Respuestas a las preguntas del modelo de datos (§10.2)

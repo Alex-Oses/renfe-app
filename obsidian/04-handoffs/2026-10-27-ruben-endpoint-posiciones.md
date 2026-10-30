@@ -6,6 +6,7 @@ para: todos
 rama: feat/api-posiciones
 pr: (apilada sobre #33)
 tags: [handoff, api, posiciones, gtfs-rt]
+estado: cerrado
 ---
 
 # Handoff — `GET /posiciones` con GTFS-RT real

@@ -6,6 +6,7 @@ para: [Marina, Alex, Rubén, Kevin]
 rama: feat/gtfs-importador-catalogo-avld
 pr: pendiente de abrir (3 ramas, ver abajo)
 tags: [handoff, gtfs, supabase]
+estado: cerrado
 ---
 
 # Handoff — Catálogo AV/LD: migración, importación y siguiente paso
