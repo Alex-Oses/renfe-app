@@ -4,7 +4,7 @@ autor: Rubén
 area: frontend
 para: Alex, Kevin
 rama: feat/mobile-paridad-features-web
-pr: pendiente
+pr: "#102"
 tags: [handoff, frontend, mobile, chatbot]
 estado: abierto
 ---
