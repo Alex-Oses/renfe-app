@@ -227,6 +227,14 @@ export class TrenesService {
     let filas: FilaParada[];
     try {
       ({ rows: filas } = await this.bd.consultar<FilaParada>(SQL_DETALLE, [feed, tripId, fecha]));
+      if (filas.length === 0) {
+        // El mapa pide el trip_id del tiempo real, cuya fecha final puede no coincidir con la del catálogo (AV/LD).
+        const { rows } = await this.bd.consultar<{ id: string }>(SQL_VIAJE_EQUIVALENTE, [feed, tripId]);
+        if (rows[0]) {
+          tripId = rows[0].id;
+          ({ rows: filas } = await this.bd.consultar<FilaParada>(SQL_DETALLE, [feed, tripId, fecha]));
+        }
+      }
     } catch {
       throw new ServiceUnavailableException('La base de datos no está disponible');
     }
@@ -290,6 +298,17 @@ export function unirTramos(tramos: Punto[][]): Punto[] {
   }
   return salida;
 }
+
+const SQL_VIAJE_EQUIVALENTE = `
+  select id
+    from viajes
+   where feed = $1
+     and $2 ~ '\\d{4}-\\d{2}-\\d{2}$'
+     and id like left($2, -10) || '%'
+     and right(id, 10) <= right($2, 10)
+   order by right(id, 10) desc
+   limit 1
+`;
 
 const SQL_RECORRIDO = `
   with viaje as (
