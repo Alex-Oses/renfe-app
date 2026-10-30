@@ -23,7 +23,8 @@ tags: [handoff, docker, gtfs, mapa]
 - `pnpm gtfs:importar` / `pnpm gtfs:vias` desde la raíz fallan si `pnpm` no está en el PATH (solo con corepack): usar `corepack pnpm --filter @renfe/gtfs-worker …`.
 
 ## Bloqueos / preguntas para otros
-- Marina: aplicar en Supabase Cloud la migración `20261029140000_recorridos.sql` y cargar `formas`/`tramos_via` cuando toque desplegar.
+- Marina: el 30/10 Alex aplicó en Supabase Cloud (`db push`) `20261029120000_billetes_y_abonos`, `20261029130000_modelo_cara_w600k_mbf` y `20261029140000_recorridos`, con el PR #98 aún sin mergear. Falta cargar `formas`/`tramos_via` en Cloud (siguen vacías) y actualizar [[supabase-nube]], que aún habla de 4 migraciones.
+- Todos: `config_cara` pasa a `arcface/w600k_mbf`; las caras ya registradas en Cloud devuelven `modelo_distinto` y hay que volver a registrarlas.
 - Kevin: revisa el compose nuevo y la excepción del `.dockerignore` raíz (zona tuya).
 
 ## Cambios en contratos
