@@ -330,6 +330,15 @@ Notas:
   `calendarios` + `calendario_excepciones`.
 - `tipo` y `numero` siguen la misma regla que en `/trenes` (`numero` puede ser `null`).
 
+
+### `recorrido` — añadido (Alex, 2026-10-29)
+
+Campo nuevo, opcional y aditivo: `"recorrido": [[40.4065, -3.6895], [40.41, -3.68], …]` (lat, lon), el
+trazado real del tren para el mapa. Sale de `formas` (el `shapes.txt` de Cercanías) o, si el viaje no
+tiene forma (AV/LD/MD), de `tramos_via`: el camino por las vías de OpenStreetMap entre cada par de
+paradas seguidas (`pnpm gtfs:vias`). Donde falte un tramo, ese trozo va en línea recta entre las dos
+paradas. `null` si no hay ninguna geometría: la web y la app dibujan entonces parada a parada.
+
 ## GET /trenes/:feed/:tripId/posicion
 
 Descripción: última posición conocida del tren que hace ese viaje **ahora**.
@@ -587,6 +596,7 @@ Response 200:
   "datos": [
     {
       "id": "1c4a…", "localizador": "R-7K3M9Q", "estado": "valido",
+      "feed": "avld", "viajeId": "0207012026-11-02",
       "tipo": "AVE", "numero": "02070",
       "salida": "2026-11-02T07:15:00+01:00", "llegada": "2026-11-02T09:40:00+01:00",
       "origen": { "id": "60000", "nombre": "Madrid-Puerta de Atocha" },
@@ -604,6 +614,8 @@ Response 200:
 
 Errores: `401` sin token · `503` BD caída. `estado` es el de `billetes` (`valido` | `usado` |
 `anulado` | `caducado`). `numero` puede ser `null`.
+`feed` y `viajeId` (añadidos el 29/10, Alex) identifican el viaje: la web los cruza con `/posiciones`
+para avisar del retraso real del tren del billete.
 
 ## GET /billetes/:id/qr
 

@@ -26,6 +26,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export interface Billete {
   id: string;
   localizador: string;
+  /** Viaje del billete, para cruzarlo con /posiciones (retraso real y avisos). */
+  feed: string;
+  viajeId: string;
   estado: string;
   tipo: string;
   numero: string | null;
@@ -81,6 +84,8 @@ export interface ResultadoValidacion {
 
 interface FilaBillete {
   id: string;
+  feed: string;
+  viaje_id: string;
   estado: string;
   referencia: string;
   reserva_estado: string;
@@ -122,6 +127,8 @@ interface FilaAbono {
 // `horarios`, para no traer el viaje entero.
 const SELECT_BILLETE = `
   select b.id,
+         b.feed,
+         b.viaje_id,
          b.estado,
          r.referencia,
          r.estado as reserva_estado,
@@ -395,6 +402,8 @@ export class BilletesService {
 
   private aBillete(fila: FilaBillete): Billete {
     return {
+      feed: fila.feed,
+      viajeId: fila.viaje_id,
       id: fila.id,
       localizador: fila.referencia,
       estado: fila.estado,

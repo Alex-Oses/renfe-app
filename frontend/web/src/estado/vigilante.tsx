@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { buscarTrenes, misBilletes, posicionesTrenes } from "@renfe/shared/api/cliente";
 import type { Billete } from "@renfe/shared/api/tipos";
 import { useAvisos } from "./avisos";
+import { useSesion } from "./sesion";
 import { novedadesBillete, reglasFavorita, reglasSeguimientos, type AvisoClave } from "@renfe/shared/estado/vigilante-reglas";
 
 const CADA_MS = 20_000;
@@ -21,6 +22,7 @@ export const hoyISO = (d = new Date()) =>
 
 export function Vigilante() {
   const { avisar, seguimientos, favoritos } = useAvisos();
+  const { sesion } = useSesion();
   const [billetes, setBilletes] = useState<Billete[]>([]);
   const enviados = useRef(leerEnviados());
   const retrasos = useRef(new Map<string, number>());
@@ -28,21 +30,26 @@ export function Vigilante() {
   const datos = useRef({ avisar, seguimientos, favoritos, billetes });
   datos.current = { avisar, seguimientos, favoritos, billetes };
 
+  // Se recargan al entrar o salir de la cuenta: al abrir la web antes del login aún no hay billetes.
   useEffect(() => {
     misBilletes().then(setBilletes, () => setBilletes([])); // sin sesión: no hay billetes que vigilar
-  }, []);
+  }, [sesion?.usuario.id]);
 
-  const hayAlgo = seguimientos.length > 0 || favoritos.length > 0 || billetes.length > 0;
+  const conSesion = Boolean(sesion);
+  const hayAlgo = conSesion || seguimientos.length > 0 || favoritos.length > 0 || billetes.length > 0;
 
   useEffect(() => {
     if (!hayAlgo) return;
     let vivo = true;
     async function revisar() {
-      const { avisar, seguimientos, favoritos, billetes } = datos.current;
+      const { avisar, seguimientos, favoritos } = datos.current;
+      // Con sesión se piden en cada vuelta: así entran también los billetes recién comprados.
+      const billetes = conSesion ? await misBilletes().catch(() => datos.current.billetes) : datos.current.billetes;
       const ahora = Date.now();
-      const nuevos: AvisoClave[] = billetes.flatMap((b) => novedadesBillete(b, ahora));
+      const nuevos: AvisoClave[] = [];
       try {
-        const pos = seguimientos.length || favoritos.length ? await posicionesTrenes() : [];
+        const pos = seguimientos.length || favoritos.length || billetes.length ? await posicionesTrenes() : [];
+        nuevos.push(...billetes.flatMap((b) => novedadesBillete(b, ahora, pos)));
         nuevos.push(...reglasSeguimientos(seguimientos, pos, ahora, retrasos.current));
         const listas = await Promise.all(
           favoritos.map((f) => buscarTrenes({ origen: f.origen, destino: f.destino, fecha: hoyISO() }).catch(() => [])),
@@ -69,7 +76,7 @@ export function Vigilante() {
       vivo = false;
       clearInterval(id);
     };
-  }, [hayAlgo]);
+  }, [hayAlgo, conSesion]);
 
   return null;
 }

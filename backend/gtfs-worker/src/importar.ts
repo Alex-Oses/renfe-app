@@ -102,6 +102,7 @@ async function cargarEnBaseDeDatos(catalogo: Catalogo, reemplazar: boolean, feed
         rutas: catalogo.rutas,
         calendarios: catalogo.calendarios,
         calendario_excepciones: catalogo.excepciones,
+        formas: catalogo.formas,
         viajes: catalogo.viajes,
         horarios: catalogo.horarios,
       };
@@ -133,6 +134,7 @@ function imprimirInforme(catalogo: Catalogo): void {
   linea("rutas", catalogo.rutas.length);
   linea("calendarios", catalogo.calendarios.length);
   linea("calendario_excepciones", catalogo.excepciones.length);
+  linea("formas (shapes.txt)", catalogo.formas.length);
   linea("viajes", catalogo.viajes.length);
   linea("horarios", catalogo.horarios.length);
 

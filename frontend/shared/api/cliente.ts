@@ -149,15 +149,18 @@ export const tipoDeFeed = (feed: string, nombre?: string | null): TipoTren =>
   feed === "cercanias" ? "Cercanías" : (PRODUCTOS.find(([r]) => r.test(nombre ?? ""))?.[1] ?? "Larga Distancia");
 
 // Renfe publica un mismo vehículo con varios viajes encadenados (tripId distinto, misma posición):
-// se deja uno por vehículo para que la lista y el mapa no lo repitan.
+// se deja uno por vehículo para que la lista y el mapa no lo repitan. Se queda el tramo en curso:
+// el que tiene próxima parada y, si no, el que llega más tarde (los demás ya terminaron).
+const vigencia = (p: PosicionApi) => [p.proximaParada ? 1 : 0, p.llegadaDestino ?? ""] as const;
 export const unoPorVehiculo = (lista: PosicionApi[]): PosicionApi[] => {
-  const vistos = new Set<string>();
-  return lista.filter((p) => {
+  const mejor = new Map<string, PosicionApi>();
+  for (const p of lista) {
     const clave = `${p.feed}:${p.vehicleId ?? p.tripId}`;
-    if (vistos.has(clave)) return false;
-    vistos.add(clave);
-    return true;
-  });
+    const actual = mejor.get(clave);
+    const [a, b] = [vigencia(p), actual && vigencia(actual)];
+    if (!b || a[0] > b[0] || (a[0] === b[0] && a[1] > b[1])) mejor.set(clave, p);
+  }
+  return [...mejor.values()];
 };
 
 const aPosicion = (p: PosicionApi): PosicionTren => {
@@ -382,7 +385,8 @@ export async function completarRuta(p: PosicionTren): Promise<PosicionTren> {
     proximaParada: proxima?.nombre ?? "",
     llegadaProxima: proxima?.llegada,
     progreso: dibujables.filter((x) => x.pasada).length / dibujables.length,
-    ruta: dibujables.map((x): [number, number] => [x.lat, x.lon]),
+    // El trazado real (vías u shapes) si la API lo da; si no, parada a parada en línea recta.
+    ruta: detalle.recorrido?.length ? detalle.recorrido : dibujables.map((x): [number, number] => [x.lat, x.lon]),
     paradas: dibujables,
   };
 }
