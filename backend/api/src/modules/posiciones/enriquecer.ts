@@ -58,8 +58,8 @@ interface FilaViaje {
 // `sig_*` es la parada siguiente a la actual (para cuando el tren está parado en ella).
 const SQL = `
   with p(viaje_id, stop_id, retraso) as (select * from unnest($2::text[], $3::text[], $4::int[]))
-  select distinct on (v.id)
-         v.id as viaje_id, v.numero, r.nombre_corto,
+  select distinct on (p.viaje_id)
+         p.viaje_id, v.numero, r.nombre_corto,
          v.origen_id, eo.nombre as origen_nombre, v.destino_id, ed.nombre as destino_nombre,
          v.llegada::text as llegada,
          h.llega::text as h_llega, h.sale::text as h_sale,
@@ -67,7 +67,19 @@ const SQL = `
          sig.estacion_id as sig_id, es.nombre as sig_nombre, sig.llega::text as sig_llega,
          hora.estacion_id as hora_id, ehora.nombre as hora_nombre, hora.llega::text as hora_llega
     from p
-    join viajes v on v.feed = $1 and v.id = p.viaje_id
+    -- En AV/LD el trip_id acaba en una fecha que Renfe cambia entre el catálogo y el tiempo real:
+    -- si no hay coincidencia exacta, vale el mismo viaje con la fecha anterior más cercana.
+    join lateral (
+      select c.*
+        from viajes c
+       where c.feed = $1
+         and (c.id = p.viaje_id
+              or (p.viaje_id ~ '\\d{4}-\\d{2}-\\d{2}$'
+                  and c.id like left(p.viaje_id, -10) || '%'
+                  and right(c.id, 10) <= right(p.viaje_id, 10)))
+       order by c.id = p.viaje_id desc, right(c.id, 10) desc
+       limit 1
+    ) v on true
     join rutas r on r.feed = v.feed and r.id = v.ruta_id
     join estaciones eo on eo.id = v.origen_id
     join estaciones ed on ed.id = v.destino_id
@@ -93,7 +105,7 @@ const SQL = `
        limit 1
     ) hora on true
     left join estaciones ehora on ehora.id = hora.estacion_id
-   order by v.id, h.secuencia
+   order by p.viaje_id, h.secuencia
 `;
 
 /** Margen para considerar que un tren va «a tiempo» (Renfe redondea a minutos). */

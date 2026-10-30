@@ -31,6 +31,7 @@ const DEMO = { email: "revisor@renfe-app.demo", ...CUENTAS_DEMO["revisor@renfe-a
 const ROL: Record<string, string> = { viajero: "Viajero", revisor: "Revisor", admin: "Administración" };
 
 const OPCIONES: { titulo: string; detalle: string; icono: NombreIcono; ruta: string }[] = [
+  { titulo: "Asistente Renfe", detalle: "Pregunta por trenes, estaciones y horarios", icono: "info", ruta: "/chatbot" },
   { titulo: "Mis billetes", detalle: "QR y localizadores de tus viajes", icono: "billetes", ruta: "/billetes" },
   { titulo: "Mis abonos", detalle: "Abonos y bonos con su QR", icono: "billetes", ruta: "/abonos" },
   { titulo: "Mis líneas", detalle: "Tus trayectos habituales", icono: "lineas", ruta: "/lineas" },

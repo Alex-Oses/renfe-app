@@ -27,6 +27,8 @@ ofrece `expo start` al pulsar `a`/`i`). Todo funciona en Expo Go:
 
 - Abonos (`/abonos`, `/comprar-abono`, `/abono/[id]` con QR), desde Cuenta.
 - Modo revisor (`/revisor`, cuentas con rol `revisor` o `admin`): lee el QR con `expo-camera`.
+- Asistente Renfe (`/chatbot`, accesible desde Cuenta): mantiene la conversación, responde sobre
+  trenes/estaciones/horarios y muestra tarjetas de tren enlazadas al flujo de compra.
 - Avisos: cada 20 s, con sesión, revisa billetes y líneas favoritas y lanza **notificaciones locales**
   (`expo-notifications`). Sin push remoto: Expo Go no lo admite.
 - Login facial: la huella usa onnxruntime-web y no corre en Expo Go; el botón abre la web en `/acceder`.

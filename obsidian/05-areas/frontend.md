@@ -5,7 +5,8 @@ tags: [area]
 
 # 📱 Área Frontend
 
-**Código:** `frontend/web` (React + Vite, publicada en Vercel). `frontend/mobile` (Expo) queda fuera de la entrega (ADR-004).
+**Código:** `frontend/web` (React + Vite, publicada en Vercel) y `frontend/mobile` (Expo para iOS,
+Android y web). La app móvil es ahora la pieza principal del sprint; la web queda como demo y plan B.
 **Estado:** completa con datos simulados; cliente alineado con [[endpoints]]. Sin `VITE_API_URL` usa simulado.
 
 ## Pantallas
@@ -19,7 +20,7 @@ tags: [area]
 | Login / registro / login facial (Human en el navegador) | ✅ |
 | Mapa tiempo real | ✅ simulado; real cuando exista `/posiciones` |
 | Revisor (escáner) | fuera de la entrega |
-| Chatbot | fuera de la entrega |
+| Chatbot | ✅ web y móvil; la app móvil usa el endpoint JSON y conserva la conversación |
 
 ## Notas técnicas
 
