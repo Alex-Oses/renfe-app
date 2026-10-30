@@ -1,54 +1,76 @@
-# Docker Compose del monorepo (responsable: Kevin).
-# La BD es Supabase local, que levanta la CLI con Docker: `pnpm db:start` (puertos 54321 API/Auth y 54322 Postgres).
-# Luego: `docker compose up --build` → API en :3000, web en :5173 y app móvil (web) en :8081.
+# Despliegue en el servidor asignado (opción A, ADR-009): base de datos y API en
+# la misma máquina. Runbook: deploy/README.md.
+#
+# Lo importante:
+#   - La base de datos NO se publica. Solo se llega a ella por la red interna de
+#     Docker (`db:5432`).
+#   - La API se publica solo en 127.0.0.1: delante va nginx o un túnel. Cambia
+#     `API_PUBLICO` si el 3010 está ocupado en el host.
+#   - `DATABASE_URL_DOCKER` manda sobre la BD del compose. Así se puede apuntar a
+#     un Supabase (Cloud o self-hosted) sin tocar este fichero.
+
+name: renfe
 
 services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Solo se lee al crear el volumen: roles de Supabase, auth.users, auth.uid().
+      - ./deploy/postgres:/docker-entrypoint-initdb.d:ro
+      # Las migraciones, dentro del contenedor, para aplicarlas con psql sin
+      # instalar nada en el host.
+      - ./backend/database/supabase/migrations:/migraciones:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
       dockerfile: backend/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     env_file: .env
     environment:
-      # Desde el contenedor, "localhost" es el propio contenedor: Supabase local está en el host.
-      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
-      SUPABASE_URL: http://host.docker.internal:54321
+      # En producción `CORS_ORIGINS` es obligatorio: si falta, la API no arranca.
+      NODE_ENV: production
       API_PORT: "3000"
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${API_PUBLICO:-3010}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
-  # shortcut: el Dockerfile del worker sigue siendo el placeholder; se importa desde el host con `pnpm gtfs:importar`.
+  # Job, no servidor: `docker compose run --rm gtfs-worker`.
   gtfs-worker:
-    profiles: [worker]
-    build: ./backend/gtfs-worker
+    build:
+      context: .
+      dockerfile: backend/gtfs-worker/Dockerfile
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
     env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres}
     volumes:
-      - gtfs-data:/app/data
-
-  # Web (Vite) en http://localhost:5173, contra la API de arriba.
-  web:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      args:
-        APP: web
-    depends_on: [api]
-    ports:
-      - "5173:80"
-
-  # App Expo exportada a web en http://localhost:8081. En el móvil con Expo Go se sigue usando
-  # `pnpm dev:mobile` fuera de Docker, con EXPO_PUBLIC_API_URL=http://<IP del PC>:3000.
-  mobile:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      args:
-        APP: mobile
-    depends_on: [api]
-    ports:
-      - "8081:80"
+      # El zip del feed se reutiliza entre ejecuciones (~15 MB).
+      - gtfs-data:/repo/backend/gtfs-worker/data
 
 volumes:
+  db-data:
   gtfs-data:

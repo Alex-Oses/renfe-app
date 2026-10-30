@@ -1,0 +1,54 @@
+# Compose LOCAL de desarrollo (el del servidor es docker-compose.yml, ADR-009).
+# La BD es Supabase local, que levanta la CLI con Docker: `pnpm db:start` (puertos 54321 API/Auth y 54322 Postgres).
+# Luego: `pnpm docker:local` → API en :3000, web en :5173 y app móvil (web) en :8081.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/api/Dockerfile
+    env_file: .env
+    environment:
+      # Desde el contenedor, "localhost" es el propio contenedor: Supabase local está en el host.
+      DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      SUPABASE_URL: http://host.docker.internal:54321
+      API_PORT: "3000"
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "3000:3000"
+
+  # shortcut: el Dockerfile del worker sigue siendo el placeholder; se importa desde el host con `pnpm gtfs:importar`.
+  gtfs-worker:
+    profiles: [worker]
+    build: ./backend/gtfs-worker
+    env_file: .env
+    volumes:
+      - gtfs-data:/app/data
+
+  # Web (Vite) en http://localhost:5173, contra la API de arriba.
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        APP: web
+    depends_on: [api]
+    ports:
+      - "5173:80"
+
+  # App Expo exportada a web en http://localhost:8081. En el móvil con Expo Go se sigue usando
+  # `pnpm dev:mobile` fuera de Docker, con EXPO_PUBLIC_API_URL=http://<IP del PC>:3000.
+  mobile:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        APP: mobile
+    depends_on: [api]
+    ports:
+      - "8081:80"
+
+volumes:
+  gtfs-data:

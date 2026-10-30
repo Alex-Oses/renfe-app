@@ -11,6 +11,10 @@ en PR; los de negocio (reservas, pagos, billetes, chatbot) siguen pendientes.
 Plan completo, diagramas y caminos de petición: [`docs/arquitectura.md`](../../docs/arquitectura.md)
 Contrato de cada ruta: [[endpoints]]. Esquema: [[modelo-datos]].
 
+La API emite JWT propios firmados con `JWT_SECRET` (HS256, 12 horas) tanto para el login con
+contraseña como para el login facial. Supabase Auth se usa internamente para validar credenciales y
+`DATABASE_URL` permanece solo en el backend.
+
 ## Módulos
 
 | Módulo | Responsable | Estado |
@@ -23,7 +27,7 @@ Contrato de cada ruta: [[endpoints]]. Esquema: [[modelo-datos]].
 | reservas | Rubén | ⚪ |
 | pagos (Stripe test) | Kevin | ⚪ |
 | billetes (QR Ed25519) | Rubén | ⚪ |
-| chatbot | Rubén | ⚪ |
+| chatbot | Rubén | 🟡 | Implementación en curso: agente Gemini `gemini-3.5-flash-lite`, contexto Renfe, guardrails y herramientas de consulta controladas |
 
 ## Datos reales que consume
 
@@ -53,6 +57,10 @@ Lo estático entra por `backend/gtfs-worker` a Postgres y la API solo lee. **La 
   el SQL de `/estaciones`, `/trenes` y el detalle apunta hoy a los nombres sin prefijo.
 
 ## Pendiente
+
+- **Chatbot:** reservar e implementar `POST /chatbot/mensaje` con Gemini function calling. El modelo solo
+  podrá consultar los servicios internos de estaciones, trenes y posiciones; no se permitirá SQL
+  generado ni HTTP arbitrario. La clave `GEMINI_API_KEY` se configura como secreto de entorno.
 
 - Migraciones de Marina (`backend/database/supabase/migrations/` no existe): sin ellas el SQL de
   estaciones/trenes/detalle **no se ha ejecutado nunca** contra un Postgres real.

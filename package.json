@@ -28,6 +28,8 @@
     "gtfs:vias": "pnpm --filter @renfe/gtfs-worker vias",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
+    "docker:local": "docker compose -f docker-compose.local.yml up -d --build",
+    "docker:local:down": "docker compose -f docker-compose.local.yml down",
     "contexto": "node scripts/agent-context.mjs",
     "rama": "node scripts/nueva-rama.mjs",
     "sync": "node scripts/sync-rama.mjs",

@@ -17,6 +17,7 @@ import type {
   PosicionTren,
   QrBilleteApi,
   ReservaApi,
+  RespuestaChatbot,
   Reserva,
   ResultadoValidacionApi,
   ResultadoValidacion,
@@ -73,6 +74,14 @@ export function configurarApi(c: ConfigApi) {
 let token: string | null = null;
 export function usarToken(t: string | null) {
   token = t;
+}
+
+export async function enviarMensajeChatbot(mensaje: string, conversationId?: string): Promise<RespuestaChatbot> {
+  if (!BASE) throw new Error("El chat no está disponible en modo demo");
+  return pedir<RespuestaChatbot>("/chatbot/mensaje", "POST", {
+    mensaje,
+    ...(conversationId && { conversationId }),
+  });
 }
 
 // El contrato devuelve { statusCode, error, message } (formato de Nest): se usa su mensaje si lo hay,

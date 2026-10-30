@@ -30,6 +30,7 @@ export function fusionarEnv(actual, supabase, aleatorio = () => randomBytes(32).
     NODE_ENV: "development",
     API_PORT: "3000",
     QR_SIGNING_SECRET: aleatorio(),
+    JWT_SECRET: aleatorio(),
     CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081",
   };
   const lineas = actual.split(/\r?\n/);
@@ -127,10 +128,10 @@ async function principal() {
   }
 
   paso("API, web y app móvil en Docker");
-  ejecutar("docker compose up -d --build");
+  ejecutar("docker compose -f docker-compose.local.yml up -d --build");
   const ok = await esperarApi("http://localhost:3000/health");
   if (!ok) {
-    console.error("La API no responde con la BD. Mira `docker compose logs api`.");
+    console.error("La API no responde con la BD. Mira `docker compose -f docker-compose.local.yml logs api`.");
     process.exit(1);
   }
 
@@ -142,7 +143,7 @@ async function principal() {
   App (web) ..... http://localhost:8081
   App (Expo Go) . EXPO_PUBLIC_API_URL=http://<IP-de-este-PC>:3000 ${p} dev:mobile
 
-  Para pararlo: docker compose down && ${p} db:stop   (los datos se conservan)
+  Para pararlo: docker compose -f docker-compose.local.yml down && ${p} db:stop   (los datos se conservan)
 `);
 }
 

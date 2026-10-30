@@ -1,0 +1,10 @@
+# Solo para frontend/Dockerfile (BuildKit lo usa en vez del .dockerignore de la raiz, que deja fuera frontend/).
+**/node_modules
+**/dist
+**/.expo
+**/coverage
+.git
+obsidian
+docs
+.env
+.env.*

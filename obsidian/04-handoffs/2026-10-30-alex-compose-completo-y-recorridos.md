@@ -11,7 +11,7 @@ tags: [handoff, docker, gtfs, mapa]
 # Handoff — Todo el stack local con `docker compose up` y recorrido real de los trenes
 
 ## Qué se hizo
-- `docker compose up -d --build` levanta API (:3000), web (:5173) y la app Expo exportada a web (:8081), todo contra Supabase local (`pnpm db:start`). Nuevo `frontend/Dockerfile` (un solo Dockerfile con `APP=web|mobile`, nginx).
+- `pnpm docker:local` (`docker-compose.local.yml`; el `docker-compose.yml` es el del servidor de Kevin) levanta API (:3000), web (:5173) y la app Expo exportada a web (:8081), todo contra Supabase local (`pnpm db:start`). Nuevo `frontend/Dockerfile` (un solo Dockerfile con `APP=web|mobile`, nginx).
 - Integradas en la rama la app móvil funcional (`feat/mobile-app-funcional`), la API de billetes/abonos, el docker local y el recorrido real (`feat/gtfs-recorridos`).
 - Recorrido real en el mapa: Cercanías usa `shapes.txt` (tabla `formas`); AV/LD/MD usa tramos por las vías de OSM (`tramos_via`, `pnpm --filter @renfe/gtfs-worker vias`). Comprobado: Madrid-Chamartín → Badajoz devuelve 418 puntos por las vías.
 - `pnpm local` ya calcula los tramos y levanta los tres servicios.
@@ -29,4 +29,4 @@ tags: [handoff, docker, gtfs, mapa]
 Ninguno nuevo: `recorrido` en el detalle del tren ya estaba en [[endpoints]]; tablas `formas` y `tramos_via` en la migración de recorridos.
 
 ## Ficheros tocados
-`docker-compose.yml`, `.dockerignore`, `frontend/Dockerfile`, `frontend/nginx.conf`, `scripts/levantar-local.mjs`, `backend/gtfs-worker/src/{gtfs/geometria.ts,gtfs/vias.ts,trazar-vias.ts,vias.test.ts}`, migración `20261029140000_recorridos.sql`.
+`docker-compose.local.yml`, `frontend/Dockerfile`, `frontend/Dockerfile.dockerignore`, `package.json`, `frontend/nginx.conf`, `scripts/levantar-local.mjs`, `backend/gtfs-worker/src/{gtfs/geometria.ts,gtfs/vias.ts,trazar-vias.ts,vias.test.ts}`, migración `20261029140000_recorridos.sql`.

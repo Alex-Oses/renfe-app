@@ -15,6 +15,7 @@ const ENTORNO: Record<string, string> = {
   SUPABASE_URL: 'https://proyecto.supabase.co',
   SUPABASE_SERVICE_ROLE_KEY: SECRETO,
   SUPABASE_ANON_KEY: SECRETO,
+  JWT_SECRET: SECRETO,
 };
 
 const servicioCon = (
@@ -60,8 +61,8 @@ describe('AuthService.registro', () => {
 
     const sesion = await servicioCon(consultar).registro(registro);
 
-    expect(sesion.token).toBe('token-supabase');
-    expect(sesion.refreshToken).toBe('refresh-supabase');
+    expect(sesion.token).not.toBe('token-supabase');
+    expect(sesion.refreshToken).toBeNull();
     expect(sesion.usuario).toEqual({
       id: USUARIO_ID,
       nombre: 'Ana',
@@ -125,7 +126,7 @@ describe('AuthService.login', () => {
     vi.unstubAllGlobals();
   });
 
-  it('devuelve el token de Supabase y el rol del perfil', async () => {
+  it('devuelve un token propio y el rol del perfil', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(
@@ -139,7 +140,8 @@ describe('AuthService.login', () => {
 
     const sesion = await servicioCon(async () => ({ rows: [PERFIL] })).login(login);
 
-    expect(sesion.token).toBe('token-supabase');
+    expect(sesion.token).not.toBe('token-supabase');
+    expect(sesion.token.split('.')).toHaveLength(3);
     expect(sesion.usuario.rol).toBe('revisor');
     expect(sesion.usuario.caraRegistrada).toBe(true);
   });
@@ -155,7 +157,6 @@ describe('AuthService.login', () => {
     const sesion = await servicioCon(async () => ({ rows: [] })).login(login);
 
     expect(sesion).toMatchObject({
-      token: 'token',
       refreshToken: null,
       usuario: { id: USUARIO_ID, nombre: login.email, rol: 'viajero', caraRegistrada: false },
     });

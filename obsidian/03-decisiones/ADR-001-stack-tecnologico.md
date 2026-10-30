@@ -19,7 +19,7 @@ App tipo Renfe hecha por 4 personas, con IA, en ~5 meses. Renfe solo publica dat
 - **Facial:** microservicio Python FastAPI + InsightFace, verificación 1:1, solo embeddings.
 - **Pagos:** Stripe en modo test. Asientos, precios y reservas simulados.
 - **Billetes:** QR firmado con Ed25519, validado contra la BD.
-- **Chatbot:** Claude API con tool use.
+- **Chatbot:** Gemini API con function calling, modelo `gemini-3.5-flash-lite`.
 - **Infra:** Docker Compose, GitHub Actions.
 - **Coordinación de IAs:** vault de Obsidian dentro del repo + `AGENTS.md`.
 
