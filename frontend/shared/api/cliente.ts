@@ -42,6 +42,7 @@ import { cuerpoLogin, cuerpoRegistro } from "./adaptador-cuenta";
 import { billeteDeApi, cuerpoReserva, reservaDeApi, validacionDeApi } from "./adaptador-reservas";
 import { cuerpoRegistrarCara, cuerpoVerificarCara, validarEmbedding } from "./cara";
 import { recordarEstaciones } from "./estaciones-memoria";
+import { parsearEventos } from "./flujo-chatbot";
 import * as trenes from "./simulado";
 import * as reservas from "./simulado-reservas";
 import * as cuenta from "./simulado-cuenta";
@@ -82,6 +83,56 @@ export async function enviarMensajeChatbot(mensaje: string, conversationId?: str
     mensaje,
     ...(conversationId && { conversationId }),
   });
+}
+
+/** Progreso del turno: espejo de `PasoChatbot` en la API (chatbot.service.ts). */
+export type PasoChatbot =
+  | { paso: "analizando" }
+  | { paso: "consultando"; herramienta: string }
+  | { paso: "razonando" };
+
+// Igual que `enviarMensajeChatbot`, pero por SSE para poder enseñar los pasos mientras trabaja.
+// No usa `fetchConLimite`: un turno con dos o tres consultas pasa de los 8 s de `pedir`.
+export async function enviarMensajeChatbotFlujo(
+  mensaje: string,
+  conversationId: string | undefined,
+  alPaso: (paso: PasoChatbot) => void,
+): Promise<RespuestaChatbot> {
+  if (!BASE) {
+    alPaso({ paso: "analizando" });
+    await simular(() => alPaso({ paso: "consultando", herramienta: "buscar_trenes" }), 350);
+    await simular(() => alPaso({ paso: "razonando" }), 350);
+    return simular(() => respuestaChatbotDemo(mensaje), 450);
+  }
+
+  const r = await fetch(`${BASE}/chatbot/mensaje/flujo`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ mensaje, ...(conversationId && { conversationId }) }),
+  });
+  if (!r.ok || !r.body) throw new Error(await mensajeDeError(r, "/chatbot/mensaje/flujo"));
+
+  const lector = r.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  let respuesta: RespuestaChatbot | undefined;
+  for (;;) {
+    const { value, done } = await lector.read();
+    if (done) break;
+    buffer += value;
+    const { eventos, resto } = parsearEventos(buffer);
+    buffer = resto;
+    for (const { evento, datos } of eventos) {
+      if (evento === "paso") alPaso(datos as PasoChatbot);
+      else if (evento === "fin") respuesta = datos as RespuestaChatbot;
+      else if (evento === "error") throw new Error((datos as { mensaje?: string }).mensaje ?? "El asistente no ha podido responder.");
+    }
+  }
+  if (!respuesta) throw new Error("El asistente no ha podido responder.");
+  return respuesta;
 }
 
 // El contrato devuelve { statusCode, error, message } (formato de Nest): se usa su mensaje si lo hay,

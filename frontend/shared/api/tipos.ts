@@ -372,6 +372,8 @@ export interface RespuestaChatbot {
   respuesta: string;
   conversationId: string;
   herramientas: string[];
+  // Trenes encontrados en el turno (los de `buscar_trenes`): la web los pinta como resultados.
+  trenes?: TrenApi[];
 }
 
 // POST /reservas: la API elige la butaca, así que el frontend no manda los asientos elegidos.
