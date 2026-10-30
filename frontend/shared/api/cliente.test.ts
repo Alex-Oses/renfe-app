@@ -2,11 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buscarEstaciones,
   buscarTrenes,
+  comprobarApi,
   completarRuta,
   configurarApi,
   obtenerAsientos,
   posicionDeTren,
   registrarCara,
+  usaApiRespaldo,
 } from "./cliente";
 import type { PosicionTren, Tren } from "./tipos";
 
@@ -215,5 +217,43 @@ describe("sin VITE_API_URL", () => {
     const trenes = await buscarTrenes({ origen: "60000", destino: "71801", fecha: "2026-11-02" });
     expect(trenes.length).toBeGreaterThan(0);
     expect(llamadas).toHaveLength(0);
+  });
+});
+
+describe("API de respaldo", () => {
+  const salud = (baseDatos: string) => new Response(JSON.stringify({ baseDatos }), { status: 200 });
+  afterEach(() => configurarApi({}));
+
+  it("pasa al respaldo si la principal cae o pierde la BD, y vuelve sola", async () => {
+    configurarApi({ api: "https://docker", respaldo: "https://render" });
+    let principal: () => Response = () => salud("ok");
+    const llamadas = api((url) => (url === "https://docker/health" ? principal() : new Response('{"datos":[]}')));
+
+    await comprobarApi();
+    expect(usaApiRespaldo()).toBe(false);
+
+    principal = () => new Response("", { status: 502 });
+    await comprobarApi();
+    expect(usaApiRespaldo()).toBe(true);
+    await buscarEstaciones("atocha");
+    expect(llamadas.at(-1)!.url).toMatch(/^https:\/\/render\/estaciones/);
+
+    principal = () => salud("error");
+    await comprobarApi();
+    expect(usaApiRespaldo()).toBe(true);
+
+    principal = () => salud("ok");
+    await comprobarApi();
+    expect(usaApiRespaldo()).toBe(false);
+    await buscarEstaciones("atocha");
+    expect(llamadas.at(-1)!.url).toMatch(/^https:\/\/docker\/estaciones/);
+  });
+
+  it("sin respaldo configurado no comprueba nada", async () => {
+    configurarApi({ api: "https://docker" });
+    const llamadas = api(() => undefined);
+    await comprobarApi();
+    expect(llamadas).toHaveLength(0);
+    expect(usaApiRespaldo()).toBe(false);
   });
 });

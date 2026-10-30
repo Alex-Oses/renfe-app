@@ -60,16 +60,57 @@ export interface ConfigApi {
   api?: string;
   posiciones?: string;
   tiempoReal?: string;
+  // respaldo: API a la que se pasa si `api` (el Docker) no responde.
+  respaldo?: string;
 }
 let BASE: string | undefined;
 let BASE_POSICIONES: string | undefined;
 let URL_TIEMPO_REAL: string | undefined;
+let PRINCIPAL: string | undefined;
+let RESPALDO: string | undefined;
+let posicionesPropias = false;
+let enRespaldo = false;
+const oyentesRespaldo = new Set<() => void>();
 export let usaDatosSimulados = true;
 export function configurarApi(c: ConfigApi) {
-  BASE = c.api || undefined;
+  BASE = PRINCIPAL = c.api || undefined;
+  RESPALDO = c.respaldo || undefined;
+  posicionesPropias = !!c.posiciones;
   BASE_POSICIONES = c.posiciones || BASE;
   URL_TIEMPO_REAL = c.tiempoReal || undefined;
   usaDatosSimulados = !BASE;
+  enRespaldo = false;
+}
+
+export const usaApiRespaldo = () => enRespaldo;
+export function alCambiarRespaldo(oyente: () => void) {
+  oyentesRespaldo.add(oyente);
+  return () => {
+    oyentesRespaldo.delete(oyente);
+  };
+}
+
+// Va al respaldo si la principal cae o pierde la BD, y vuelve sola cuando se recupera.
+// shortcut: las sesiones no valen entre las dos APIs (BD y secretos distintos), hay que volver a entrar.
+export async function comprobarApi(): Promise<void> {
+  if (!PRINCIPAL || !RESPALDO) return;
+  let viva = false;
+  try {
+    const r = await fetchConLimite(`${PRINCIPAL}/health`);
+    viva = r.ok && (await r.json()).baseDatos === "ok";
+  } catch {
+    // Sin conexión con la principal: cuenta como caída.
+  }
+  if (viva === !enRespaldo) return;
+  enRespaldo = !viva;
+  BASE = viva ? PRINCIPAL : RESPALDO;
+  if (!posicionesPropias) BASE_POSICIONES = BASE;
+  oyentesRespaldo.forEach((oyente) => oyente());
+}
+
+export function vigilarApi(cadaMs = 30_000) {
+  void comprobarApi();
+  setInterval(() => void comprobarApi(), cadaMs);
 }
 
 let token: string | null = null;

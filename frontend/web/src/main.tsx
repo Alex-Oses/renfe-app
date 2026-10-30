@@ -10,14 +10,17 @@ import { ProveedorSesion } from "./estado/sesion";
 import { Inicio } from "./paginas/Inicio";
 import { Resultados } from "./paginas/Resultados";
 import "./estilos/base.css";
-import { configurarApi } from "@renfe/shared/api/cliente";
+import { configurarApi, vigilarApi } from "@renfe/shared/api/cliente";
+import { AvisoRespaldo } from "./componentes/AvisoRespaldo";
 
 // En producción (Vercel) el tiempo real lo sirve api/posiciones.ts; VITE_TIEMPO_REAL=simulado lo apaga (plan B).
 configurarApi({
   api: import.meta.env.VITE_API_URL,
+  respaldo: import.meta.env.VITE_API_RESPALDO_URL,
   posiciones: import.meta.env.VITE_POSICIONES_URL,
   tiempoReal: import.meta.env.PROD && import.meta.env.VITE_TIEMPO_REAL !== "simulado" ? "/api/posiciones" : undefined,
 });
+vigilarApi();
 
 // Las páginas pesadas (mapa, cámara, QR) se cargan solo al entrar en ellas.
 const Reserva = lazy(() => import("./paginas/reserva/Reserva"));
@@ -37,6 +40,7 @@ function App() {
   return (
     <>
       <AlNavegar />
+      <AvisoRespaldo />
       <a className="saltar" href="#contenido">
         Saltar al contenido
       </a>
