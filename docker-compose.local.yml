@@ -13,6 +13,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:54322/postgres
       SUPABASE_URL: http://host.docker.internal:54321
       API_PORT: "3000"
+      MAILPIT_URL: http://host.docker.internal:54324 # bandeja local: http://localhost:54324
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081}
     extra_hosts:
       - "host.docker.internal:host-gateway"

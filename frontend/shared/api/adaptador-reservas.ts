@@ -164,6 +164,22 @@ export function billeteDeApi(api: BilleteApi): Billete {
   };
 }
 
+// Consulta por localizador: la reserva se rehace con sus billetes de GET /billetes.
+export function reservaDeBilletes(billetes: BilleteApi[]): Reserva {
+  const propios = billetes.map(billeteDeApi);
+  const primero = propios[0]!;
+  return {
+    id: primero.localizador,
+    localizador: primero.localizador,
+    tren: primero.tren,
+    asientos: propios.map((b) => b.asiento),
+    pasajeros: propios.map((b) => b.pasajero),
+    total: Math.round(billetes.reduce((suma, b) => suma + b.precio, 0) * 100) / 100,
+    estado: billetes.some((b) => b.estado === "anulado") ? "cancelada" : "pagada",
+    creada: billetes[0]!.emitido,
+  };
+}
+
 // POST /billetes/validar: la API manda `primeraValidacion: null`; la UI usa undefined.
 export function validacionDeApi({
   primeraValidacion,

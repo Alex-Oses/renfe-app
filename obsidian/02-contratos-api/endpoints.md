@@ -606,6 +606,22 @@ Notas: `estado` es siempre `pagada` mientras el pago sea simulado. La reserva, l
 billetes se escriben en **una transacción**: si falla algo, no queda nada a medias. `expira_en` del
 billete es la fecha de servicio + 26 h.
 
+## POST /reservas/:localizador/cancelar — añadido (Alex, 2026-10-30)
+
+Auth: **sí**, solo el dueño. Sin cuerpo. Pasa la reserva a `cancelada` y sus billetes a `anulado`.
+Response 200: `{ "localizador": "R-7K3M9Q", "estado": "cancelada", "total": 45.0, "penalizacion": 30, "reembolso": 31.5 }`.
+Penalización simulada por clase: Confort 30 %, Turista 100 %.
+
+| Código | Cuándo |
+|---|---|
+| 400 | El viaje ya ha pasado |
+| 404 | No existe o es de otro usuario |
+| 409 | Ya está cancelada o algún billete está usado |
+
+La consulta por localizador se hace filtrando `GET /billetes`. Tras comprar o cancelar, la API manda
+un correo al usuario (sin bloquear la respuesta si falla). `precio` y `precioDesde` dependen del producto
+y de la distancia del trayecto, y coinciden entre búsqueda y compra.
+
 ## GET /billetes
 
 Descripción: mis billetes, del más nuevo al más viejo.

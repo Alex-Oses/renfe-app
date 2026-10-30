@@ -39,7 +39,7 @@ import {
   sinProducto,
 } from "./adaptador-trenes";
 import { cuerpoLogin, cuerpoRegistro } from "./adaptador-cuenta";
-import { billeteDeApi, cuerpoReserva, reservaDeApi, validacionDeApi } from "./adaptador-reservas";
+import { billeteDeApi, cuerpoReserva, reservaDeApi, reservaDeBilletes, validacionDeApi } from "./adaptador-reservas";
 import { cuerpoRegistrarCara, cuerpoVerificarCara, validarEmbedding } from "./cara";
 import { recordarEstaciones } from "./estaciones-memoria";
 import { parsearEventos } from "./flujo-chatbot";
@@ -406,8 +406,20 @@ export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
 // GET /billetes
 export const misBilletes = async (): Promise<Billete[]> =>
   BASE
-    ? (await datos<BilleteApi>("/billetes")).map(billeteDeApi)
+    ? (await datos<BilleteApi>("/billetes")).filter((b) => b.estado !== "anulado").map(billeteDeApi)
     : simular(() => reservas.misBilletes());
+
+// Admite el localizador con o sin el prefijo "R-" de la API. Solo encuentra reservas propias: hace falta sesión.
+export async function buscarReservaPorLocalizador(localizador: string): Promise<Reserva | undefined> {
+  const limpio = localizador.trim().toUpperCase();
+  const buscado = limpio.startsWith("R-") ? limpio : `R-${limpio}`;
+  const billetes = (await datos<BilleteApi>("/billetes")).filter((b) => b.localizador === buscado);
+  return billetes.length ? reservaDeBilletes(billetes) : undefined;
+}
+
+// POST /reservas/:localizador/cancelar
+export const cancelarReserva = (localizador: string): Promise<{ penalizacion: number; reembolso: number }> =>
+  pedir(`/reservas/${encodeURIComponent(localizador)}/cancelar`, "POST");
 
 // GET /billetes/:id/qr  (la API devuelve `{ id, qr }`: el billete se completa con GET /billetes)
 export async function obtenerBillete(id: string): Promise<Billete> {

@@ -1,7 +1,7 @@
 // Widgets que parten de un localizador: consulta, cambio, anulación y pago pendiente.
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { confirmarPagoSimulado } from "@renfe/shared/api/cliente";
+import { cancelarReserva, confirmarPagoSimulado, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Reserva } from "@renfe/shared/api/tipos";
 import { costeCambio, devolucionAnulacion, euros, PENALIZACION, tarifaDe } from "./logica";
 import { BuscaReserva, Exito, Herramienta, ResumenReserva, useEnvio } from "./comun";
@@ -51,6 +51,17 @@ export function AnulaBillete() {
   const envio = useEnvio("ANU");
   const tarifa = r && tarifaDe(r);
   const devuelve = r && tarifa ? devolucionAnulacion(tarifa, r.total) : null;
+  const [reembolso, setReembolso] = useState<number | null>(null);
+  const [error, setError] = useState("");
+  async function confirmar(res: Reserva) {
+    setError("");
+    try {
+      if (!usaDatosSimulados) setReembolso((await cancelarReserva(res.localizador)).reembolso);
+      await envio.enviar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo anular la reserva.");
+    }
+  }
   return (
     <Herramienta titulo="Anula tu billete">
       <BuscaReserva filtro={soloPagadas} onReserva={(x) => { setR(x); envio.reiniciar(); }} />
@@ -61,11 +72,12 @@ export function AnulaBillete() {
           {devuelve === null ? (
             <p className="herr__error">La tarifa Básico no permite anulación.</p>
           ) : envio.exp ? (
-            <Exito>Anulación registrada. Expediente <strong>{envio.exp}</strong>. Te devolveremos {euros(devuelve)} (simulado).</Exito>
+            <Exito>Anulación registrada. Expediente <strong>{envio.exp}</strong>. Te devolveremos {euros(reembolso ?? devuelve)} (simulado).{!usaDatosSimulados && " Te lo hemos confirmado por correo."}</Exito>
           ) : (
             <>
               <p>Penalización: {PENALIZACION[tarifa]} %. Te devolvemos <strong>{euros(devuelve)}</strong> de {euros(r.total)}.</p>
-              <button className="boton" onClick={envio.enviar} disabled={envio.enviando}>{envio.enviando ? "Procesando…" : "Confirmar anulación"}</button>
+              <button className="boton" onClick={() => confirmar(r)} disabled={envio.enviando}>{envio.enviando ? "Procesando…" : "Confirmar anulación"}</button>
+              {error && <p className="herr__error" role="alert">{error}</p>}
             </>
           )}
         </div>

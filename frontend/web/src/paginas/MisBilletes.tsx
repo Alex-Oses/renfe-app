@@ -167,6 +167,9 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
       <div className="ticket__talon">
         <span className="ticket__etiqueta">Localizador</span>
         <span className="ticket__loc">{localizador}</span>
+        <span className="ticket__etiqueta">
+          Total {viaje.billetes.reduce((suma, b) => suma + b.asiento.precio, 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+        </span>
         <svg className="ticket__barras" viewBox={`0 0 ${localizador.length * 12} 40`} preserveAspectRatio="none" aria-hidden="true">
           {barras(localizador).map((b) => (
             <rect key={b.x} x={b.x} width={b.w} height="40" />
