@@ -1817,3 +1817,12 @@ a.boton {
     backdrop-filter: none;
   }
 }
+
+.aviso-respaldo {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: #fde68a;
+  color: #451a03;
+  font-weight: 600;
+  text-align: center;
+}
