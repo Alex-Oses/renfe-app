@@ -5,6 +5,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  IsOptional,
   IsString,
   Length,
   Matches,
@@ -61,4 +62,15 @@ export class CrearReservaDto {
   @ValidateNested({ each: true })
   @Type(() => PasajeroDto)
   pasajeros!: PasajeroDto[];
+
+  @ApiProperty({
+    description: 'Butacas elegidas (`coche-asiento`), una por pasajero. Sin ellas se asignan solas',
+    example: ['1-2A'],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @Matches(/^\d-\d{1,2}[A-D]$/, { each: true })
+  asientos?: string[];
 }

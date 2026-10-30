@@ -338,7 +338,7 @@ export function Resultados() {
                 {abierto === t.id && (
                   <ul className="tarifas" id={`tarifas-${i}`} aria-label={`Tarifas del ${nombreDeTren(t)}`}>
                     {TARIFAS.map((ta) => {
-                      const q = new URLSearchParams({ pasajeros: String(pasajeros), tarifa: ta.id, ...Object.fromEntries(extra) });
+                      const q = new URLSearchParams({ origen, destino, pasajeros: String(pasajeros), tarifa: ta.id, ...Object.fromEntries(extra) });
                       return (
                         <li key={ta.id} className={`tarifa cristal tarifa--${ta.id}`}>
                           <h3>{ta.nombre}</h3>

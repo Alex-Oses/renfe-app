@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { obtenerAsientos, obtenerTren, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
 import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
 import { DESCUENTOS, TARIFAS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import { PasoAsientos } from "./PasoAsientos";
@@ -47,7 +48,8 @@ export default function Reserva() {
   useEffect(() => {
     if (!conSesion) return;
     obtenerTren(trenId)
-      .then(async (t) => {
+      .then(async (detalle) => {
+        const t = soloTramo(detalle, params.get("origen"), params.get("destino"));
         setTren(t);
         setAsientos(await obtenerAsientos(t));
       })

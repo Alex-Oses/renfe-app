@@ -42,6 +42,20 @@ export class TrenesController {
     return this.trenes.detalle(feed, tripId, fecha);
   }
 
+  @Get(':feed/:tripId/asientos')
+  @ApiOperation({ summary: 'Mapa de butacas del viaje con su ocupación real' })
+  @ApiOkResponse({ description: '`{ datos: Butaca[], total }`' })
+  @ApiNotFoundResponse({ description: 'El viaje no existe' })
+  asientos(
+    @Param('feed') feed: string,
+    @Param('tripId') tripId: string,
+    @Query('fecha') fecha: string,
+    @Query('origen') origen?: string,
+    @Query('destino') destino?: string,
+  ) {
+    return this.trenes.asientos(feed, tripId, fecha, origen, destino);
+  }
+
   @Get(':feed/:tripId/posicion')
   @ApiOperation({ summary: 'Última posición conocida del viaje que circula ahora' })
   @ApiOkResponse({ description: 'Posición del tren en el último sondeo de Renfe' })

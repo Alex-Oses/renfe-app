@@ -367,6 +367,12 @@ tiene forma (AV/LD/MD), de `tramos_via`: el camino por las vías de OpenStreetMa
 paradas seguidas (`pnpm gtfs:vias`). Donde falte un tramo, ese trozo va en línea recta entre las dos
 paradas. `null` si no hay ninguna geometría: la web y la app dibujan entonces parada a parada.
 
+## GET /trenes/:feed/:tripId/asientos — implementado (Alex, 2026-10-30)
+
+Query: `fecha`, `origen`, `destino`. Response `{ datos: [{ id: "1-2A", coche, fila, letra, clase, libre, precio }], total }`.
+`libre` es la ocupación real del viaje ese día. `POST /reservas` admite `asientos: ["1-2A"]` (uno por pasajero, opcional);
+si alguna ya no está libre responde 409. Cancelar una reserva libera sus butacas.
+
 ## GET /trenes/:feed/:tripId/posicion
 
 Descripción: última posición conocida del tren que hace ese viaje **ahora**.

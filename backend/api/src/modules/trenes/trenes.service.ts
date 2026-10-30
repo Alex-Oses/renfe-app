@@ -3,6 +3,7 @@ import { BdService } from '../../common/bd/bd.service.js';
 import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import { duracionMin, intervaloAIso } from '../../common/gtfs/tiempo.js';
 import type { BuscarTrenesDto } from './dto/buscar-trenes.dto.js';
+import { claseVisible, etiquetaAsiento } from '../../common/formato.js';
 import { kmTrayecto, plazasSimuladas, precioSimulado } from './simulado.js';
 
 export interface Tren {
@@ -309,6 +310,54 @@ export class TrenesService {
         precio: Math.round((tramos[0].precioDesde + tramos[1].precioDesde) * 100) / 100,
       };
     });
+    return { datos, total: datos.length };
+  }
+
+  /** Mapa de butacas del viaje: 3 coches de 40 plazas; ocupada = con reserva en vigor. */
+  async asientos(feed: string, tripId: string, fecha: string, origen?: string, destino?: string) {
+    let tipo: string | null = null;
+    let km = 0;
+    const ocupadas = new Set<string>();
+    try {
+      const [viaje, filas, estaciones] = await Promise.all([
+        this.bd.consultar<{ tipo_servicio: string | null }>(
+          'select r.tipo_servicio from viajes v join rutas r on r.feed = v.feed and r.id = v.ruta_id where v.feed = $1 and v.id = $2',
+          [feed, tripId],
+        ),
+        this.bd.consultar<{ coche: number; numero: number }>(
+          'select coche, numero from asientos where feed = $1 and viaje_id = $2 and fecha_servicio = $3::date and reserva_id is not null',
+          [feed, tripId, fecha],
+        ),
+        this.bd.consultar<{ id: string; lat: number; lon: number }>(
+          'select id, lat, lon from estaciones where id = any($1::text[])',
+          [[origen ?? '', destino ?? '']],
+        ),
+      ]);
+      if (!viaje.rows[0]) throw new NotFoundException('Ese viaje no existe');
+      tipo = viaje.rows[0].tipo_servicio;
+      for (const f of filas.rows) ocupadas.add(`${f.coche}-${f.numero}`);
+      const o = estaciones.rows.find((e) => e.id === origen);
+      const d = estaciones.rows.find((e) => e.id === destino);
+      if (o && d) km = kmTrayecto(o.lat, o.lon, d.lat, d.lon);
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new ServiceUnavailableException('La base de datos no está disponible');
+    }
+    const precio = precioSimulado(tipo, km, `${feed}:${tripId}:${fecha}:${origen}:${destino}`);
+    const datos = [1, 2, 3].flatMap((coche) =>
+      Array.from({ length: 40 }, (_, i) => {
+        const numero = i + 1;
+        return {
+          id: `${coche}-${etiquetaAsiento(numero)}`,
+          coche,
+          fila: Math.ceil(numero / 4),
+          letra: 'ABCD'[i % 4]!,
+          clase: claseVisible(coche === 1 && ['ave', 'avlo', 'alvia', 'avant'].includes(tipo ?? '') ? 'preferente' : 'turista'),
+          libre: !ocupadas.has(`${coche}-${numero}`),
+          precio,
+        };
+      }),
+    );
     return { datos, total: datos.length };
   }
 

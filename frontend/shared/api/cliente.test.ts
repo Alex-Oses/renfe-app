@@ -158,26 +158,23 @@ describe("con VITE_API_URL", () => {
     expect(r.llegadaProxima).toBe("2026-11-02T07:35:00.000Z"); // 08:32 en Madrid + 3 min de retraso
   });
 
-  it("no pregunta por /asientos (la API todavía no lo tiene) y usa la plantilla local", async () => {
+  it("pide la ocupación real a /asientos", async () => {
     configurarApi({ api: "http://api" });
-    const llamadas = api(() => undefined);
-    const tren: Tren = {
+    const llamadas = api((url) =>
+      url.includes("/asientos")
+        ? new Response(JSON.stringify({ datos: [{ id: "1-1A", coche: 1, fila: 1, letra: "A", clase: "Confort", libre: false, precio: 45 }], total: 1 }))
+        : undefined,
+    );
+    const tren = {
       id: "avld:3097L23537C1:2026-11-02",
-      tipo: "AVE",
-      numero: "02070",
-      origen: { id: "60000", nombre: "Madrid-Puerta de Atocha" },
-      destino: { id: "04040", nombre: "Zaragoza-Delicias" },
-      salida: "2026-11-02T07:15:00+01:00",
-      llegada: "2026-11-02T08:32:00+01:00",
-      precioDesde: 45,
-      plazasLibres: 12,
-    };
+      origen: { id: "60000", nombre: "Madrid" },
+      destino: { id: "04040", nombre: "Zaragoza" },
+    } as Tren;
 
-    const asientos = await obtenerAsientos(tren);
-    expect(llamadas).toHaveLength(0);
-    expect(asientos).toHaveLength(240);
-    expect(asientos[0].precio).toBeCloseTo(45 * 1.9, 2); // coche 1 es Prémium
-    expect(asientos.some((a) => a.libre)).toBe(true);
+    const [asiento] = await obtenerAsientos(tren);
+
+    expect(llamadas[0]!.url).toContain("/trenes/avld/3097L23537C1/asientos?fecha=2026-11-02&origen=60000&destino=04040");
+    expect(asiento).toMatchObject({ id: "1-1A", libre: false, clase: "Confort" });
   });
 
   it("si el viaje no está circulando, /posicion da 404 y no es un error", async () => {

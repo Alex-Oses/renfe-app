@@ -399,6 +399,7 @@ export interface NuevaReservaApi {
   origenId: string;
   destinoId: string;
   pasajeros: PasajeroApi[]; // de 1 a 6: una butaca por pasajero
+  asientos?: string[]; // butacas elegidas: "coche-asiento"
 }
 
 export interface BilleteEmitidoApi {

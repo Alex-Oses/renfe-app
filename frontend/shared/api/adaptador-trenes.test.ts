@@ -7,9 +7,10 @@ import {
   nombreDeTren,
   numeroDeServicio,
   sinProducto,
+  soloTramo,
   tipoDeServicio,
 } from "./adaptador-trenes";
-import type { TrenApi, TrenDetalleApi } from "./tipos";
+import type { TrenApi, TrenDetalle, TrenDetalleApi } from "./tipos";
 
 const trenApi: TrenApi = {
   id: "avld:3097L23537C1:2026-11-02",
@@ -168,5 +169,24 @@ describe("marcarParadas", () => {
     ]);
     expect(r[0].llegada).toBe("2020-01-01T10:00:00+01:00");
     expect(r[0].pasada).toBe(true);
+  });
+});
+
+describe("soloTramo", () => {
+  const parada = (seq: number, estacionId: string, hora: string) => ({
+    seq, estacionId, nombre: estacionId, llega: hora, sale: hora, retrasoSeg: null,
+  });
+  const viaje = {
+    origen: { id: "M", nombre: "M" }, destino: { id: "B", nombre: "B" }, salida: "2026-11-02T07:00:00+01:00", llegada: "2026-11-02T10:00:00+01:00",
+    paradas: [parada(1, "M", "2026-11-02T07:00:00+01:00"), parada(2, "Z", "2026-11-02T08:30:00+01:00"), parada(3, "B", "2026-11-02T10:00:00+01:00")],
+  } as unknown as TrenDetalle;
+
+  it("recorta el viaje al tramo buscado", () => {
+    expect(soloTramo(viaje, "M", "Z")).toMatchObject({ destino: { id: "Z" }, llegada: "2026-11-02T08:30:00+01:00", duracionMin: 90 });
+  });
+
+  it("deja el viaje igual sin tramo o con estaciones al revés", () => {
+    expect(soloTramo(viaje)).toBe(viaje);
+    expect(soloTramo(viaje, "Z", "M")).toBe(viaje);
   });
 });

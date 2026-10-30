@@ -34,10 +34,18 @@ export function enmascararTitular(nombre: string): string {
 
 /** `12A`: butaca con letra de fila según el número (A y D son ventanilla). */
 export function etiquetaAsiento(numero: number): string {
-  return `${numero}${'ABCD'[(numero - 1) % 4]}`;
+  return `${Math.ceil(numero / 4)}${'ABCD'[(numero - 1) % 4]}`;
 }
 
 /** Ventanilla = columnas A y D de la plantilla simulada de 4 asientos por fila. */
+/** `2A` → 5: inversa de etiquetaAsiento. `null` si no es una butaca de la plantilla. */
+export function numeroDeAsiento(etiqueta: string): number | null {
+  const partes = /^(\d+)([A-D])$/.exec(etiqueta);
+  if (!partes) return null;
+  const numero = (Number(partes[1]) - 1) * 4 + 'ABCD'.indexOf(partes[2]!) + 1;
+  return numero >= 1 && numero <= 40 ? numero : null;
+}
+
 export function esVentanilla(numero: number): boolean {
   const columna = (numero - 1) % 4;
   return columna === 0 || columna === 3;

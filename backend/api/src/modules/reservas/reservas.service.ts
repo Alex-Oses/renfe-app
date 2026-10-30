@@ -14,6 +14,7 @@ import {
   claseVisible,
   enmascararDocumento,
   etiquetaAsiento,
+  numeroDeAsiento,
   numeroVisible,
   referencia,
   tipoVisible,
@@ -174,6 +175,17 @@ const SQL_ASIENTOS = `
    limit $4
 `;
 
+const SQL_ASIENTOS_ELEGIDOS = `
+  select a.id, a.coche, a.numero, a.clase
+    from asientos a
+    join unnest($4::int[], $5::int[]) as e(coche, numero) on e.coche = a.coche and e.numero = a.numero
+   where a.feed = $1
+     and a.viaje_id = $2
+     and a.fecha_servicio = $3::date
+     and a.reserva_id is null
+   for update of a
+`;
+
 const SQL_OCUPAR = `
   update asientos
      set reserva_id = $1
@@ -234,6 +246,18 @@ export class ReservasService {
     }
   }
 
+  private butacasElegidas(ids: string[], plazas: number): { coches: number[]; numeros: number[] } {
+    const butacas = ids.map((id) => {
+      const [coche, etiqueta] = id.split('-');
+      return { coche: Number(coche), numero: numeroDeAsiento(etiqueta ?? '') };
+    });
+    const validas = butacas.every((b) => b.coche >= 1 && b.coche <= 3 && b.numero !== null);
+    if (ids.length !== plazas || new Set(ids).size !== plazas || !validas) {
+      throw new BadRequestException('Elige una butaca distinta y válida por pasajero');
+    }
+    return { coches: butacas.map((b) => b.coche), numeros: butacas.map((b) => b.numero!) };
+  }
+
   private async cancelarEn(
     cliente: PoolClient,
     usuarioId: string,
@@ -248,8 +272,7 @@ export class ReservasService {
 
     await cliente.query(`update reservas set estado = 'cancelada' where id = $1`, [reserva.id]);
     await cliente.query(`update billetes set estado = 'anulado' where reserva_id = $1`, [reserva.id]);
-    // shortcut: la butaca no se libera (billetes.asiento_id es único); con 120 plazas por viaje no se nota,
-    // para revenderla haría falta una migración que quite esa restricción.
+    await cliente.query('update asientos set reserva_id = null where reserva_id = $1', [reserva.id]);
 
     const penalizacion = PENALIZACION_POR_CLASE[reserva.clase] ?? 100;
     return {
@@ -362,14 +385,22 @@ export class ReservasService {
     ]);
     const reserva = reservas[0]!;
 
-    const { rows: libres } = await cliente.query<FilaAsiento>(SQL_ASIENTOS, [
-      dto.feed,
-      dto.viajeId,
-      dto.fecha,
-      plazas,
-    ]);
+    const elegidas = dto.asientos?.length ? this.butacasElegidas(dto.asientos, plazas) : null;
+    const { rows: libres } = elegidas
+      ? await cliente.query<FilaAsiento>(SQL_ASIENTOS_ELEGIDOS, [
+          dto.feed,
+          dto.viajeId,
+          dto.fecha,
+          elegidas.coches,
+          elegidas.numeros,
+        ])
+      : await cliente.query<FilaAsiento>(SQL_ASIENTOS, [dto.feed, dto.viajeId, dto.fecha, plazas]);
     if (libres.length < plazas) {
-      throw new ConflictException('No quedan butacas libres para ese viaje');
+      throw new ConflictException(
+        elegidas
+          ? 'Alguna de las butacas elegidas acaba de ocuparse: elige otra'
+          : 'No quedan butacas libres para ese viaje',
+      );
     }
 
     const { rows: ocupados } = await cliente.query<FilaAsiento>(SQL_OCUPAR, [
