@@ -42,6 +42,7 @@ import { cuerpoLogin, cuerpoRegistro } from "./adaptador-cuenta";
 import { billeteDeApi, cuerpoReserva, reservaDeApi, validacionDeApi } from "./adaptador-reservas";
 import { cuerpoRegistrarCara, cuerpoVerificarCara, validarEmbedding } from "./cara";
 import { recordarEstaciones } from "./estaciones-memoria";
+import { parsearEventos } from "./flujo-chatbot";
 import * as trenes from "./simulado";
 import * as reservas from "./simulado-reservas";
 import * as cuenta from "./simulado-cuenta";
@@ -77,11 +78,61 @@ export function usarToken(t: string | null) {
 }
 
 export async function enviarMensajeChatbot(mensaje: string, conversationId?: string): Promise<RespuestaChatbot> {
-  if (!BASE) throw new Error("El chat no está disponible en modo demo");
+  if (!BASE) return simular(() => respuestaChatbotDemo(mensaje), 250);
   return pedir<RespuestaChatbot>("/chatbot/mensaje", "POST", {
     mensaje,
     ...(conversationId && { conversationId }),
   });
+}
+
+/** Progreso del turno: espejo de `PasoChatbot` en la API (chatbot.service.ts). */
+export type PasoChatbot =
+  | { paso: "analizando" }
+  | { paso: "consultando"; herramienta: string }
+  | { paso: "razonando" };
+
+// Igual que `enviarMensajeChatbot`, pero por SSE para poder enseñar los pasos mientras trabaja.
+// No usa `fetchConLimite`: un turno con dos o tres consultas pasa de los 8 s de `pedir`.
+export async function enviarMensajeChatbotFlujo(
+  mensaje: string,
+  conversationId: string | undefined,
+  alPaso: (paso: PasoChatbot) => void,
+): Promise<RespuestaChatbot> {
+  if (!BASE) {
+    alPaso({ paso: "analizando" });
+    await simular(() => alPaso({ paso: "consultando", herramienta: "buscar_trenes" }), 350);
+    await simular(() => alPaso({ paso: "razonando" }), 350);
+    return simular(() => respuestaChatbotDemo(mensaje), 450);
+  }
+
+  const r = await fetch(`${BASE}/chatbot/mensaje/flujo`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ mensaje, ...(conversationId && { conversationId }) }),
+  });
+  if (!r.ok || !r.body) throw new Error(await mensajeDeError(r, "/chatbot/mensaje/flujo"));
+
+  const lector = r.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  let respuesta: RespuestaChatbot | undefined;
+  for (;;) {
+    const { value, done } = await lector.read();
+    if (done) break;
+    buffer += value;
+    const { eventos, resto } = parsearEventos(buffer);
+    buffer = resto;
+    for (const { evento, datos } of eventos) {
+      if (evento === "paso") alPaso(datos as PasoChatbot);
+      else if (evento === "fin") respuesta = datos as RespuestaChatbot;
+      else if (evento === "error") throw new Error((datos as { mensaje?: string }).mensaje ?? "El asistente no ha podido responder.");
+    }
+  }
+  if (!respuesta) throw new Error("El asistente no ha podido responder.");
+  return respuesta;
 }
 
 // El contrato devuelve { statusCode, error, message } (formato de Nest): se usa su mensaje si lo hay,
@@ -98,7 +149,7 @@ async function mensajeDeError(r: Response, ruta: string): Promise<string> {
 }
 
 async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise<T> {
-  const r = await fetch(`${BASE}${ruta}`, {
+  const r = await fetchConLimite(`${BASE}${ruta}`, {
     method: metodo,
     headers: {
       ...(cuerpo !== undefined && { "Content-Type": "application/json" }),
@@ -203,6 +254,63 @@ async function posicionesVercel(): Promise<PosicionTren[]> {
 const simular = <T>(f: () => T | Promise<T>, ms = 350): Promise<T> =>
   new Promise((ok, ko) => setTimeout(() => (async () => f())().then(ok, ko), ms));
 
+const TIEMPO_LIMITE_API_MS = 8_000;
+
+async function fetchConLimite(url: string, init?: RequestInit): Promise<Response> {
+  const controlador = new AbortController();
+  const temporizador = setTimeout(() => controlador.abort(), TIEMPO_LIMITE_API_MS);
+  try {
+    return await fetch(url, { ...init, signal: controlador.signal });
+  } catch (razon) {
+    if (razon instanceof DOMException && razon.name === "AbortError") {
+      throw new Error("La API está tardando demasiado en responder. Inténtalo de nuevo.");
+    }
+    throw razon;
+  } finally {
+    clearTimeout(temporizador);
+  }
+}
+
+function respuestaChatbotDemo(mensaje: string): RespuestaChatbot {
+  const pregunta = mensaje.toLocaleLowerCase("es");
+  const saludo = /^(hola|buenas|buenos días|buenas tardes|buenas noches|hey)\b/.test(pregunta);
+  const despedida = /\b(adiós|adios|hasta luego|nos vemos)\b/.test(pregunta);
+  const agradecimiento = /\b(gracias|muchas gracias|te lo agradezco)\b/.test(pregunta);
+  const trayecto = pregunta.match(/\bde\s+(.+?)\s+a\s+(.+?)(?:[?.!,]|$)/);
+  let respuesta = "Puedo ayudarte a buscar trenes, estaciones y horarios. ¿Qué necesitas?";
+
+  if (saludo) {
+    respuesta = "¡Hola! ¿En qué puedo ayudarte? Puedo buscarte trenes, estaciones u horarios.";
+  } else if (agradecimiento) {
+    respuesta = "¡De nada! Cuando quieras, seguimos con tu viaje.";
+  } else if (despedida) {
+    respuesta = "¡Hasta luego! Que tengas un buen viaje.";
+  } else if (/\b(cómo estás|como estas|qué tal|que tal)\b/.test(pregunta)) {
+    respuesta = "¡Muy bien, gracias! Preparado para ayudarte con tu viaje.";
+  } else if (trayecto) {
+    const origen = trenes.buscarEstaciones(trayecto[1])[0];
+    const destino = trenes.buscarEstaciones(trayecto[2])[0];
+    if (origen && destino) {
+      const lista = trenes.buscarTrenes({ origen: origen.id, destino: destino.id, fecha: hoyEnMadrid() }).slice(0, 3);
+      const horas = lista.map((tren) => {
+        const salida = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(new Date(tren.salida));
+        const llegada = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(new Date(tren.llegada));
+        return `${tren.tipo} ${tren.numero}: sale a las ${salida} y llega a las ${llegada}`;
+      });
+      respuesta = horas.length
+        ? `Para ir de ${origen.nombre} a ${destino.nombre} hoy he encontrado:\n${horas.join("\n")}`
+        : `Ahora mismo no hay trenes simulados de ${origen.nombre} a ${destino.nombre}.`;
+    } else {
+      respuesta = `No encuentro una estación simulada para ${trayecto[1]} o ${trayecto[2]}. Puedes probar con Madrid, Tarragona, Barcelona, Valencia o Sevilla.`;
+    }
+  } else if (pregunta.includes("estación") || pregunta.includes("estacion")) {
+    respuesta = "Claro. Puedes preguntarme por una estación concreta o pedirme un trayecto entre dos estaciones.";
+  } else if (pregunta.includes("tren") || pregunta.includes("horario")) {
+    respuesta = "Claro. Dime el origen y el destino, por ejemplo: «¿Qué trenes hay de Madrid a Barcelona?»";
+  }
+  return { respuesta, conversationId: "demo", herramientas: [] };
+}
+
 // GET /estaciones?q=&feed=
 export async function buscarEstaciones(q: string, feed?: "cercanias" | "avld"): Promise<Estacion[]> {
   // El contrato exige `q` de 1 a 60 caracteres: con el campo vacío no se pregunta (sería un 400).
@@ -300,7 +408,7 @@ export async function verificarCara(datos: { email: string; embedding: Embedding
 
 export async function posicionesTrenes(): Promise<PosicionTren[]> {
   if (BASE_POSICIONES) {
-    const r = await fetch(`${BASE_POSICIONES}/posiciones`);
+    const r = await fetchConLimite(`${BASE_POSICIONES}/posiciones`);
     if (!r.ok) throw new Error(await mensajeDeError(r, "/posiciones"));
     posicionesReales = true;
     return unoPorVehiculo(((await r.json()) as Lista<PosicionApi>).datos).map(aPosicion);
