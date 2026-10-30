@@ -76,18 +76,25 @@ export const CARGAS = {
       tipo = excluded.tipo
   `,
 
+  formas: `
+    insert into public.formas (feed, id, puntos)
+    select feed, id, puntos
+      from jsonb_to_recordset($1::jsonb) as x(feed text, id text, puntos jsonb)
+    on conflict (feed, id) do update set puntos = excluded.puntos
+  `,
+
   viajes: `
     insert into public.viajes
       (feed, id, numero, ruta_id, servicio_id, fecha_inicio, fecha_fin,
-       origen_id, destino_id, salida, llegada, num_paradas, sentido, accesible)
+       origen_id, destino_id, salida, llegada, num_paradas, sentido, accesible, forma_id)
     select feed, id, numero, ruta_id, servicio_id, fecha_inicio::date, fecha_fin::date,
            origen_id, destino_id, salida::interval, llegada::interval,
-           num_paradas, sentido, accesible
+           num_paradas, sentido, accesible, forma_id
       from jsonb_to_recordset($1::jsonb) as x(
         feed text, id text, numero text, ruta_id text, servicio_id text,
         fecha_inicio text, fecha_fin text, origen_id text, destino_id text,
         salida text, llegada text, num_paradas smallint,
-        sentido smallint, accesible boolean)
+        sentido smallint, accesible boolean, forma_id text)
     on conflict (feed, id) do update set
       numero = excluded.numero,
       ruta_id = excluded.ruta_id,
@@ -100,7 +107,8 @@ export const CARGAS = {
       llegada = excluded.llegada,
       num_paradas = excluded.num_paradas,
       sentido = excluded.sentido,
-      accesible = excluded.accesible
+      accesible = excluded.accesible,
+      forma_id = excluded.forma_id
   `,
 
   horarios: `
@@ -131,6 +139,7 @@ export const ORDEN_CARGA: TablaCarga[] = [
   "rutas",
   "calendarios",
   "calendario_excepciones",
+  "formas",
   "viajes",
   "horarios",
 ];
@@ -142,6 +151,7 @@ export const ORDEN_CARGA: TablaCarga[] = [
 export const ORDEN_VACIADO = [
   "horarios",
   "viajes",
+  "formas",
   "calendario_excepciones",
   "calendarios",
   "rutas",

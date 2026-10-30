@@ -12,6 +12,7 @@ import { registrosCsv } from "../csv.js";
 import { descomprimirZip } from "../zip.js";
 import { leerEstacionesCsv, type FilaEstacion } from "./estaciones.js";
 import { booleanoGtfs, fechaGtfs, horaGtfs, permiteGtfs } from "./tiempo.js";
+import { redondear, simplificar, type Punto } from "./geometria.js";
 import { tipoServicio } from "./tipo-servicio.js";
 
 export interface FilaEstacionFeed {
@@ -51,6 +52,12 @@ export interface FilaExcepcion {
   tipo: "añadido" | "eliminado";
 }
 
+export interface FilaForma {
+  feed: string;
+  id: string;
+  puntos: Punto[];
+}
+
 export interface FilaViaje {
   feed: string;
   id: string;
@@ -66,6 +73,7 @@ export interface FilaViaje {
   num_paradas: number;
   sentido: number | null;
   accesible: boolean | null;
+  forma_id: string | null;
 }
 
 export interface FilaHorario {
@@ -102,6 +110,7 @@ export interface Catalogo {
   rutas: FilaRuta[];
   calendarios: FilaCalendario[];
   excepciones: FilaExcepcion[];
+  formas: FilaForma[];
   viajes: FilaViaje[];
   horarios: FilaHorario[];
   informe: Informe;
@@ -246,6 +255,23 @@ export function leerCatalogo(zip: Buffer, estacionesCsv: Buffer, feed: string = 
     });
   }
 
+  // --- shapes.txt (opcional: solo Cercanías lo publica) --------------------
+  const puntosPorForma = new Map<string, [number, number, number][]>();
+  for (const punto of registrosCsv(ficheros.get("shapes.txt")?.toString("utf8") ?? "")) {
+    const id = (punto["shape_id"] ?? "").trim();
+    const lat = Number((punto["shape_pt_lat"] ?? "").trim());
+    const lon = Number((punto["shape_pt_lon"] ?? "").trim());
+    if (id === "" || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const lista = puntosPorForma.get(id) ?? [];
+    lista.push([Number((punto["shape_pt_sequence"] ?? "0").trim()), lat, lon]);
+    puntosPorForma.set(id, lista);
+  }
+  const formas: FilaForma[] = [...puntosPorForma].map(([id, lista]) => ({
+    feed,
+    id,
+    puntos: simplificar(lista.sort((a, b) => a[0] - b[0]).map(([, lat, lon]) => [lat, lon] as Punto)).map(redondear),
+  }));
+
   // --- stop_times.txt ------------------------------------------------------
   const horarios: FilaHorario[] = [];
   const paradasPorViaje = new Map<string, FilaHorario[]>();
@@ -336,6 +362,7 @@ export function leerCatalogo(zip: Buffer, estacionesCsv: Buffer, feed: string = 
       num_paradas: ordenadas.length,
       sentido: sentidoGtfs(viaje["direction_id"]),
       accesible: booleanoGtfs(viaje["wheelchair_accessible"]),
+      forma_id: puntosPorForma.has((viaje["shape_id"] ?? "").trim()) ? (viaje["shape_id"] ?? "").trim() : null,
     });
   }
 
@@ -358,6 +385,7 @@ export function leerCatalogo(zip: Buffer, estacionesCsv: Buffer, feed: string = 
     rutas,
     calendarios,
     excepciones,
+    formas,
     viajes,
     horarios,
     informe: {
