@@ -3,7 +3,7 @@ fecha: 2026-10-27
 autor: Rubén
 area: frontend
 para: Alex
-estado: abierto
+estado: obsoleto
 prioridad: alta
 rama: feat/api-retrasos
 pr: "#47"

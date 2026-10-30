@@ -20,6 +20,7 @@ tags: [estado]
 - 🟢 **Supabase Cloud operativa desde el 29/10** (`hqwwucagvlhnlqrspwvh`, eu-west-1): esquema y catálogo AV/LD cargados y verificados. Ya no depende de la VM de Marina ([[supabase-nube]]).
 - API desplegada en Render (https://renfe-api.onrender.com) **sin base de datos**: `/estaciones` y `/trenes` dan 503 hasta que se rellene `DATABASE_URL` (session pooler) en el panel de Render.
 - 🟢 **La app móvil ya tiene plan** ([[ADR-005-app-movil-expo]], 28/10): Expo para iOS y Android, y la web queda como demo y plan B. El facial está decidido en [[ADR-007-reconocimiento-facial]]: **sin servidor Python**, el vector lo calcula el dispositivo y la decisión la toma Postgres.
+- 🟡 **Servidor final bloqueado por red:** el administrador debe confirmar la apertura de puertos y autorizar proxy/TLS y DNS. La base de datos y la API deben quedar dockerizadas allí; Supabase Cloud y Render son transitorios y se retirarán solo después de validar el servidor ([[infraestructura-servidor]], [[ADR-009-supabase-self-hosted-en-servidor]]).
 
 ## Próximos hitos
 - **Entrega final: 06/11/2026.** Congelación de código el 04/11. Plan en [[sprint-actual]].

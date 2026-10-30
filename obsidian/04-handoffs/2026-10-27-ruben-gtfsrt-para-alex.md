@@ -6,6 +6,7 @@ para: Alex
 rama: feat/api-retrasos
 pr: "#47"
 tags: [handoff, api, posiciones, gtfs-rt, retrasos, frontend]
+estado: cerrado
 ---
 
 # Handoff — `/posiciones` con posiciones **y retrasos reales**: lo que la web puede usar ya

@@ -6,6 +6,7 @@ para: [Alex, Rubén, Kevin]
 rama: docs/vault-supabase-cloud-validada
 pr: pendiente de abrir (solo documentación)
 tags: [handoff, supabase, despliegue, base-datos]
+estado: abierto
 ---
 
 # Handoff — Supabase Cloud validada: catálogo AV/LD en la nube

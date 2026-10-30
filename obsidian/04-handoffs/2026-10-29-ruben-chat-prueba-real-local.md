@@ -5,7 +5,8 @@ area: api
 para: Alex, Marina, Kevin
 rama: fix/mobile-chat-demo-local
 pr: "#97"
-tags: [handoff, chatbot, frontend, supabase, local]
+tags: [handoff, chatbot, frontend, supabase, local]
+estado: abierto
 ---
 
 # Handoff — Prueba del chatbot real en local

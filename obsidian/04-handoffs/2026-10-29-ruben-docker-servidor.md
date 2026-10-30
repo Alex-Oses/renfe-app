@@ -6,6 +6,7 @@ para: [Kevin, Marina, Alex]
 rama: chore/infra-docker-servidor
 pr: 87
 tags: [handoff, infra, docker, despliegue]
+estado: abierto
 ---
 
 # Handoff — Docker del servidor preparado (sin ejecutar)

@@ -6,6 +6,7 @@ para: Alex, Rubén, Marina
 rama: ci/infra-revision-ci-dependabot
 pr: 75 (https://github.com/Alex-Oses/renfe-app/pull/75)
 tags: [handoff, ci, render, dependabot]
+estado: cerrado
 ---
 
 # Handoff — Revisión de la CI, excepción de Dependabot y estado real de Render

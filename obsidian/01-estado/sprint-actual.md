@@ -18,13 +18,22 @@ tags: [sprint]
 | Alex | Frontend: mejora la web, lógica común en `@renfe/shared` y app Expo en `frontend/mobile` en cuanto haya BD y facial |
 | Rubén | Login facial **sin servidor Python**: dispositivo + Postgres, rutas `/auth/cara/*` en la API ([[ADR-007-reconocimiento-facial]]) |
 | Marina | Base de datos: migraciones `gtfs_*`, import y Supabase en la nube |
-| Kevin | Despliegue y Docker (D10 pendiente) |
+| Kevin | Despliegue y Docker en el servidor (requisito obligatorio) |
 
 ## Alcance
 
-**Entra:** app Expo (iOS y Android), login facial con el servidor Python, GTFS AVE/LD en Supabase, API en Render y web en Vercel.
+**Entra:** app Expo (iOS y Android), login facial calculado en el dispositivo y decidido por
+Postgres, GTFS AVE/LD y API dockerizados en el servidor, con Supabase Cloud y Render como entornos
+transitorios durante la migración.
 
-**Fuera (simulado o recortado):** Stripe real, reservas en BD, chatbot, Cercanías y worker separado.
+**Entra:** chatbot de consultas, adelantado por Rubén porque el margen de tiempo del sprint lo
+permite; infraestructura dockerizada de la base de datos y la API en el servidor asignado.
+
+**Fuera (simulado o recortado):** Stripe real, reservas en BD y Cercanías en la nube.
+
+La infraestructura dockerizada es requisito obligatorio de la entrega. Supabase Cloud y Render son
+entornos transitorios mientras el administrador confirma la apertura de puertos y se valida el
+servidor; después se retirarán como destinos operativos.
 
 > El plan de abajo es el del 27/10 y sigue sirviendo para la API y los datos. Donde diga «Fuera: app Expo», manda lo de arriba.
 

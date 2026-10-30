@@ -6,6 +6,7 @@ para: todos
 rama: docs/db-borrador-modelo-datos
 pr: (pendiente de abrir)
 tags: [handoff, contrato, base-datos]
+estado: cerrado
 ---
 
 # Handoff — Modelo de datos (contrato cerrado salvo Kevin)

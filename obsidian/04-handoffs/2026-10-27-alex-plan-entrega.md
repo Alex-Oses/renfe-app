@@ -6,6 +6,7 @@ para: todos
 rama: docs/vault-plan-entrega
 pr: (ver PR de esta rama)
 tags: [handoff, sprint]
+estado: obsoleto
 ---
 
 # Handoff — Plan de entrega del 6/11

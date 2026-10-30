@@ -6,6 +6,7 @@ para: todos
 rama: feat/api-busqueda-trenes
 pr: 33
 tags: [handoff, api, trenes]
+estado: cerrado
 ---
 
 # Handoff — `GET /trenes` (búsqueda de viajes directos)

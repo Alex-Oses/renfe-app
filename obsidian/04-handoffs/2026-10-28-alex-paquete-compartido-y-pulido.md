@@ -6,6 +6,7 @@ para: todos
 rama: feat/mobile-paquete-compartido
 pr: (ver PR de esta rama)
 tags: [handoff]
+estado: abierto
 ---
 
 # Handoff — Paquete `@renfe/shared`, tokens de diseño y pulido de la web

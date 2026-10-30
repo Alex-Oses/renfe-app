@@ -6,6 +6,7 @@ para: Alex
 rama: feat/api-retrasos
 pr: "#47"
 tags: [handoff, api, posiciones, contrato, mapa, retrasos]
+estado: cerrado
 ---
 
 # Handoff — respuesta a los «campos del viaje para el mapa» y qué llega en #47

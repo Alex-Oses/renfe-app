@@ -6,6 +6,7 @@ para: Marina
 rama: feat/gtfs-importar-cercanias
 pr: (este)
 tags: [handoff, gtfs, cercanias]
+estado: abierto
 ---
 
 # Handoff — Importar Cercanías

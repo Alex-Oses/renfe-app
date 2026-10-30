@@ -19,15 +19,17 @@ permita continuar con la API y la demostración.
 
 ## Decisión
 
-- **Entorno final:** Supabase self-hosted en Docker en el servidor asignado, incluyendo PostgreSQL,
-  Auth, API, Realtime, Studio y los servicios necesarios para mantener la compatibilidad con el
-  código actual.
-- **Entorno transitorio:** Supabase Cloud, usando el session pooler, hasta que el administrador
-  habilite el acceso al servidor y se complete la migración.
+- **Entorno final:** base de datos y API dockerizadas en el servidor asignado. La base de datos será
+  Supabase self-hosted en Docker, incluyendo PostgreSQL, Auth, Realtime, Studio y los servicios
+  necesarios para mantener la compatibilidad con el código actual.
+- **Entornos transitorios:** Supabase Cloud para la base de datos y Render para la API, usando el
+  session pooler mientras el administrador habilita el acceso al servidor y se completa la migración.
 - **Desarrollo local:** Supabase local mediante la CLI y Docker, sin considerarlo el entorno final.
 - La migración al servidor se hará aplicando las migraciones versionadas y cargando de nuevo el
   catálogo GTFS; no se copiarán secretos en Git ni en la bóveda.
-- Render seguirá siendo el despliegue temporal de la API hasta que se valide la API en el servidor.
+- Cloud y Render se retirarán cuando el servidor esté validado de extremo a extremo: red, Docker,
+  persistencia, migraciones, catálogo, API, Auth, Realtime, copias de seguridad y pruebas desde
+  fuera. No se retirarán antes ni se considerarán el destino final.
 
 ## Alternativas descartadas
 
@@ -42,6 +44,7 @@ permita continuar con la API y la demostración.
 
 - Hay que preparar un despliegue reproducible de Supabase self-hosted, almacenamiento persistente,
   copias de seguridad y un plan de actualización.
-- La migración queda bloqueada hasta que el administrador confirme puertos, proxy/TLS y permisos.
+- La migración queda bloqueada hasta que el administrador confirme la apertura de puertos y autorice
+  proxy/TLS y permisos en el servidor.
 - Durante la transición habrá que mantener las variables de conexión separadas por entorno y probar
   `/health`, `/estaciones`, `/trenes` y Auth contra el servidor antes de retirar Cloud o Render.

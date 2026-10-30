@@ -6,6 +6,7 @@ para: todos
 rama: feat/infra-compose-completo
 pr: 98
 tags: [handoff, docker, gtfs, mapa]
+estado: abierto
 ---
 
 # Handoff — Todo el stack local con `docker compose up` y recorrido real de los trenes
