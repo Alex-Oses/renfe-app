@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { misAbonos, misBilletes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Abono, Billete } from "@renfe/shared/api/tipos";
-import { agrupar, unirTransbordos, type Viaje } from "./billetes/agrupar";
+import { agrupar, unirTransbordos, type Viaje } from "@renfe/shared/billetes/agrupar";
 import { TarjetaAbono } from "./billetes/TarjetaAbono";
 import { fecha, hora } from "./reserva/formato";
 import RetrasoVivo from "./billetes/RetrasoVivo";
