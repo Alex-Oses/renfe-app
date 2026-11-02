@@ -238,15 +238,15 @@ pendiente verlo contra el Supabase de verdad cuando existan las migraciones.
 
 ## GET /trenes
 
-Descripción: viajes **directos** entre dos estaciones para una fecha de servicio.
+Descripción: viajes **directos** entre dos estaciones (o sus ciudades) para una fecha de servicio.
 Auth: **no**
 
 Request (query):
 
 | Parámetro | Tipo | Obligatorio | Notas |
 |---|---|---|---|
-| `origen` | string | sí | `id` de estación |
-| `destino` | string | sí | `id` de estación, distinto de `origen` |
+| `origen` | string | sí | `id` de estación (se amplía a su ciudad, ver notas) |
+| `destino` | string | sí | `id` de estación, distinto de `origen` (se amplía a su ciudad) |
 | `fecha` | `AAAA-MM-DD` | sí | Fecha local de servicio |
 | `limit` | int 1–50 | no | Por defecto 20 |
 
@@ -291,12 +291,26 @@ Notas:
 - Solo directos en fase 1. Los transbordos, si llegan, serán `numTransbordos` > 0 en una v2.
 - La fecha se resuelve con `calendarios` + `calendario_excepciones` en la misma consulta, y `recoge`/
   `deja` excluyen las paradas técnicas.
+- **Búsqueda por ciudad** (2026-11-02): `origen` y `destino` se amplían a todas las estaciones con la
+  misma `estaciones.ciudad` (p. ej. `71500` TARRAGONA incluye CAMP DE TARRAGONA; `71802` incluye
+  BARCELONA-SANTS). Si la estación no tiene `ciudad` (muchas `cercanias:*`), solo cuenta ella. Cada
+  tren lleva su estación **real** en `origen`/`destino`, que puede no ser la pedida. Orden por `salida`.
+- **Sin duplicados entre feeds**: si el mismo tren sale en `avld` y en `cercanias` (mismas estaciones,
+  misma salida y llegada), se devuelve uno solo, el de `avld`. `total` descuenta los quitados.
 
-## GET /trenes/transbordos — añadido (Alex, 2026-10-30)
+## GET /trenes/transbordos — añadido (Alex, 2026-10-30) · revisado 2026-11-02
 
-Mismos parámetros que `GET /trenes`. Devuelve `{ datos: Opcion[], total }` con un transbordo como máximo, en la misma
-estación, con entre 15 min y 3 h de espera. `Opcion`: `{ tramos: [Tren, Tren], transbordo: { id, nombre }, esperaMin,
-duracionMin, precio }`. `precio` es la suma por plaza. Cada tramo se compra con su propio `POST /reservas`.
+Mismos parámetros que `GET /trenes` (con la misma ampliación por ciudad). Devuelve `{ datos: Opcion[], total }` con un
+transbordo como máximo y entre 15 min y 3 h de espera. `Opcion`: `{ tramos: [Tren, Tren], transbordo: { id, nombre },
+esperaMin, duracionMin, precio, cambioEstacion?, transbordoSalida? }`. `precio` es la suma por plaza. Cada tramo se
+compra con su propio `POST /reservas`.
+
+- El cambio puede hacerse en la misma estación (mín. 15 min) o en **otra estación de la misma ciudad** (mín. 30 min):
+  entonces `cambioEstacion: true`, `transbordo` es donde llega el primer tren y `transbordoSalida` donde sale el
+  segundo. Si es la misma estación, `cambioEstacion: false` y no hay `transbordoSalida`.
+- Solo se devuelven las **mejores** opciones: se quitan duplicados (misma salida y llegada; gana `avld`) y las
+  dominadas (otra sale igual o más tarde y llega igual o antes). Orden por llegada (= por salida). `limit` las acota.
+- La web solo lo llama si `GET /trenes` no devuelve directos; el endpoint responde igual haya o no directos.
 
 ## GET /trenes/:feed/:tripId
 
