@@ -5,7 +5,8 @@ import { ciudadDe, type Billete } from "@renfe/shared/api/tipos";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
 import type { Viaje } from "@renfe/shared/billetes/agrupar";
 import { slug } from "@/billetes";
-import { fecha, hora } from "@/formato";
+import { RetrasoVivo } from "@/components/RetrasoVivo";
+import { euros, fecha, hora } from "@/formato";
 import { colores, espaciado, estilos, fuentes, gradientes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
 
 const t = tipografia.tamanos;
@@ -25,7 +26,10 @@ export function TarjetaBillete({
   onAbrir: (b: Billete) => void;
 }) {
   const { tren, localizador, qr } = viaje.billetes[0];
-  const destino = ciudadDe(tren.destino);
+  // Con transbordo, el segundo tren pone la llegada y el destino final (como MisBilletes.tsx de la web).
+  const ultimo = viaje.enlace?.billetes[0].tren ?? tren;
+  const todos = [...viaje.billetes, ...(viaje.enlace?.billetes ?? [])];
+  const destino = ciudadDe(ultimo.destino);
   const foto = fotoDeRuta(slug(destino));
   const n = viaje.billetes.length;
   const hoy = !pasado && tren.salida.slice(0, 10) === new Date().toISOString().slice(0, 10);
@@ -53,7 +57,10 @@ export function TarjetaBillete({
           </View>
         ) : null}
         <View style={styles.fotoPie}>
-          <Text style={styles.antetitulo}>{pasado ? "Viaje realizado" : "Tu próximo tren"}</Text>
+          <View style={styles.antefila}>
+            <Text style={styles.antetitulo}>{pasado ? "Viaje realizado" : "Tu próximo tren"}</Text>
+            {!pasado ? <RetrasoVivo tren={tren} /> : null}
+          </View>
           <Text style={styles.ruta}>
             {ciudadDe(tren.origen)} → {destino}
           </Text>
@@ -61,11 +68,20 @@ export function TarjetaBillete({
       </ImageBackground>
 
       <View style={styles.cuerpo}>
+        {viaje.enlace ? (
+          <View style={styles.transbordo}>
+            <Text style={styles.transbordoTexto}>
+              <Text style={styles.transbordoFuerte}>Con transbordo en {tren.destino.nombre}</Text>:{" "}
+              {Math.round((Date.parse(ultimo.salida) - Date.parse(tren.llegada)) / 60_000)} min de espera. Sigue en{" "}
+              {ultimo.tipo} {ultimo.numero}, sale a las {hora(ultimo.salida)}.
+            </Text>
+          </View>
+        ) : null}
         <View style={styles.rejillaDatos}>
           {dato("Fecha", fecha(tren.salida))}
           {dato("Tren", `${tren.tipo} ${tren.numero}`)}
           {dato("Salida", hora(tren.salida))}
-          {dato("Llegada", hora(tren.llegada))}
+          {dato("Llegada", hora(ultimo.llegada))}
         </View>
 
         <View style={styles.pie}>
@@ -73,7 +89,7 @@ export function TarjetaBillete({
             <QRCode value={qr} size={70} color={colores.texto} backgroundColor="#fff" />
           </View>
           <View style={{ flex: 1, gap: 5 }}>
-            {viaje.billetes.map((b) => (
+            {todos.map((b) => (
               <Pressable
                 key={b.id}
                 accessibilityRole="button"
@@ -86,7 +102,7 @@ export function TarjetaBillete({
                     {b.pasajero.nombre} {b.pasajero.apellidos}
                   </Text>
                   <Text style={styles.viajeroAsiento}>
-                    Coche {b.asiento.coche} · {b.asiento.fila}
+                    {viaje.enlace ? `${b.tren.tipo} ${b.tren.numero} · ` : ""}Coche {b.asiento.coche} · {b.asiento.fila}
                     {b.asiento.letra}
                   </Text>
                 </View>
@@ -108,6 +124,7 @@ export function TarjetaBillete({
         <View style={{ gap: 1 }}>
           <Text style={styles.talonEtiqueta}>Localizador</Text>
           <Text style={styles.talonLoc}>{localizador}</Text>
+          {viaje.enlace ? <Text style={styles.talonLoc}>{viaje.enlace.billetes[0].localizador}</Text> : null}
         </View>
         <View style={styles.barras} accessibilityElementsHidden importantForAccessibility="no">
           {barras(localizador).map((w, i) => (
@@ -116,6 +133,8 @@ export function TarjetaBillete({
         </View>
         <Text style={styles.talonCuenta}>
           {n} {n === 1 ? "viajero" : "viajeros"}
+          {"\n"}
+          {euros(todos.reduce((suma, b) => suma + b.asiento.precio, 0))}
         </Text>
       </LinearGradient>
     </View>
@@ -141,6 +160,10 @@ const styles = StyleSheet.create({
   },
   hoyTexto: { fontFamily: fuentes.negrita, fontSize: 11, color: "#fff" },
   fotoPie: { padding: espaciado[3], gap: 2 },
+  antefila: { flexDirection: "row", alignItems: "center", gap: espaciado[2] },
+  transbordo: { backgroundColor: tonos.moradoSuave, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
+  transbordoTexto: { fontFamily: fuentes.normal, fontSize: 12.4, lineHeight: 17, color: colores.texto },
+  transbordoFuerte: { fontFamily: fuentes.negrita, color: colores.marca },
   antetitulo: {
     fontFamily: fuentes.negrita,
     fontSize: 10.5,

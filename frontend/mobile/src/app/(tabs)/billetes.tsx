@@ -1,9 +1,10 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { misBilletes } from "@renfe/shared/api/cliente";
-import type { Billete } from "@renfe/shared/api/tipos";
-import { agrupar, unirTransbordos, type Viaje } from "@renfe/shared/billetes/agrupar";
+import { misAbonos, misBilletes } from "@renfe/shared/api/cliente";
+import type { Abono, Billete } from "@renfe/shared/api/tipos";
+import { agrupar, unirTransbordos } from "@renfe/shared/billetes/agrupar";
+import { TarjetaAbono } from "@/components/TarjetaAbono";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { IconoBilleteGrande } from "@/components/Icono";
@@ -16,9 +17,13 @@ export default function Billetes() {
   const [billetes, setBilletes] = useState<Billete[] | null>(null);
   const [error, setError] = useState("");
 
+  const [abonos, setAbonos] = useState<Abono[]>([]);
+
   const cargar = useCallback(() => {
     setError("");
     misBilletes().then(setBilletes, (e: Error) => setError(e.message));
+    // Los abonos son un extra de la pantalla: si fallan, los billetes se siguen viendo (como la web).
+    misAbonos().then(setAbonos, () => setAbonos([]));
   }, []);
 
   // Se recarga al volver a la pestaña (por ejemplo, después de comprar).
@@ -34,11 +39,13 @@ export default function Billetes() {
   };
 
   const ahora = Date.now();
-  const viajes = agrupar(billetes ?? []);
+  // Los dos tramos de un transbordo van en una sola tarjeta.
+  const viajes = unirTransbordos(agrupar(billetes ?? []));
   const proximos = viajes.filter((v) => Date.parse(v.billetes[0].tren.llegada) >= ahora);
   const pasados = viajes.filter((v) => Date.parse(v.billetes[0].tren.llegada) < ahora).reverse();
 
   const abrir = (b: Billete) => router.push({ pathname: "/billete/[id]", params: { id: b.id } });
+  const abrirAbono = (a: Abono) => router.push({ pathname: "/abono/[id]", params: { id: a.id } } as never);
 
   return (
     <Pantalla>
@@ -48,6 +55,22 @@ export default function Billetes() {
           Tus viajes con el QR y el localizador siempre a mano, sin imprimir nada.
         </Text>
       </View>
+
+      {abonos.length > 0 ? (
+        <View style={styles.seccion}>
+          <View style={styles.seccionCabecera}>
+            <Text style={estilos.h2}>Mis abonos</Text>
+            <Text style={styles.cuenta}>
+              {abonos.length} {abonos.length === 1 ? "abono" : "abonos"}
+            </Text>
+          </View>
+          <View style={styles.lista}>
+            {abonos.map((a) => (
+              <TarjetaAbono key={a.id} abono={a} onAbrir={abrirAbono} />
+            ))}
+          </View>
+        </View>
+      ) : null}
 
       {error && billetes === null ? (
         <>
