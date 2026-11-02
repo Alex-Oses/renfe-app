@@ -85,11 +85,52 @@ interface FilaTren {
   total: string;
 }
 
-// Viajes directos: la misma estación de origen y de destino dentro del mismo
-// viaje, en orden. La fecha se resuelve con `calendarios` (día de la semana y
-// rango) y `calendario_excepciones` (festivos y refuerzos), como pide el modelo.
+// Estaciones que sirven a cada punta de la búsqueda (`$1` origen, `$2` destino). Devuelve
+// `origenes` y `destinos` como arrays; `null` si alguna de las dos no existe.
+// - Ciudades distintas: todas las estaciones de cada ciudad. El usuario busca «Tarragona →
+//   Barcelona», no una estación suelta, y así también salen los viajes que no son de la estación
+//   exacta (antes: sin resultados).
+// - Misma ciudad: solo las pedidas (buscar Sants → Passeig no debe devolver toda Barcelona).
+// Muchas de Cercanías no traen `ciudad`: toman la de la estación con ciudad más cercana y, al
+// expandir, entran si están a ~3,5 km de la estación pedida.
+const SQL_SERVICIO = `
+  with lugar as (
+    select e.id, e.lat, e.lon,
+           coalesce(e.ciudad, (select c.ciudad from estaciones c where c.ciudad is not null
+                                 order by (c.lat - e.lat) ^ 2 + (c.lon - e.lon) ^ 2 limit 1)) as ciudad
+      from estaciones e where e.id in ($1, $2)
+  ), par as (
+    select (select ciudad from lugar where id = $1) as co,
+           (select ciudad from lugar where id = $2) as cd
+  )
+  select
+    (select array_agg(s.id)
+       from estaciones s, lugar l, par p
+      where l.id = $1
+        and (s.id = $1
+             or (p.co is distinct from p.cd
+                 and (s.ciudad = l.ciudad
+                      or (s.ciudad is null
+                          and abs(s.lat - l.lat) < 0.032 and abs(s.lon - l.lon) < 0.042))))) as origenes,
+    (select array_agg(s.id)
+       from estaciones s, lugar l, par p
+      where l.id = $2
+        and (s.id = $2
+             or (p.co is distinct from p.cd
+                 and (s.ciudad = l.ciudad
+                      or (s.ciudad is null
+                          and abs(s.lat - l.lat) < 0.032 and abs(s.lon - l.lon) < 0.042))))) as destinos
+`;
+
+// Viajes directos entre cualquier estación de `$1` y de `$2` (`text[]`), dentro del mismo viaje y
+// en orden. La fecha se resuelve con `calendarios` (día de la semana y rango) y
+// `calendario_excepciones` (festivos y refuerzos), como pide el modelo.
+// El mismo tren en dos feeds (mismas estaciones, salida y llegada) cuenta una vez: gana avld.
+// Pide el doble del límite porque luego se quitan en JS los trip_id repetidos del mismo número.
 const SQL_BUSCAR = `
-  select v.feed,
+  select *, count(*) over () as total from (
+  select distinct on (o.estacion_id, d.estacion_id, o.sale, d.llega)
+         v.feed,
          v.id as viaje_id,
          v.numero,
          r.nombre_corto,
@@ -106,8 +147,7 @@ const SQL_BUSCAR = `
             from horarios h
            where h.feed = v.feed
              and h.viaje_id = v.id
-             and h.secuencia between o.secuencia and d.secuencia) as num_paradas,
-         count(*) over () as total
+             and h.secuencia between o.secuencia and d.secuencia) as num_paradas
     from horarios o
     join horarios d
       on d.feed = o.feed
@@ -117,15 +157,17 @@ const SQL_BUSCAR = `
     join rutas r on r.feed = v.feed and r.id = v.ruta_id
     join estaciones eo on eo.id = o.estacion_id
     join estaciones ed on ed.id = d.estacion_id
-   where o.estacion_id = $1
-     and d.estacion_id = $2
+   where o.estacion_id = any($1::text[])
+     and d.estacion_id = any($2::text[])
      and o.sale is not null
      and d.llega is not null
      and o.recoge
      and d.deja
      and ${SERVICIO_ACTIVO}
-   order by o.sale
-   limit $4
+   order by o.estacion_id, d.estacion_id, o.sale, d.llega, v.feed = 'avld' desc
+  ) t
+   order by sale, origen_id, destino_id
+   limit $4 * 2
 `;
 
 const lineaDe = (fila: { nombre_corto: string | null; nombre: string }) =>
@@ -141,6 +183,20 @@ export function sinViajesDuplicados<T extends { numero: string | null; sale: str
   const vistos = new Set<string>();
   return filas.filter((f) => {
     const clave = `${f.numero ?? f.viaje_id}|${f.sale}`;
+    if (vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
+  });
+}
+
+// El mismo tren sale en `avld` y en `cercanias` con trip_id y número distintos (15000 vs R15):
+// mismas estaciones, salida y llegada = mismo tren. Se queda el primero; el SQL ordena `avld` delante.
+export function sinDuplicadosEntreFeeds<
+  T extends { origen_id: string; destino_id: string; sale: string; llega: string },
+>(filas: T[]): T[] {
+  const vistos = new Set<string>();
+  return filas.filter((f) => {
+    const clave = `${f.origen_id}|${f.destino_id}|${f.sale}|${f.llega}`;
     if (vistos.has(clave)) return false;
     vistos.add(clave);
     return true;
@@ -169,8 +225,6 @@ const SQL_DETALLE = `
      and ${SERVICIO_ACTIVO}
    order by h.secuencia
 `;
-
-const SQL_ESTACIONES = 'select id from estaciones where id = any($1::text[])';
 
 const aTren = (fila: FilaTren, fecha: string): Tren => {
         const clave = `${fila.feed}:${fila.viaje_id}:${fecha}`;
@@ -201,6 +255,9 @@ const aTren = (fila: FilaTren, fecha: string): Tren => {
 export interface OpcionTransbordo {
   tramos: [Tren, Tren];
   transbordo: { id: string; nombre: string };
+  /** `true` si el segundo tren sale de otra estación de la misma ciudad (`transbordoSalida`). */
+  cambioEstacion?: boolean;
+  transbordoSalida?: { id: string; nombre: string };
   esperaMin: number;
   duracionMin: number;
   precio: number;
@@ -214,7 +271,8 @@ const COLUMNAS_TRAMO = `
          eo.lat as km_lat_o, eo.lon as km_lon_o, ed.lat as km_lat_d, ed.lon as km_lon_d,
          o.sale::text as sale, d.llega::text as llega,
          (d.secuencia - o.secuencia + 1)::text as num_paradas, '0' as total,
-         o.sale as sale_i, d.llega as llega_i`;
+         o.sale as sale_i, d.llega as llega_i,
+         coalesce(eo.ciudad, o.estacion_id) as origen_lugar, coalesce(ed.ciudad, d.estacion_id) as destino_lugar`;
 const ENTRE_PARADAS = `
     from horarios o
     join horarios d on d.feed = o.feed and d.viaje_id = o.viaje_id and d.secuencia > o.secuencia
@@ -222,25 +280,36 @@ const ENTRE_PARADAS = `
     join rutas r on r.feed = v.feed and r.id = v.ruta_id
     join estaciones eo on eo.id = o.estacion_id
     join estaciones ed on ed.id = d.estacion_id`;
-const SQL_TRANSBORDOS = `
-  with ida as (
+// El cambio vale en la misma estación (15 min) o en otra de la misma ciudad (30 min, `cambio_estacion`).
+// Luego: una opción por primer tren, una por par salida/llegada (gana avld) y fuera las dominadas
+// (otra sale igual o más tarde y llega igual o antes). Quedan las mejores, por llegada.
+const SQL_TRANSBORDOS = `with ida as (
     select ${COLUMNAS_TRAMO} ${ENTRE_PARADAS}
-     where o.estacion_id = $1 and d.estacion_id <> $2
+     where o.estacion_id = any($1::text[]) and d.estacion_id <> all($2::text[])
        and o.sale is not null and d.llega is not null and o.recoge and d.deja and ${SERVICIO_ACTIVO}
   ), sigue as (
     select ${COLUMNAS_TRAMO} ${ENTRE_PARADAS}
-     where d.estacion_id = $2 and o.estacion_id <> $1
+     where d.estacion_id = any($2::text[]) and o.estacion_id <> all($1::text[])
        and o.sale is not null and d.llega is not null and o.recoge and d.deja and ${SERVICIO_ACTIVO}
-  ), opciones as (
-    select distinct on (a.viaje_id) to_jsonb(a) as a, to_jsonb(b) as b, a.sale_i, b.llega_i
+  ), enlaces as (
+    select distinct on (a.viaje_id) to_jsonb(a) as a, to_jsonb(b) as b, a.sale_i, b.llega_i,
+           a.feed = 'avld' and b.feed = 'avld' as solo_avld
       from ida a
       join sigue b
-        on b.origen_id = a.destino_id
+        on b.origen_lugar = a.destino_lugar
        and b.viaje_id <> a.viaje_id
-       and b.sale_i between a.llega_i + interval '15 minutes' and a.llega_i + interval '3 hours'
+       and b.sale_i <= a.llega_i + interval '3 hours'
+       and b.sale_i >= a.llega_i + case when b.origen_id = a.destino_id
+                                        then interval '15 minutes' else interval '30 minutes' end
      order by a.viaje_id, b.llega_i, a.llega_i desc
+  ), unicas as (
+    select distinct on (sale_i, llega_i) * from enlaces order by sale_i, llega_i, solo_avld desc
   )
-  select a, b from opciones order by llega_i - sale_i, sale_i limit $4
+  select a, b from unicas u
+   where not exists (select 1 from unicas w
+                      where w.sale_i >= u.sale_i and w.llega_i <= u.llega_i
+                        and (w.sale_i > u.sale_i or w.llega_i < u.llega_i))
+   order by llega_i limit $4
 `;
 
 const minutosDe = (hora: string) => {
@@ -252,35 +321,51 @@ const minutosDe = (hora: string) => {
 export class TrenesService {
   constructor(private readonly bd: BdService) {}
 
+  // La expansión por ciudad cambia poco y se pide en cada búsqueda: se guarda en memoria.
+  private readonly cacheEstaciones = new Map<string, { origenes: string[]; destinos: string[] }>();
+
+  /** Estaciones que sirven a cada punta; `NotFoundException` si alguna no existe. */
+  private async estacionesDe(origen: string, destino: string) {
+    const clave = `${origen}|${destino}`;
+    const guardado = this.cacheEstaciones.get(clave);
+    if (guardado) return guardado;
+
+    const { rows } = await this.bd.consultar<{
+      origenes: string[] | null;
+      destinos: string[] | null;
+    }>(SQL_SERVICIO, [origen, destino]);
+    const fila = rows[0];
+    if (!fila?.origenes || !fila.destinos) {
+      throw new NotFoundException('Estación de origen o destino inexistente');
+    }
+
+    const valor = { origenes: fila.origenes, destinos: fila.destinos };
+    if (this.cacheEstaciones.size > 500) this.cacheEstaciones.clear();
+    this.cacheEstaciones.set(clave, valor);
+    return valor;
+  }
+
   async buscar({ origen, destino, fecha, limit }: BuscarTrenesDto): Promise<{
     datos: Tren[];
     total: number;
   }> {
     let filas: FilaTren[];
     try {
+      const { origenes, destinos } = await this.estacionesDe(origen, destino);
       ({ rows: filas } = await this.bd.consultar<FilaTren>(SQL_BUSCAR, [
-        origen,
-        destino,
+        origenes,
+        destinos,
         fecha,
         limit,
       ]));
-
-      if (filas.length === 0) {
-        const { rows: estaciones } = await this.bd.consultar<{ id: string }>(SQL_ESTACIONES, [
-          [origen, destino],
-        ]);
-        if (estaciones.length < new Set([origen, destino]).size) {
-          throw new NotFoundException('Estación de origen o destino inexistente');
-        }
-      }
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       throw new ServiceUnavailableException('La base de datos no está disponible');
     }
 
-    const unicas = sinViajesDuplicados(filas);
+    const unicas = sinDuplicadosEntreFeeds(sinViajesDuplicados(filas));
     return {
-      datos: unicas.map((fila) => aTren(fila, fecha)),
+      datos: unicas.slice(0, limit).map((fila) => aTren(fila, fecha)),
       total: filas.length > 0 ? Number(filas[0].total) - (filas.length - unicas.length) : 0,
     };
   }
@@ -291,20 +376,25 @@ export class TrenesService {
   }> {
     let filas: { a: FilaTren; b: FilaTren }[];
     try {
+      const { origenes, destinos } = await this.estacionesDe(origen, destino);
       ({ rows: filas } = await this.bd.consultar<{ a: FilaTren; b: FilaTren }>(SQL_TRANSBORDOS, [
-        origen,
-        destino,
+        origenes,
+        destinos,
         fecha,
         limit,
       ]));
-    } catch {
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
       throw new ServiceUnavailableException('La base de datos no está disponible');
     }
     const datos = filas.map(({ a, b }) => {
       const tramos: [Tren, Tren] = [aTren(a, fecha), aTren(b, fecha)];
+      const cambioEstacion = a.destino_id !== b.origen_id;
       return {
         tramos,
         transbordo: { id: a.destino_id, nombre: a.destino_nombre },
+        cambioEstacion,
+        ...(cambioEstacion && { transbordoSalida: { id: b.origen_id, nombre: b.origen_nombre } }),
         esperaMin: minutosDe(b.sale) - minutosDe(a.llega),
         duracionMin: minutosDe(b.llega) - minutosDe(a.sale),
         precio: Math.round((tramos[0].precioDesde + tramos[1].precioDesde) * 100) / 100,
