@@ -1380,14 +1380,29 @@ a.mega__titulo:hover {
   }
 
   @media (max-width: 47.99rem) {
+    /* Por encima de la barra de pestañas: con `bottom: 0.75rem` la píldora se sentaba
+       encima y dejaba sin poder pulsar «Billetes» y «Cuenta». Y en icono redondo,
+       porque la etiqueta tapaba el formulario del buscador. */
     .chatbot {
       right: 0.75rem;
-      bottom: 0.75rem;
+      bottom: calc(var(--alto-barra) + 1.25rem + env(safe-area-inset-bottom));
+    }
+
+    .chatbot__texto {
+      display: none;
+    }
+
+    .chatbot__boton {
+      justify-content: center;
+      width: 3rem;
+      height: 3rem;
+      padding: 0;
+      border-radius: 50%;
     }
 
     .chatbot__panel {
       width: calc(100vw - 1.5rem);
-      height: min(34rem, calc(100vh - 1.5rem));
+      height: min(34rem, calc(100vh - var(--alto-barra) - 2.5rem - env(safe-area-inset-bottom)));
     }
   }
 

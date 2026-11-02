@@ -231,7 +231,7 @@ export function Chatbot() {
       ) : (
         <button type="button" className="chatbot__boton" onClick={() => setAbierto(true)} aria-label="Abrir asistente Renfe">
           <span className="chatbot__icono" aria-hidden="true">✦</span>
-          <span>¿Necesitas ayuda?</span>
+          <span className="chatbot__texto">¿Necesitas ayuda?</span>
         </button>
       )}
     </aside>
