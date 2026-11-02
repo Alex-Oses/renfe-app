@@ -4,7 +4,7 @@ autor: Rubén
 area: mobile
 para: Alex, Kevin
 rama: feat/mobile-facial-en-app
-pr: pendiente
+pr: "123"
 tags: [handoff, facial, movil, onnx, expo, arcface]
 estado: abierto
 ---
