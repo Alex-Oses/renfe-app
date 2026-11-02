@@ -1,7 +1,12 @@
 # @renfe/mobile — App Expo (iOS y Android)
 
-Expo SDK 58 con expo-router y TypeScript estricto. Funciona en **Expo Go** (sin módulos nativos fuera del SDK).
-La lógica (cliente de la API, simulados, QR, tokens de diseño) viene de `@renfe/shared` (ver ADR-005).
+Expo SDK 58 con expo-router y TypeScript estricto. La lógica (cliente de la API, simulados, QR,
+tokens de diseño) viene de `@renfe/shared` (ver ADR-005).
+
+**El reconocimiento facial corre en el dispositivo** (SCRFD + ArcFace con `onnxruntime-react-native`,
+ver el ADR-007 en `obsidian/03-decisiones/`), así que esta pantalla **no funciona en Expo Go**: hay
+que compilar la app (`npx expo run:android` o EAS, ver más abajo). El resto de la app sí funciona
+en Expo Go.
 
 ## Ejecutar
 
@@ -16,7 +21,6 @@ Variables (en `.env` de la raíz o de esta carpeta):
 |---|---|---|
 | `EXPO_PUBLIC_API_URL` | API NestJS (billetes, abonos, cuenta, revisor) | datos simulados en el dispositivo |
 | `EXPO_PUBLIC_POSICIONES_URL` | posiciones de trenes del mapa en directo | `https://renfe-api.onrender.com` |
-| `EXPO_PUBLIC_WEB_URL` | web, para el botón «Entrar con tu cara» de Cuenta | no sale el botón |
 
 En el móvil **no uses `localhost`**: es el propio teléfono. Pon la IP del PC en la red local
 (p. ej. `EXPO_PUBLIC_API_URL=http://192.168.1.40:3000`), con el móvil en la misma wifi. `localhost` solo
@@ -31,18 +35,31 @@ ofrece `expo start` al pulsar `a`/`i`). Todo funciona en Expo Go:
   trenes/estaciones/horarios y muestra tarjetas de tren enlazadas al flujo de compra.
 - Avisos: cada 20 s, con sesión, revisa billetes y líneas favoritas y lanza **notificaciones locales**
   (`expo-notifications`). Sin push remoto: Expo Go no lo admite.
-- Login facial: la huella usa onnxruntime-web y no corre en Expo Go; el botón abre la web en `/acceder`.
+- Login facial (`/cara`, desde Cuenta): **nativo**, con modelos ONNX empaquetados en
+  `assets/modelos/`; requiere app compilada (no corre en Expo Go).
 
 ## Estructura
 
-- `src/app/`: rutas. Pestañas `(tabs)/`: Comprar, En directo, Billetes, Líneas, Cuenta; `pasajero`, `billete/[id]`, `abonos`, `comprar-abono`, `abono/[id]` y `revisor`.
+- `src/app/`: rutas. Pestañas `(tabs)/`: Comprar, En directo, Billetes, Líneas, Cuenta; `pasajero`, `billete/[id]`, `abonos`, `comprar-abono`, `abono/[id]`, `revisor` y `cara` (facial).
 - `src/components/`: botón, tarjeta de billete, mapa (`MapaTrenes.web.tsx` es el sustituto en web).
+- `src/fotos/`: pipeline del facial — `matematica.ts` (alineación, recorte, semejanza; lógica pura,
+  con tests en `matematica.test.mjs`) y `ficha.ts` (carga de los modelos ONNX y huella ArcFace).
 - `src/polyfills.ts`: `localStorage` (expo-sqlite) y `crypto` (expo-crypto + @noble/hashes para SHA-256/HMAC).
 - `src/tema.ts`: estilos hechos solo con `@renfe/shared/tema/tokens` y la fuente Instrument Sans.
 
-Metro no necesita `metro.config.js`: desde el SDK 52 Expo detecta el monorepo pnpm solo.
+`metro.config.js` solo añade `onnx` a los assets de Metro para empaquetar los modelos de
+`assets/modelos/` (`det-500m.onnx`, `arcface-w600k-mbf.onnx`).
 
-## Compilar con EAS
+## Compilar (necesario para el facial)
+
+El facial necesita `onnxruntime-react-native` (módulo nativo), así que la app se compila en vez de
+usarse desde Expo Go:
+
+```bash
+npx expo run:android     # build de desarrollo con el móvil conectado por USB
+# o, sin SDK de Android instalado:
+eas build --profile preview --platform android   # APK interno (ver eas.json)
+```
 
 `eas build --profile preview --platform android` saca un APK interno. Perfiles en `eas.json`:
 `development` (dev client), `preview` (APK interno) y `production`.

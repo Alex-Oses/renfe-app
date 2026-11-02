@@ -30,7 +30,7 @@
       "expo-router",
       "expo-font",
       "expo-sqlite",
-      ["expo-camera", { "cameraPermission": "La cámara se usa en el modo revisor para leer el QR de billetes y abonos." }],
+      ["expo-camera", { "cameraPermission": "La cámara se usa para leer el QR de billetes y abonos (modo revisor) y para reconocerte la cara al entrar." }],
       "expo-notifications",
       [
         "expo-splash-screen",
