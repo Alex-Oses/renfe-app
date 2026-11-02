@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { misBilletes } from "@renfe/shared/api/cliente";
 import type { Billete } from "@renfe/shared/api/tipos";
-import { agrupar, type Viaje } from "@/billetes";
+import { agrupar, unirTransbordos, type Viaje } from "@renfe/shared/billetes/agrupar";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { IconoBilleteGrande } from "@/components/Icono";

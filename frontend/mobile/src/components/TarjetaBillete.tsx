@@ -3,7 +3,8 @@ import { ImageBackground, Pressable, StyleSheet, Text, View } from "react-native
 import QRCode from "react-native-qrcode-svg";
 import { ciudadDe, type Billete } from "@renfe/shared/api/tipos";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
-import { slug, type Viaje } from "@/billetes";
+import type { Viaje } from "@renfe/shared/billetes/agrupar";
+import { slug } from "@/billetes";
 import { fecha, hora } from "@/formato";
 import { colores, espaciado, estilos, fuentes, gradientes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
 
