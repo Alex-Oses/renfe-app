@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
+import { menuPrincipal } from "@renfe/shared/contenido/navegacion";
 import { colores, espaciado, estilos, fuentes, gradientes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
 import { Buscador, type Criterios } from "@/components/Buscador";
 import { Cristal } from "@/components/Cristal";
@@ -180,12 +181,46 @@ export default function Comprar() {
         </View>
       </Pressable>
 
+      <View style={styles.seccion}>
+        <Text style={estilos.h2}>Información y ayuda</Text>
+        <View style={styles.infoRejilla}>
+          {[...menuPrincipal, { titulo: "Ayuda", ruta: "/ayuda" }].map((m) => (
+            <Pressable
+              key={m.ruta}
+              accessibilityRole="link"
+              onPress={() => router.push(`/contenido${m.ruta}` as never)}
+              style={({ pressed }) => [styles.info, pressed && { opacity: 0.8 }]}
+            >
+              <Text style={styles.avisoTitulo}>{m.titulo}</Text>
+              <Icono nombre="delante" tamano={17} color={colores.marca} />
+            </Pressable>
+          ))}
+        </View>
+        <Pressable accessibilityRole="link" onPress={() => router.push("/informacion" as never)}>
+          <Text style={styles.directoBotonTexto}>Ver todas las secciones</Text>
+        </Pressable>
+      </View>
+
       <Text style={styles.pie}>Renfe · Andén 0 · Proyecto de clase. Precios y reservas simulados.</Text>
     </Pantalla>
   );
 }
 
 const styles = StyleSheet.create({
+  infoRejilla: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  info: {
+    width: "48.4%",
+    minHeight: 56,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(255,255,255,0.78)",
+    borderRadius: 16,
+    paddingHorizontal: espaciado[3],
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.9)",
+    ...sombras[1],
+  },
   portada: {
     height: 214,
     overflow: "hidden",
