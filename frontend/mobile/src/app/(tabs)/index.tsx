@@ -41,6 +41,8 @@ export default function Comprar() {
       params: {
         origen: c.origen.id,
         destino: c.destino.id,
+        origenNombre: c.origen.nombre,
+        destinoNombre: c.destino.nombre,
         fecha: c.fecha,
         pasajeros: String(c.adultos + c.ninos),
         adultos: String(c.adultos),

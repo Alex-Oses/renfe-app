@@ -32,6 +32,8 @@ export interface Criterios {
 export interface CriteriosIniciales {
   origen?: string;
   destino?: string;
+  origenNombre?: string;
+  destinoNombre?: string;
   fecha?: string;
   adultos?: number;
   pasajeros?: number;
@@ -47,17 +49,19 @@ const hoyIso = () => {
 };
 
 const descuentoNombre = (id: string) => DESCUENTOS.find((d) => d.id === id)?.nombre ?? "Sin descuento";
-const estacionDe = (id?: string) => ESTACIONES.find((e) => e.id === id) ?? null;
+// Las estaciones reales no están en la lista simulada: con el nombre del enlace basta para mostrarla.
+const estacionDe = (id?: string, nombre?: string): Estacion | null =>
+  ESTACIONES.find((e) => e.id === id) ?? (id && nombre ? { id, nombre, ciudad: "", lat: 0, lon: 0 } : null);
 
 // Buscador de la portada y de los resultados: misma estructura que el de la web (trayecto con
 // línea morada, Solo ida / Ida y vuelta, fecha, viajeros y descuento) adaptada a campos táctiles.
 export function Buscador({ onBuscar, inicial }: { onBuscar: (c: Criterios) => void; inicial?: CriteriosIniciales }) {
   const ninosInicial = inicial?.ninos ?? 0;
   const [origen, setOrigen] = useState<Estacion | null>(() =>
-    estacionDe(inicial?.origen),
+    estacionDe(inicial?.origen, inicial?.origenNombre),
   );
   const [destino, setDestino] = useState<Estacion | null>(() =>
-    estacionDe(inicial?.destino),
+    estacionDe(inicial?.destino, inicial?.destinoNombre),
   );
   const [fecha, setFecha] = useState(inicial?.fecha || hoyIso());
   const [idaVuelta, setIdaVuelta] = useState(!!inicial?.vuelta);
