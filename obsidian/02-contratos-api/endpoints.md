@@ -293,8 +293,10 @@ Notas:
   `deja` excluyen las paradas técnicas.
 - **Búsqueda por ciudad** (2026-11-02): `origen` y `destino` se amplían a todas las estaciones con la
   misma `estaciones.ciudad` (p. ej. `71500` TARRAGONA incluye CAMP DE TARRAGONA; `71802` incluye
-  BARCELONA-SANTS). Si la estación no tiene `ciudad` (muchas `cercanias:*`), solo cuenta ella. Cada
-  tren lleva su estación **real** en `origen`/`destino`, que puede no ser la pedida. Orden por `salida`.
+  BARCELONA-SANTS). Las estaciones sin `ciudad` (muchas `cercanias:*`) toman la de la estación con
+  ciudad más cercana y entran si están a menos de ~3,5 km de la estación pedida. Si origen y destino
+  son de la **misma** ciudad, no se amplía: se buscan las estaciones pedidas. Cada tren lleva su
+  estación **real** en `origen`/`destino`, que puede no ser la pedida. Orden por `salida`.
 - **Sin duplicados entre feeds**: si el mismo tren sale en `avld` y en `cercanias` (mismas estaciones,
   misma salida y llegada), se devuelve uno solo, el de `avld`. `total` descuenta los quitados.
 
