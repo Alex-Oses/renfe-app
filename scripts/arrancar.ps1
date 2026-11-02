@@ -43,6 +43,13 @@ if (-not (Get-Command tailscale -ErrorAction SilentlyContinue)) {
   throw 'Falta Tailscale (sin él Vercel no llega a tu PC). Instálalo con: winget install --id Tailscale.Tailscale -e'
 }
 
+# La CLI de Supabase y el worker GTFS vienen de las dependencias: una carpeta recién clonada no las tiene.
+if (-not (Test-Path node_modules)) {
+  Write-Host 'Instalando dependencias (solo la primera vez)...'
+  corepack pnpm install --frozen-lockfile
+  if ($LASTEXITCODE -ne 0) { throw 'No se han podido instalar las dependencias: mira el error de arriba.' }
+}
+
 if (-not (Test-Docker)) {
   Write-Host 'Abriendo Docker Desktop...'
   $docker = @("$env:LOCALAPPDATA\Programs\DockerDesktop\Docker Desktop.exe", "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
