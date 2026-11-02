@@ -58,6 +58,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="resultados" options={{ headerShown: false }} />
         <Stack.Screen name="pasajero" options={{ headerShown: false }} />
+        <Stack.Screen name="transbordo" options={{ headerShown: false }} />
         <Stack.Screen name="billete/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="abonos" options={{ headerShown: false }} />
         <Stack.Screen name="comprar-abono" options={{ headerShown: false }} />
