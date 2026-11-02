@@ -4,7 +4,7 @@ autor: Alex
 area: frontend
 para: todos
 rama: fix/mobile-portada-y-fotos-cercanias
-pr: por abrir
+pr: 125
 tags: [handoff, web, responsive]
 ---
 
