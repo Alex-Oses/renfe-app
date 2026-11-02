@@ -272,17 +272,103 @@
   }
 }
 
-/* Teléfonos y ventanas bajas: el panel del buscador (≈935 px a 390 px de ancho) no
-   cabe en el tramo sticky, así que quedaba cortado arriba y abajo y el botón de buscar
-   solo se alcanzaba cuando la sección siguiente ya lo tapaba. Aquí el tramo se sirve
-   en flujo normal: el buscador entra entero y sin 2 700 px de scroll previo.
+/* Teléfonos y ventanas estrechas: el tramo se queda pegado y el tren se queda, pero el
+   buscador se aprieta para caber entre la cabecera (≈66 px) y la barra de pestañas
+   (≈64 px). Antes el panel medía ~935 px porque cada campo del pie iba en su propia
+   fila; ahora el pie va a dos columnas y el tramo es más corto (220vh en vez de 340vh).
+   El ancho coincide con el de la barra de pestañas (47.99rem). */
+@media (max-width: 47.99rem) {
+  .entrada {
+    height: 220vh;
+  }
+
+  .entrada__lema {
+    top: calc(8% + var(--cab, 0px));
+  }
+
+  .entrada__panel {
+    width: min(100% - 1.5rem, 38rem);
+    padding: 0.85rem;
+    /* La barra de pestañas flota encima: al centrar el panel el hueco de abajo se
+       descuenta solo y el botón de buscar no queda debajo de ella. */
+    margin-bottom: var(--alto-barra, 4rem);
+  }
+
+  /* El lema de la escena ya dice «Renfe»: en el móvil el panel va al grano. */
+  .entrada__panel > p {
+    display: none;
+  }
+
+  .entrada__panel .buscador {
+    padding: 0.35rem;
+  }
+
+  .entrada__panel .parada {
+    padding-block: 0.2rem;
+  }
+
+  .entrada__panel .parada__campo {
+    font-size: 1.15rem;
+  }
+
+  .entrada__panel .buscador__modo {
+    margin-top: 0.5rem;
+  }
+
+  .entrada__panel .buscador__pie {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+  }
+
+  .entrada__panel .buscador__pie .campo {
+    flex: none;
+    min-width: 0;
+  }
+
+  .entrada__panel .buscador__pie .campo input,
+  .entrada__panel .buscador__pie .campo select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Las listas de adultos/niños/bebés tienen 14rem de mínimo y en media columna se
+     salían del panel (el tramo recorta en horizontal y las cortaba). */
+  .entrada__panel .buscador__pie .panel-cristal {
+    min-width: 0;
+  }
+
+  .entrada__panel .buscador__pie .boton {
+    grid-column: 1 / -1;
+    padding-inline: 1rem;
+  }
+}
+
+/* Pantallas estrechas y bajas: el título del panel se oculta visualmente (sigue para
+   lectores de pantalla, que necesitan el `h1` de la portada) para que el buscador quepa. */
+@media (max-width: 47.99rem) and (max-height: 760px) {
+  .entrada__panel h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Pantallas bajas (móvil tumbado, ventanas pequeñas): el buscador ya no cabe de ninguna
+   forma en el tramo, así que se sirve en flujo normal.
    El umbral coincide con `esEntradaEstatica()` de EntradaTren.tsx. */
-@media (max-width: 40rem), (max-height: 560px) {
+@media (max-height: 660px) {
   .entrada {
     --p: 1;
     height: auto;
     margin-top: 0;
   }
+
   .entrada__fijo {
     position: relative;
     display: block;
@@ -291,6 +377,7 @@
     overflow: visible;
     padding: var(--esp-4) 0 var(--esp-6);
   }
+
   .entrada__paisaje,
   .entrada__catenaria,
   .entrada__anden,
@@ -299,9 +386,10 @@
   .entrada__aviso {
     display: none;
   }
+
   .entrada__panel {
-    margin-inline: auto;
-    /* Por si el móvil venía del tramo animado (rotar el teléfono) y dejó --p escrito. */
+    margin: 0 auto;
+    /* Por si el teléfono venía del tramo animado (rotar la pantalla) y dejó --p escrito. */
     opacity: 1;
     transform: none;
     pointer-events: auto !important;

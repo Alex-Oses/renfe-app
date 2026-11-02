@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { avisoDestacado, enlacesAyuda, menuPrincipal, type Menu } from "@renfe/shared/contenido/navegacion";
+import { fotoDeNucleo, urlFoto } from "@renfe/shared/contenido/imagenes";
 import { useSesion } from "../estado/sesion";
 import { CampanaAvisos } from "./CampanaAvisos";
 
@@ -52,11 +53,20 @@ function Columnas({ menu }: { menu: Menu }) {
             {g.titulo}
           </Link>
           <ul>
-            {g.enlaces.map((e) => (
-              <li key={e.ruta}>
-                <Link to={e.ruta}>{e.texto}</Link>
-              </li>
-            ))}
+            {g.enlaces.map((e) => {
+              // Los núcleos de Cercanías llevan la foto de su ciudad: se reconocen de un vistazo.
+              const foto = fotoDeNucleo(e.ruta);
+              return (
+                <li key={e.ruta}>
+                  <Link to={e.ruta}>
+                    {foto && (
+                      <img className="mega__miniatura" src={urlFoto(foto.archivo, 96)} alt="" width={30} height={30} loading="lazy" decoding="async" />
+                    )}
+                    {e.texto}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}
