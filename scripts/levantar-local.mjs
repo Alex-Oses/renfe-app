@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+// La web de Vercel llama a esta API por Funnel: sin su origen en CORS, el navegador la rechaza.
+const ORIGEN_VERCEL = "https://renfe-app-beta.vercel.app";
 
 /**
  * Mezcla el `.env` existente con los valores de Supabase local. Los que ya tenga el usuario no se
@@ -32,7 +34,7 @@ export function fusionarEnv(actual, supabase, aleatorio = () => randomBytes(32).
     API_PORT: "3000",
     QR_SIGNING_SECRET: aleatorio(),
     JWT_SECRET: aleatorio(),
-    CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081",
+    CORS_ORIGINS: `http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,${ORIGEN_VERCEL}`,
   };
   const lineas = actual.split(/\r?\n/);
   const vistos = new Set();
@@ -43,6 +45,7 @@ export function fusionarEnv(actual, supabase, aleatorio = () => randomBytes(32).
     vistos.add(clave);
     if (clave in forzados) return `${clave}=${forzados[clave]}`;
     if (clave in porDefecto && valor.trim() === "") return `${clave}=${porDefecto[clave]}`;
+    if (clave === "CORS_ORIGINS" && !valor.split(",").includes(ORIGEN_VERCEL)) return `${clave}=${valor},${ORIGEN_VERCEL}`;
     return linea;
   });
   for (const [clave, valor] of Object.entries({ ...forzados, ...porDefecto })) {
