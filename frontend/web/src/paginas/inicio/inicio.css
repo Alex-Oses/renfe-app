@@ -370,8 +370,9 @@
 }
 
 .ventaja a {
-  display: inline-block;
-  padding-block: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-weight: 600;
 }
 
@@ -601,8 +602,9 @@
 }
 
 .atajo li a {
-  display: inline-block;
-  padding-block: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .atajo__chips {
@@ -614,7 +616,7 @@
 .atajo li .atajo__chip {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--esp-4);
   border-radius: var(--radio-pildora);
   border: 1px solid rgb(129 0 94 / 0.2);
