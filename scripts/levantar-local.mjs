@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Levanta todo el stack en local con un solo comando (ver docs/levantar-en-local.md):
 // Supabase (Docker, con las migraciones), `.env` con sus claves, catálogo GTFS real y la API en Docker.
-// Uso: pnpm local [--sin-cercanias] [--sin-importar]
+// Uso: pnpm local [--sin-cercanias] [--sin-importar] [--solo-api]
 //   --sin-cercanias  solo AV/LD/MD (Cercanías son ~2 M de horarios, ~2 min más)
 //   --sin-importar   no vuelve a cargar los horarios (si la BD ya los tiene)
+//   --solo-api       no levanta la web ni la app (lo que usa arrancar.cmd para la web de Vercel)
 
 import { execSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -137,14 +138,19 @@ async function principal() {
     ejecutar(`${p} --filter @renfe/gtfs-worker vias`, { env: { ...env, NODE_OPTIONS: "--max-old-space-size=6144" } });
   }
 
-  paso("API, web y app móvil en Docker");
-  ejecutar("docker compose -f docker-compose.local.yml up -d --build");
+  const soloApi = args.has("--solo-api");
+  paso(soloApi ? "API en Docker" : "API, web y app móvil en Docker");
+  ejecutar(`docker compose -f docker-compose.local.yml up -d --build${soloApi ? " api" : ""}`);
   const ok = await esperarApi("http://localhost:3000/health");
   if (!ok) {
     console.error("La API no responde con la BD. Mira `docker compose -f docker-compose.local.yml logs api`.");
     process.exit(1);
   }
 
+  if (soloApi) {
+    console.log("\n✔ API levantada en http://localhost:3000 (docs: http://localhost:3000/docs)");
+    return;
+  }
   console.log(`
 ✔ Todo levantado
   API ........... http://localhost:3000   (docs: http://localhost:3000/docs)
