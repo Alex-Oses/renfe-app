@@ -98,7 +98,17 @@ async function principal() {
   }
 
   paso("Supabase local (aplica todas las migraciones la primera vez)");
-  ejecutar(`${p} db:start`);
+  // Tras un apagado brusco de Docker, Postgres tarda en recuperarse y `supabase start` se rinde antes.
+  for (let intento = 1; ; intento++) {
+    try {
+      ejecutar(`${p} db:start`);
+      break;
+    } catch (e) {
+      if (intento === 5) throw e;
+      console.log(`  Supabase aún no está listo: reintento ${intento + 1} de 5 en 20 s...`);
+      await new Promise((ok) => setTimeout(ok, 20_000));
+    }
+  }
 
   paso("Escribiendo .env con las claves de Supabase local");
   const estado = execSync(`${p} exec supabase status --workdir backend/database -o env`, {
@@ -143,7 +153,7 @@ async function principal() {
   App (web) ..... http://localhost:8081
   App (Expo Go) . EXPO_PUBLIC_API_URL=http://<IP-de-este-PC>:3000 ${p} dev:mobile
 
-  Para pararlo: docker compose -f docker-compose.local.yml down && ${p} db:stop   (los datos se conservan)
+  Para pararlo: .\\arrancar.cmd -Cerrar   (los datos se conservan)
 `);
 }
 
