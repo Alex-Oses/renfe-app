@@ -1,3 +1,6 @@
 @echo off
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\arrancar.ps1" %*
-if errorlevel 1 pause
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
