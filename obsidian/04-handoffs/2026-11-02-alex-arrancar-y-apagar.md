@@ -4,6 +4,7 @@ autor: Alex
 area: devops
 para: todos
 rama: chore/infra-arrancar-apagar
+pr: "#114"
 tags: [handoff, infra, local]
 estado: abierto
 ---
@@ -19,6 +20,7 @@ estado: abierto
 - En el PC con Tailscale, Chrome bloquea la llamada (el dominio resuelve a la IP 100.x) y la web cae a Render: probar desde fuera de la tailnet.
 
 ## Qué queda
+- Mergeado en `develop` (`26ccbb4`). Para que pasara el CI se arregló antes el test de `completarRuta` en `frontend/shared/api/cliente.test.ts`, que usaba la hora real con una llegada fija el 02/11 a las 08:32 (#115, reloj fijo con `vi.useFakeTimers`).
 - Solo probado en el PC de Alex (Windows 11).
 
 ## Ficheros tocados

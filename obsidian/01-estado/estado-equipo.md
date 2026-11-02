@@ -1,5 +1,5 @@
 ---
-actualizado: 2026-10-30
+actualizado: 2026-11-02
 tags: [estado]
 ---
 
@@ -10,7 +10,7 @@ tags: [estado]
 
 | Persona | Rol | Estado | En qué está | Bloqueos | Actualizado |
 |---|---|---|---|---|---|
-| Alex | PO + Frontend | 🟢 | `pnpm docker:local` (`docker-compose.local.yml`) levanta API, web (:5173) y app móvil web (:8081) contra Supabase local; mapa con recorrido real (shapes de Cercanías y vías de OSM para AV/LD/MD). PR desde `feat/infra-compose-completo` ([[2026-10-30-alex-compose-completo-y-recorridos]]) | Probar Expo Go en móvil; recorridos en Supabase Cloud (Marina) | 2026-10-30 |
+| Alex | PO + Frontend | 🟢 | `arrancar.cmd` (#114) enciende/apaga solo lo que usa la web de Vercel: Supabase local, API en Docker y Funnel (`https://aleeex.tail3409a7.ts.net`, la de `VITE_API_URL`). Verificado desde fuera: `/estaciones` 200 con CORS de Vercel. Arreglado el test con fecha fija de `completarRuta` que rompía el CI de todas las ramas (#115) ([[2026-11-02-alex-arrancar-y-apagar]]) | Probar Expo y facial en móvil real; en el PC con Tailscale, Chrome bloquea la IP 100.x y la web cae a Render (probar desde fuera de la tailnet) | 2026-11-02 |
 | Rubén | Backend + chatbot | 🟢 | Chatbot con contexto en `.md`, memoria por conversación, pasos en vivo por SSE y tarjetas de tren en web; pantalla de asistente en Expo con endpoint JSON, memoria, Markdown básico y acceso al flujo de compra. PR #97 integrada con `develop`; triaje documental #101 integrado ([[2026-10-30-ruben-pr97-mergeada]]) | Probar el chat en Expo y la latencia de Gemini sigue siendo el riesgo de la demo | 2026-10-30 |
 | Marina | SM + Base de datos | 🟢 | **Supabase Cloud validada**: proyecto `hqwwucagvlhnlqrspwvh` (eu-west-1), 4 migraciones con `db push`, catálogo AV/LD cargado por el session pooler y `gtfs:verificar` en verde (1 035 estaciones / 668 rutas / 8 908 viajes / 71 781 horarios, feed 29/10). Los 3 PRs (#72, #73, #74) ya están mergeados. Siguiente: `DATABASE_URL` en Render ([[supabase-nube]]) | Nada por mi parte. Render sigue en 503 hasta que Kevin/Alex pongan `DATABASE_URL` | 2026-10-29 |
 | Kevin | DevOps + despliegue + Docker | 🟢 | CI revisada y en verde (excepción para Dependabot + `pnpm test:ramas`): PR **#75** abierta, `CI / ok` y `PR / reglas` ✅, falta aprobación. API viva en Render sin base de datos. Siguiente: en cuanto exista Supabase Cloud ([[supabase-nube]]) rellenar las variables de Render; y Docker (D10 de [[ADR-005-app-movil-expo]]) | `DATABASE_URL` bloqueada hasta que Marina cree Supabase Cloud | 2026-10-28 |
