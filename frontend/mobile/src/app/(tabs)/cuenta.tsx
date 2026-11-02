@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { alSesionInvalida, iniciarSesion, misBilletes, registrarse, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { CUENTAS_DEMO } from "@renfe/shared/api/simulado-cuenta";
