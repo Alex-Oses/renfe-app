@@ -79,6 +79,7 @@ const posicion = (): PosicionTren => ({
 afterEach(() => {
   configurarApi({});
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("con VITE_API_URL", () => {
@@ -133,6 +134,8 @@ describe("con VITE_API_URL", () => {
   });
 
   it("completarRuta pide el detalle, resuelve coordenadas y marca salida y llegada", async () => {
+    // Reloj fijo antes de la llegada (08:32 en Madrid): con la hora real, el test falla a partir de esa hora.
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-02T07:00:00+01:00") });
     configurarApi({ api: "http://api" });
     const llamadas = api((url) => {
       if (url.includes("/estaciones?")) return Response.json(estaciones);
