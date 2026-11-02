@@ -445,10 +445,22 @@ a.mega__titulo:hover {
 }
 
 .mega__grupo li a {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   padding: 0.4rem 0;
   color: var(--grafito);
   text-decoration: none;
+}
+
+/* Miniatura de la ciudad junto a cada núcleo de Cercanías */
+.mega__miniatura {
+  flex: none;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  background: var(--niebla, #eff3f6);
 }
 
 .mega__grupo li a:hover {
