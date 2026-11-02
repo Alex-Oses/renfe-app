@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ParadaRuta } from "@renfe/shared/api/tipos";
+import type { ParadaRuta } from "../api/tipos";
 import { ciudadCorta, etiquetaRetraso, extremos, nivelRetraso, progresoDe, proximaDe, repasarParadas } from "./estado-tren";
 
 const parada = (nombre: string, llegada: string, pasada: boolean): ParadaRuta => ({

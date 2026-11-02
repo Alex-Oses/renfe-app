@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { iniciarSesion, registrarse, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { alSesionInvalida, iniciarSesion, misBilletes, registrarse, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { CUENTAS_DEMO } from "@renfe/shared/api/simulado-cuenta";
 import type { Sesion } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
@@ -51,9 +51,17 @@ export default function Cuenta() {
   const [contrasena, setContrasena] = useState("");
   const [errores, setErrores] = useState<Errores>({});
   const [enviando, setEnviando] = useState(false);
+  const [puntos, setPuntos] = useState<number | null>(null);
 
   // La sesión se guarda en sessionStorage (en la app, SQLite): sobrevive a recargar sin cerrar.
   useEffect(() => setSesion(leerSesion()), []);
+  useEffect(() => alSesionInvalida(() => setSesion(null)), []);
+
+  // shortcut: 1 punto por euro de asiento, calculado en el dispositivo como en la web; la API real los guardará.
+  useEffect(() => {
+    if (!sesion) return setPuntos(null);
+    misBilletes().then((bs) => setPuntos(Math.floor(bs.reduce((s, b) => s + b.asiento.precio, 0))), () => setPuntos(0));
+  }, [sesion]);
 
   const entrar = (s: Sesion) => {
     guardarSesion(s);
@@ -154,6 +162,33 @@ export default function Cuenta() {
             </View>
           </View>
         </LinearGradient>
+
+        <Cristal gap={espaciado[1]}>
+          <Text style={styles.estadoTitulo}>Tus puntos</Text>
+          <Text style={styles.puntos}>
+            {puntos === null ? "…" : puntos} <Text style={styles.estadoTexto}>puntos</Text>
+          </Text>
+          <Text style={styles.estadoTexto}>
+            Sumas un punto por cada euro de tus billetes. Es una simulación: todavía no se pueden canjear.
+          </Text>
+        </Cristal>
+
+        <Cristal gap={espaciado[2]}>
+          <Text style={styles.estadoTitulo}>Acceso con tu cara</Text>
+          <Text style={styles.estadoTexto}>
+            {usuario.caraRegistrada
+              ? "Activado: puedes entrar con tu cara desde la web. La contraseña sigue funcionando."
+              : "Sin activar. El registro facial se hace en la web: Expo Go no puede ejecutar el modelo de reconocimiento."}
+          </Text>
+          {WEB ? (
+            <Boton
+              texto={usuario.caraRegistrada ? "Volver a registrar en la web" : "Activar en la web"}
+              variante="secundario"
+              icono="cara"
+              onPress={() => void WebBrowser.openBrowserAsync(`${WEB}/cuenta`)}
+            />
+          ) : null}
+        </Cristal>
 
         <View style={styles.opciones}>
           {[...OPCIONES, ...(rol === "revisor" || rol === "admin" ? [REVISOR] : [])].map((o) => (
@@ -435,5 +470,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   estadoTitulo: { fontFamily: fuentes.seminegrita, fontSize: 14, color: colores.texto },
+  puntos: { fontFamily: fuentes.negrita, fontSize: 28, color: colores.marca, letterSpacing: -0.6 },
   estadoTexto: { fontFamily: fuentes.normal, fontSize: 12.2, color: colores.textoSuave, lineHeight: 17 },
 });

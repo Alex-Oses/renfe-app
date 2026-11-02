@@ -1,6 +1,6 @@
 // Sesión guardada como en la web (sessionStorage; en la app es SQLite, ver polyfills.ts).
 // Se restaura al arrancar para que billetes y abonos lleven el token aunque no se abra Cuenta.
-import { usarToken } from "@renfe/shared/api/cliente";
+import { alSesionInvalida, usarToken } from "@renfe/shared/api/cliente";
 import { CLAVE_SESION } from "@renfe/shared/api/simulado-cuenta";
 import type { Sesion } from "@renfe/shared/api/tipos";
 
@@ -22,5 +22,8 @@ export function guardarSesion(s: Sesion | null) {
     /* sin almacenamiento: la sesión dura lo que la app abierta */
   }
 }
+
+// Token rechazado o API cambiada: se borra la sesión guardada y Cuenta vuelve a pedir entrar.
+alSesionInvalida(() => guardarSesion(null));
 
 export const restaurarSesion = () => usarToken(leerSesion()?.token ?? null);

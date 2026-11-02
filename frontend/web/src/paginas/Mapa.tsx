@@ -9,7 +9,7 @@ import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
 import { useAvisos } from "../estado/avisos";
 import { CapaTrenes, COLOR_TIPO, SIGLA_TIPO, svgTren } from "./mapa/CapaTrenes";
 import { Estaciones, RutaElegida, RutasTodas } from "./mapa/CapasRuta";
-import { etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas, ciudadCorta } from "./mapa/estado-tren";
+import { etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas, ciudadCorta } from "@renfe/shared/estado/estado-tren";
 
 const TIPOS = Object.keys(COLOR_TIPO) as TipoTren[];
 
