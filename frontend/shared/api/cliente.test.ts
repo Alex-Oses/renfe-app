@@ -9,6 +9,10 @@ import {
   posicionDeTren,
   registrarCara,
   usaApiRespaldo,
+  alSesionInvalida,
+  misBilletes,
+  SESION_CADUCADA,
+  usarToken,
 } from "./cliente";
 import type { PosicionTren, Tren } from "./tipos";
 
@@ -79,6 +83,7 @@ const posicion = (): PosicionTren => ({
 afterEach(() => {
   configurarApi({});
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("con VITE_API_URL", () => {
@@ -133,6 +138,8 @@ describe("con VITE_API_URL", () => {
   });
 
   it("completarRuta pide el detalle, resuelve coordenadas y marca salida y llegada", async () => {
+    // Reloj fijo antes de la llegada (08:32 en Madrid): con la hora real, el test falla a partir de esa hora.
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-02T07:00:00+01:00") });
     configurarApi({ api: "http://api" });
     const llamadas = api((url) => {
       if (url.includes("/estaciones?")) return Response.json(estaciones);
@@ -252,5 +259,36 @@ describe("API de respaldo", () => {
     await comprobarApi();
     expect(llamadas).toHaveLength(0);
     expect(usaApiRespaldo()).toBe(false);
+  });
+});
+
+describe("sesión caducada", () => {
+  afterEach(() => usarToken(null));
+
+  it("un 401 con sesión cierra la sesión y avisa", async () => {
+    configurarApi({ api: "http://api" });
+    usarToken("viejo");
+    const aviso = vi.fn();
+    const quitar = alSesionInvalida(aviso);
+    const llamadas = api(() => new Response(JSON.stringify({ message: "Token inválido o caducado" }), { status: 401 }));
+
+    await expect(misBilletes()).rejects.toThrow(SESION_CADUCADA);
+    expect(aviso).toHaveBeenCalledTimes(1);
+    await misBilletes().catch(() => {});
+    expect(llamadas[1].init?.headers).not.toHaveProperty("Authorization");
+    quitar();
+  });
+
+  it("al pasar a la API de respaldo se cierra la sesión", async () => {
+    configurarApi({ api: "http://principal", respaldo: "http://respaldo" });
+    usarToken("de-la-principal");
+    const aviso = vi.fn();
+    const quitar = alSesionInvalida(aviso);
+    api(() => new Response("", { status: 503 }));
+
+    await comprobarApi();
+    expect(usaApiRespaldo()).toBe(true);
+    expect(aviso).toHaveBeenCalledTimes(1);
+    quitar();
   });
 });

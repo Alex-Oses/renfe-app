@@ -3,12 +3,19 @@ import { Buscador } from "../../componentes/Buscador";
 import { TrenSvg } from "./TrenSvg";
 
 // Tramo sticky: el progreso de scroll (0..1) se escribe en --p y el CSS mueve todo con transform/opacity.
+
+// En pantallas donde el panel no cabe en la ventana el tramo se sirve en flujo normal
+// (ver el @media de inicio.css): sin JS no se escribe --p ni se marca `data-listo`.
+const esEntradaEstatica = () =>
+  matchMedia("(prefers-reduced-motion: reduce)").matches ||
+  matchMedia("(max-width: 40rem), (max-height: 560px)").matches;
+
 export function EntradaTren() {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!el || esEntradaEstatica()) return;
     let pendiente = 0;
     // La cabecera sticky ocupa sitio encima: subimos el tramo su altura para que se pegue desde scrollY=0.
     const ajustar = () => {
@@ -70,7 +77,7 @@ export function EntradaTren() {
   // Salta al estado final del tramo (buscador visible).
   function irAlFinal() {
     const el = ref.current;
-    if (!el || el.dataset.listo === "si") return;
+    if (!el || esEntradaEstatica() || el.dataset.listo === "si") return;
     const fin = el.getBoundingClientRect().bottom + scrollY - innerHeight;
     scrollTo({ top: fin, behavior: "instant" });
   }

@@ -14,9 +14,10 @@ export default function Cuenta() {
   const [descuento, setDescuento] = useState(descuentoGuardado);
   const [puntos, setPuntos] = useState<number | null>(null);
   useEffect(() => {
+    if (!sesion) return; // sin sesión se redirige a /acceder: no se pide /billetes (daría 401)
     // shortcut: 1 punto por euro de asiento, calculado en el navegador; la API real los guardará.
     misBilletes().then((bs) => setPuntos(Math.floor(bs.reduce((s, b) => s + b.asiento.precio, 0))), () => setPuntos(0));
-  }, []);
+  }, [sesion]);
   const guardarDescuento = (v: string) => {
     setDescuento(v as typeof descuento);
     try {

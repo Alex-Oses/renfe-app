@@ -4,7 +4,7 @@ import { CircleMarker, Marker, Polyline, Tooltip, useMapEvents } from "react-lea
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import type { PosicionTren } from "@renfe/shared/api/tipos";
 import { COLOR_TIPO } from "./CapaTrenes";
-import { extremos } from "./estado-tren";
+import { extremos } from "@renfe/shared/estado/estado-tren";
 
 type LL = [number, number];
 

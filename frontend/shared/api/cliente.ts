@@ -92,7 +92,7 @@ export function alCambiarRespaldo(oyente: () => void) {
 }
 
 // Va al respaldo si la principal cae o pierde la BD, y vuelve sola cuando se recupera.
-// shortcut: las sesiones no valen entre las dos APIs (BD y secretos distintos), hay que volver a entrar.
+// Las sesiones no valen entre las dos APIs (BD y secretos distintos): al cambiar se cierra la sesión.
 export async function comprobarApi(): Promise<void> {
   if (!PRINCIPAL || !RESPALDO) return;
   let viva = false;
@@ -107,6 +107,7 @@ export async function comprobarApi(): Promise<void> {
   BASE = viva ? PRINCIPAL : RESPALDO;
   if (!posicionesPropias) BASE_POSICIONES = BASE;
   oyentesRespaldo.forEach((oyente) => oyente());
+  invalidarSesion();
 }
 
 export function vigilarApi(cadaMs = 30_000) {
@@ -117,6 +118,21 @@ export function vigilarApi(cadaMs = 30_000) {
 let token: string | null = null;
 export function usarToken(t: string | null) {
   token = t;
+}
+
+export const SESION_CADUCADA = "Tu sesión ha caducado. Vuelve a entrar.";
+const oyentesSesion = new Set<() => void>();
+// Avisa cuando la API deja de aceptar el token (401 o cambio de API) para que la app cierre la sesión.
+export function alSesionInvalida(oyente: () => void) {
+  oyentesSesion.add(oyente);
+  return () => {
+    oyentesSesion.delete(oyente);
+  };
+}
+function invalidarSesion() {
+  if (!token) return;
+  token = null;
+  oyentesSesion.forEach((oyente) => oyente());
 }
 
 export async function enviarMensajeChatbot(mensaje: string, conversationId?: string): Promise<RespuestaChatbot> {
@@ -199,6 +215,10 @@ async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise
     },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
+  if (r.status === 401 && token) {
+    invalidarSesion();
+    throw new Error(SESION_CADUCADA);
+  }
   if (!r.ok) throw new Error(await mensajeDeError(r, ruta));
   // POST /auth/cara/registrar responde 204 sin cuerpo.
   if (r.status === 204) return undefined as T;

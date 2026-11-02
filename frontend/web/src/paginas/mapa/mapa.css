@@ -507,3 +507,12 @@
 [data-detalle="medio"] .tren-marca:not(.tren-marca--activa) .tren-marca__dibujo svg { transform: scale(0.75); }
 [data-detalle="medio"] .tren-marca--cercanias:not(.tren-marca--activa) .tren-marca__dibujo { display: none; }
 [data-detalle="medio"] .tren-marca--cercanias:not(.tren-marca--activa) .tren-marca__punto { display: block; inset: 14px; opacity: 0.85; }
+
+/* Móvil: botones de zoom de Leaflet a 44px para el dedo */
+@media (max-width: 47.99rem) {
+  .mapa-leaflet .leaflet-control-zoom a {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+}

@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
-import { ciudadDe, type IdDescuento, type IdTarifa, type TipoTren, type Tren } from "@renfe/shared/api/tipos";
+import { ciudadDe, type IdDescuento, type IdTarifa, type OpcionTransbordo, type TipoTren, type Tren } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Buscador, type Criterios } from "@/components/Buscador";
 import { Cristal } from "@/components/Cristal";
@@ -104,6 +104,21 @@ export default function Resultados() {
     };
   }, [origen, destino, fecha, pasajeros]);
 
+  // Sin directos se ofrecen opciones con un transbordo, como en la web.
+  const [transbordos, setTransbordos] = useState<OpcionTransbordo[] | null>(null);
+  useEffect(() => {
+    setTransbordos(null);
+    if (trenes?.length !== 0) return;
+    let vivo = true;
+    buscarTransbordos({ origen, destino, fecha }).then(
+      (o) => vivo && setTransbordos(o),
+      () => vivo && setTransbordos([]),
+    );
+    return () => {
+      vivo = false;
+    };
+  }, [trenes, origen, destino, fecha]);
+
   const tiposDisponibles = useMemo(() => [...new Set((trenes ?? []).map((t) => t.tipo))], [trenes]);
   const visibles = useMemo(
     () =>
@@ -123,8 +138,8 @@ export default function Resultados() {
   );
   const inicio = trenes?.length ? Math.min(...trenes.map((t) => minutos(t.salida))) : 0;
   const fin = trenes?.length ? Math.max(...trenes.map((t) => minutos(t.salida) + duracion(t))) : 1;
-  const origenNombre = ESTACIONES.find((e) => e.id === origen);
-  const destinoNombre = ESTACIONES.find((e) => e.id === destino);
+  const origenNombre = ESTACIONES.find((e) => e.id === origen) ?? (params.origenNombre ? { id: origen, nombre: params.origenNombre } : undefined);
+  const destinoNombre = ESTACIONES.find((e) => e.id === destino) ?? (params.destinoNombre ? { id: destino, nombre: params.destinoNombre } : undefined);
   const semanas = [-3, -2, -1, 0, 1, 2, 3].map((d) => moverDia(fecha, d));
   const hoy = hoyIso();
 
@@ -134,6 +149,8 @@ export default function Resultados() {
       params: {
         origen: c.origen.id,
         destino: c.destino.id,
+        origenNombre: c.origen.nombre,
+        destinoNombre: c.destino.nombre,
         fecha: c.fecha,
         pasajeros: String(c.adultos + c.ninos),
         adultos: String(c.adultos),
@@ -169,6 +186,8 @@ export default function Resultados() {
           inicial={{
             origen,
             destino,
+            origenNombre: params.origenNombre,
+            destinoNombre: params.destinoNombre,
             fecha,
             adultos,
             ninos,
@@ -439,7 +458,68 @@ export default function Resultados() {
         </Cristal>
       ) : null}
 
-      {trenes?.length === 0 && !desconocidas.length ? (
+      {trenes?.length === 0 && transbordos === null ? (
+        <Cristal padding={espaciado[4]} gap={espaciado[3]} style={{ alignItems: "center" }}>
+          <ActivityIndicator color={colores.marca} />
+          <Text style={estilos.suave}>Buscando opciones con transbordo…</Text>
+        </Cristal>
+      ) : null}
+
+      {transbordos && transbordos.length > 0 ? (
+        <View style={{ gap: espaciado[2] }}>
+          <Text style={[estilos.subtitulo, { paddingHorizontal: espaciado[1] }]} accessibilityRole="header">
+            No hay trenes directos: opciones con transbordo
+          </Text>
+          <View style={styles.lista}>
+            {transbordos.map((o, i) => {
+              const [a, b] = o.tramos;
+              return (
+                <View key={`${a.id}|${b.id}`} style={[styles.filaTren, i > 0 && styles.filaTrenBorde]}>
+                  <View style={styles.horas}>
+                    <Text style={styles.hora}>{hora(a.salida)}</Text>
+                    <Text style={styles.duracion}>{textoDuracion(o.duracionMin)}</Text>
+                    <Text style={styles.hora}>{hora(b.llegada)}</Text>
+                  </View>
+                  <Text style={styles.tipo}>
+                    <Text style={{ fontFamily: fuentes.negrita }}>{a.tipo}</Text> {a.numero || a.linea} hasta {a.destino.nombre} ({hora(a.llegada)})
+                  </Text>
+                  <Text style={[styles.tipo, { fontFamily: fuentes.seminegrita, color: colores.marca }]}>
+                    Transbordo en {o.transbordo.nombre}: {textoDuracion(o.esperaMin)} de espera
+                  </Text>
+                  <Text style={styles.tipo}>
+                    <Text style={{ fontFamily: fuentes.negrita }}>{b.tipo}</Text> {b.numero || b.linea} sale a las {hora(b.salida)}
+                  </Text>
+                  <View style={styles.compra}>
+                    <View style={{ flex: 1 }} />
+                    <Text style={styles.precio}>{euros(o.precio)}</Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Elegir el viaje con transbordo de las ${hora(a.salida)}`}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/transbordo",
+                          params: { origen, destino, fecha, a: a.id, b: b.id, pasajeros: String(pasajeros), ninos: String(ninos) },
+                        })
+                      }
+                      style={({ pressed }) => [styles.elegir, pressed && { transform: [{ scale: 0.96 }] }]}
+                    >
+                      <LinearGradient
+                        colors={gradientes.marca}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[StyleSheet.absoluteFill, { borderRadius: radios.pildora }]}
+                      />
+                      <Text style={styles.elegirTexto}>Elegir</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
+
+      {trenes?.length === 0 && transbordos?.length === 0 && !desconocidas.length ? (
         <Cristal padding={espaciado[5 as 4]} gap={espaciado[3]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: espaciado[3] }}>
             <View style={styles.vacioIcono}>

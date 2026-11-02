@@ -12,12 +12,18 @@ test("rellena las claves de Supabase local y respeta lo que ya tenía el usuario
   assert.match(env, /^STRIPE_SECRET_KEY=sk_test_mia$/m);
   assert.match(env, /^QR_SIGNING_SECRET=aleatorio$/m);
   assert.match(env, /^SUPABASE_JWT_SECRET=jwt$/m);
-  assert.match(env, /^CORS_ORIGINS=.*localhost:8081$/m);
+  assert.match(env, /^CORS_ORIGINS=.*localhost:8081,https:\/\/renfe-app-beta\.vercel\.app$/m);
 });
 
 test("no cambia un QR_SIGNING_SECRET que ya existe", () => {
   const env = fusionarEnv("QR_SIGNING_SECRET=el-mio\n", supabase, () => "otro");
   assert.match(env, /^QR_SIGNING_SECRET=el-mio$/m);
+});
+
+test("añade el origen de Vercel a CORS_ORIGINS sin duplicarlo", () => {
+  const env = fusionarEnv("CORS_ORIGINS=http://localhost:5173\n", supabase);
+  assert.match(env, /^CORS_ORIGINS=http:\/\/localhost:5173,https:\/\/renfe-app-beta\.vercel\.app$/m);
+  assert.equal(fusionarEnv(env, supabase), env);
 });
 
 test("lee la salida de `supabase status -o env`", () => {

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Levanta todo el stack en local con un solo comando (ver docs/levantar-en-local.md):
 // Supabase (Docker, con las migraciones), `.env` con sus claves, catálogo GTFS real y la API en Docker.
-// Uso: pnpm local [--sin-cercanias] [--sin-importar]
+// Uso: pnpm local [--sin-cercanias] [--sin-importar] [--solo-api]
 //   --sin-cercanias  solo AV/LD/MD (Cercanías son ~2 M de horarios, ~2 min más)
 //   --sin-importar   no vuelve a cargar los horarios (si la BD ya los tiene)
+//   --solo-api       no levanta la web ni la app (lo que usa arrancar.cmd para la web de Vercel)
 
 import { execSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -13,6 +14,8 @@ import { fileURLToPath } from "node:url";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+// La web de Vercel llama a esta API por Funnel: sin su origen en CORS, el navegador la rechaza.
+const ORIGEN_VERCEL = "https://renfe-app-beta.vercel.app";
 
 /**
  * Mezcla el `.env` existente con los valores de Supabase local. Los que ya tenga el usuario no se
@@ -31,7 +34,7 @@ export function fusionarEnv(actual, supabase, aleatorio = () => randomBytes(32).
     API_PORT: "3000",
     QR_SIGNING_SECRET: aleatorio(),
     JWT_SECRET: aleatorio(),
-    CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081",
+    CORS_ORIGINS: `http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,${ORIGEN_VERCEL}`,
   };
   const lineas = actual.split(/\r?\n/);
   const vistos = new Set();
@@ -42,6 +45,7 @@ export function fusionarEnv(actual, supabase, aleatorio = () => randomBytes(32).
     vistos.add(clave);
     if (clave in forzados) return `${clave}=${forzados[clave]}`;
     if (clave in porDefecto && valor.trim() === "") return `${clave}=${porDefecto[clave]}`;
+    if (clave === "CORS_ORIGINS" && !valor.split(",").includes(ORIGEN_VERCEL)) return `${clave}=${valor},${ORIGEN_VERCEL}`;
     return linea;
   });
   for (const [clave, valor] of Object.entries({ ...forzados, ...porDefecto })) {
@@ -98,7 +102,17 @@ async function principal() {
   }
 
   paso("Supabase local (aplica todas las migraciones la primera vez)");
-  ejecutar(`${p} db:start`);
+  // Tras un apagado brusco de Docker, Postgres tarda en recuperarse y `supabase start` se rinde antes.
+  for (let intento = 1; ; intento++) {
+    try {
+      ejecutar(`${p} db:start`);
+      break;
+    } catch (e) {
+      if (intento === 5) throw e;
+      console.log(`  Supabase aún no está listo: reintento ${intento + 1} de 5 en 20 s...`);
+      await new Promise((ok) => setTimeout(ok, 20_000));
+    }
+  }
 
   paso("Escribiendo .env con las claves de Supabase local");
   const estado = execSync(`${p} exec supabase status --workdir backend/database -o env`, {
@@ -127,14 +141,19 @@ async function principal() {
     ejecutar(`${p} --filter @renfe/gtfs-worker vias`, { env: { ...env, NODE_OPTIONS: "--max-old-space-size=6144" } });
   }
 
-  paso("API, web y app móvil en Docker");
-  ejecutar("docker compose -f docker-compose.local.yml up -d --build");
+  const soloApi = args.has("--solo-api");
+  paso(soloApi ? "API en Docker" : "API, web y app móvil en Docker");
+  ejecutar(`docker compose -f docker-compose.local.yml up -d --build${soloApi ? " api" : ""}`);
   const ok = await esperarApi("http://localhost:3000/health");
   if (!ok) {
     console.error("La API no responde con la BD. Mira `docker compose -f docker-compose.local.yml logs api`.");
     process.exit(1);
   }
 
+  if (soloApi) {
+    console.log("\n✔ API levantada en http://localhost:3000 (docs: http://localhost:3000/docs)");
+    return;
+  }
   console.log(`
 ✔ Todo levantado
   API ........... http://localhost:3000   (docs: http://localhost:3000/docs)
@@ -143,7 +162,7 @@ async function principal() {
   App (web) ..... http://localhost:8081
   App (Expo Go) . EXPO_PUBLIC_API_URL=http://<IP-de-este-PC>:3000 ${p} dev:mobile
 
-  Para pararlo: docker compose -f docker-compose.local.yml down && ${p} db:stop   (los datos se conservan)
+  Para pararlo: .\\arrancar.cmd -Cerrar   (los datos se conservan)
 `);
 }
 

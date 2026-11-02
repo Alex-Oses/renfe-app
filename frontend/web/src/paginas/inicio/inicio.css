@@ -272,6 +272,42 @@
   }
 }
 
+/* Teléfonos y ventanas bajas: el panel del buscador (≈935 px a 390 px de ancho) no
+   cabe en el tramo sticky, así que quedaba cortado arriba y abajo y el botón de buscar
+   solo se alcanzaba cuando la sección siguiente ya lo tapaba. Aquí el tramo se sirve
+   en flujo normal: el buscador entra entero y sin 2 700 px de scroll previo.
+   El umbral coincide con `esEntradaEstatica()` de EntradaTren.tsx. */
+@media (max-width: 40rem), (max-height: 560px) {
+  .entrada {
+    --p: 1;
+    height: auto;
+    margin-top: 0;
+  }
+  .entrada__fijo {
+    position: relative;
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding: var(--esp-4) 0 var(--esp-6);
+  }
+  .entrada__paisaje,
+  .entrada__catenaria,
+  .entrada__anden,
+  .entrada__tren,
+  .entrada__lema,
+  .entrada__aviso {
+    display: none;
+  }
+  .entrada__panel {
+    margin-inline: auto;
+    /* Por si el móvil venía del tramo animado (rotar el teléfono) y dejó --p escrito. */
+    opacity: 1;
+    transform: none;
+    pointer-events: auto !important;
+  }
+}
+
 /* ---------- Secciones ---------- */
 .revela {
   opacity: 0;
@@ -370,8 +406,9 @@
 }
 
 .ventaja a {
-  display: inline-block;
-  padding-block: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-weight: 600;
 }
 
@@ -463,7 +500,9 @@
   gap: var(--esp-4);
 }
 
-.modulo-aviso {
+/* `a.` para ganar a `.cristal--pulsable { display: block }`, que se carga después
+   (main.tsx importa base.css tras las páginas) y dejaba el título pegado al texto. */
+a.modulo-aviso {
   display: grid;
   gap: var(--esp-1);
   height: 100%;
@@ -601,8 +640,9 @@
 }
 
 .atajo li a {
-  display: inline-block;
-  padding-block: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .atajo__chips {
@@ -614,7 +654,7 @@
 .atajo li .atajo__chip {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--esp-4);
   border-radius: var(--radio-pildora);
   border: 1px solid rgb(129 0 94 / 0.2);

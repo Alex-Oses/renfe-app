@@ -1,6 +1,6 @@
 // Vigila trenes seguidos, billetes próximos y líneas favoritas con un único intervalo.
 import { useEffect, useRef, useState } from "react";
-import { buscarTrenes, misBilletes, posicionesTrenes } from "@renfe/shared/api/cliente";
+import { buscarTrenes, misBilletes, posicionesTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Billete } from "@renfe/shared/api/tipos";
 import { useAvisos } from "./avisos";
 import { useSesion } from "./sesion";
@@ -31,8 +31,10 @@ export function Vigilante() {
   datos.current = { avisar, seguimientos, favoritos, billetes };
 
   // Se recargan al entrar o salir de la cuenta: al abrir la web antes del login aún no hay billetes.
+  // Con la API real /billetes exige token: sin sesión no se pide (evita un 401 en cada página).
   useEffect(() => {
-    misBilletes().then(setBilletes, () => setBilletes([])); // sin sesión: no hay billetes que vigilar
+    if (!usaDatosSimulados && !sesion) return setBilletes([]);
+    misBilletes().then(setBilletes, () => setBilletes([]));
   }, [sesion?.usuario.id]);
 
   const conSesion = Boolean(sesion);
