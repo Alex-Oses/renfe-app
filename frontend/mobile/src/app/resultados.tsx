@@ -138,8 +138,8 @@ export default function Resultados() {
   );
   const inicio = trenes?.length ? Math.min(...trenes.map((t) => minutos(t.salida))) : 0;
   const fin = trenes?.length ? Math.max(...trenes.map((t) => minutos(t.salida) + duracion(t))) : 1;
-  const origenNombre = ESTACIONES.find((e) => e.id === origen);
-  const destinoNombre = ESTACIONES.find((e) => e.id === destino);
+  const origenNombre = ESTACIONES.find((e) => e.id === origen) ?? (params.origenNombre ? { id: origen, nombre: params.origenNombre } : undefined);
+  const destinoNombre = ESTACIONES.find((e) => e.id === destino) ?? (params.destinoNombre ? { id: destino, nombre: params.destinoNombre } : undefined);
   const semanas = [-3, -2, -1, 0, 1, 2, 3].map((d) => moverDia(fecha, d));
   const hoy = hoyIso();
 
@@ -149,6 +149,8 @@ export default function Resultados() {
       params: {
         origen: c.origen.id,
         destino: c.destino.id,
+        origenNombre: c.origen.nombre,
+        destinoNombre: c.destino.nombre,
         fecha: c.fecha,
         pasajeros: String(c.adultos + c.ninos),
         adultos: String(c.adultos),
@@ -184,6 +186,8 @@ export default function Resultados() {
           inicial={{
             origen,
             destino,
+            origenNombre: params.origenNombre,
+            destinoNombre: params.destinoNombre,
             fecha,
             adultos,
             ninos,
