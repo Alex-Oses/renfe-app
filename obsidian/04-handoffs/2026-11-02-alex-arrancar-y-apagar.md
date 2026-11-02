@@ -1,0 +1,24 @@
+---
+fecha: 2026-11-02
+autor: Alex
+area: devops
+para: todos
+rama: chore/infra-arrancar-apagar
+tags: [handoff, infra, local]
+estado: abierto
+---
+
+# Handoff — Un solo script para arrancar y apagar todo en local
+
+## Qué se hizo
+- `arrancar.cmd` sin argumentos pregunta abrir o cerrar; `-Abrir` y `-Cerrar` lo hacen sin preguntar.
+- `-Cerrar` apaga Funnel, API/web/app (`docker compose down`) y Supabase (`db:stop`); los datos se conservan. Si Docker está cerrado, lo dice y no falla.
+- Arreglos: con Docker cerrado el script se caía en vez de abrirlo (stderr de `docker info` con `Stop` en PowerShell 5.1); `-Importar` no se respetaba y siempre descargaba los catálogos; `arrancar.cmd` devolvía 0 aunque fallara.
+- Si Hyper-V/WSL reserva los puertos de Supabase (`bind: Intento de acceso a un socket...`), el script reinicia `winnat` con aviso de administrador. `db:start` reintenta 5 veces mientras Postgres se recupera.
+- Probado: abrir y cerrar en frío; `/health`, :5173, :8081 y el Funnel responden 200.
+
+## Qué queda
+- Solo probado en el PC de Alex (Windows 11).
+
+## Ficheros tocados
+`arrancar.cmd`, `scripts/arrancar.ps1`, `scripts/levantar-local.mjs`.
