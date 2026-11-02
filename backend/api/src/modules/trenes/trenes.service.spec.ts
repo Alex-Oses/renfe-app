@@ -28,11 +28,21 @@ const dto = (extra: Record<string, unknown> = {}) =>
 const servicioCon = (consultar: (sql: string, valores: unknown[]) => Promise<unknown>) =>
   new TrenesService({ consultar } as unknown as BdService);
 
+// El servicio pregunta primero por las estaciones de cada punta (`as origenes`) y luego por los
+// viajes. Este doble devuelve la expansión y, para el resto, las filas que le pases.
+const servicioBd = (
+  filas: unknown[],
+  estaciones: { origenes: string[] | null; destinos: string[] | null } = {
+    origenes: ['60000'],
+    destinos: ['71801'],
+  },
+) => servicioCon(async (sql) => (sql.includes('as origenes') ? { rows: [estaciones] } : { rows: filas }));
+
 describe('TrenesService.transbordos', () => {
   it('suma precio y calcula espera y duración total', async () => {
     const a = { ...fila, destino_id: '04040', destino_nombre: 'Zaragoza', sale: '07:00:00', llega: '08:30:00' };
     const b = { ...fila, viaje_id: 'otro', origen_id: '04040', origen_nombre: 'Zaragoza', sale: '09:00:00', llega: '10:15:00' };
-    const servicio = servicioCon(async () => ({ rows: [{ a, b }] }));
+    const servicio = servicioBd([{ a, b }]);
 
     const { datos } = await servicio.transbordos(dto());
 
@@ -40,12 +50,34 @@ describe('TrenesService.transbordos', () => {
     expect(datos[0]!.esperaMin).toBe(30);
     expect(datos[0]!.duracionMin).toBe(195);
     expect(datos[0]!.precio).toBeCloseTo(datos[0]!.tramos[0].precioDesde + datos[0]!.tramos[1].precioDesde);
+    expect(datos[0]!.cambioEstacion).toBe(false);
+    expect(datos[0]!.transbordoSalida).toBeUndefined();
+  });
+
+  it('marca el cambio a otra estación de la misma ciudad', async () => {
+    const a = { ...fila, destino_id: '71801', destino_nombre: 'Barcelona-Sants', sale: '07:00:00', llega: '08:30:00' };
+    const b = { ...fila, viaje_id: 'otro', origen_id: '79009', origen_nombre: 'Barcelona-El Clot', sale: '09:05:00', llega: '10:15:00' };
+    let sqlUsado = '';
+    const servicio = servicioCon(async (sql) => {
+      if (sql.includes('as origenes')) return { rows: [{ origenes: ['60000'], destinos: ['71801'] }] };
+      sqlUsado = sql;
+      return { rows: [{ a, b }] };
+    });
+
+    const { datos } = await servicio.transbordos(dto());
+
+    expect(datos[0]!.cambioEstacion).toBe(true);
+    expect(datos[0]!.transbordo).toEqual({ id: '71801', nombre: 'Barcelona-Sants' });
+    expect(datos[0]!.transbordoSalida).toEqual({ id: '79009', nombre: 'Barcelona-El Clot' });
+    expect(datos[0]!.esperaMin).toBe(35);
+    expect(sqlUsado).toContain("interval '30 minutes'");
+    expect(sqlUsado).toContain('not exists');
   });
 });
 
 describe('TrenesService', () => {
   it('mapea el viaje al contrato', async () => {
-    const servicio = servicioCon(async () => ({ rows: [fila] }));
+    const servicio = servicioBd([fila]);
 
     const { datos, total } = await servicio.buscar(dto());
 
@@ -70,20 +102,57 @@ describe('TrenesService', () => {
     });
   });
 
-  it('pasa origen, destino, fecha y límite al SQL', async () => {
+  it('pasa las estaciones de cada punta, la fecha y el límite al SQL', async () => {
     let valores: unknown[] = [];
-    const servicio = servicioCon(async (_sql, v) => {
+    const servicio = servicioCon(async (sql, v) => {
+      if (sql.includes('as origenes')) return { rows: [{ origenes: ['60000'], destinos: ['71801'] }] };
       valores = v;
       return { rows: [fila] };
     });
 
     await servicio.buscar(dto({ limit: 5 }));
 
-    expect(valores).toEqual(['60000', '71801', '2026-11-02', 5]);
+    expect(valores).toEqual([['60000'], ['71801'], '2026-11-02', 5]);
+  });
+
+  it('amplía origen y destino a las estaciones de su ciudad y devuelve la estación real', async () => {
+    let sqlExpansion = '';
+    let valoresBusqueda: unknown[] = [];
+    const servicio = servicioCon(async (sql, v) => {
+      if (sql.includes('as origenes')) {
+        sqlExpansion = sql;
+        return { rows: [{ origenes: ['71500', '71502', '04104'], destinos: ['71801', '71802'] }] };
+      }
+      valoresBusqueda = v;
+      return { rows: [{ ...fila, destino_id: '71802', destino_nombre: 'Barcelona-Passeig de Gràcia' }] };
+    });
+
+    const { datos } = await servicio.buscar(dto({ origen: '71500', destino: '71802' }));
+
+    expect(sqlExpansion).toContain('s.ciudad = l.ciudad');
+    expect(sqlExpansion).toContain('p.co is distinct from p.cd');
+    expect(valoresBusqueda[0]).toEqual(['71500', '71502', '04104']);
+    expect(valoresBusqueda[1]).toEqual(['71801', '71802']);
+    expect(datos[0]!.destino).toEqual({ id: '71802', nombre: 'Barcelona-Passeig de Gràcia' });
+  });
+
+  it('quita el mismo tren publicado en avld y en cercanias y respeta el límite', async () => {
+    const servicio = servicioBd([
+      { ...fila, total: '3' },
+      { ...fila, feed: 'cercanias', viaje_id: 'R15', nombre_corto: 'R15', total: '3' },
+      { ...fila, viaje_id: 'otro', sale: '08:00:00', llega: '09:10:00', total: '3' },
+    ]);
+
+    const todos = await servicio.buscar(dto());
+    const uno = await servicio.buscar(dto({ limit: 1 }));
+
+    expect(todos.datos.map((t) => t.feed)).toEqual(['avld', 'avld']);
+    expect(todos.total).toBe(2);
+    expect(uno.datos).toHaveLength(1);
   });
 
   it('el precio y las plazas son deterministas', async () => {
-    const servicio = servicioCon(async () => ({ rows: [fila] }));
+    const servicio = servicioBd([fila]);
 
     const primera = await servicio.buscar(dto());
     const segunda = await servicio.buscar(dto());
@@ -93,9 +162,7 @@ describe('TrenesService', () => {
   });
 
   it('el precio y las plazas cambian entre viajes distintos', async () => {
-    const servicio = servicioCon(async () => ({
-      rows: [fila, { ...fila, viaje_id: 'otro-viaje', total: '2' }],
-    }));
+    const servicio = servicioBd([fila, { ...fila, viaje_id: 'otro-viaje', sale: '08:15:00', total: '2' }]);
 
     const { datos } = await servicio.buscar(dto());
 
@@ -103,9 +170,7 @@ describe('TrenesService', () => {
   });
 
   it('sin nombre corto ni tipo usa el nombre de la ruta y DESCONOCIDO', async () => {
-    const servicio = servicioCon(async () => ({
-      rows: [{ ...fila, nombre_corto: null, tipo_servicio: null }],
-    }));
+    const servicio = servicioBd([{ ...fila, nombre_corto: null, tipo_servicio: null }]);
 
     const { datos } = await servicio.buscar(dto());
 
@@ -114,18 +179,12 @@ describe('TrenesService', () => {
     expect(datos[0].tipo).toBe('DESCONOCIDO');
   });
 
-  it('sin resultados comprueba las estaciones y devuelve total 0', async () => {
-    const servicio = servicioCon(async (sql) =>
-      sql.includes('any(') ? { rows: [{ id: '60000' }, { id: '71801' }] } : { rows: [] },
-    );
-
-    await expect(servicio.buscar(dto())).resolves.toEqual({ datos: [], total: 0 });
+  it('sin resultados devuelve total 0', async () => {
+    await expect(servicioBd([]).buscar(dto())).resolves.toEqual({ datos: [], total: 0 });
   });
 
   it('responde 404 si una estación no existe', async () => {
-    const servicio = servicioCon(async (sql) =>
-      sql.includes('any(') ? { rows: [{ id: '60000' }] } : { rows: [] },
-    );
+    const servicio = servicioBd([], { origenes: null, destinos: ['71801'] });
 
     await expect(servicio.buscar(dto())).rejects.toBeInstanceOf(NotFoundException);
   });
@@ -136,6 +195,22 @@ describe('TrenesService', () => {
     });
 
     await expect(servicio.buscar(dto())).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('no repite la consulta de estaciones en búsquedas seguidas', async () => {
+    let expansiones = 0;
+    const servicio = servicioCon(async (sql) => {
+      if (sql.includes('as origenes')) {
+        expansiones++;
+        return { rows: [{ origenes: ['60000'], destinos: ['71801'] }] };
+      }
+      return { rows: [fila] };
+    });
+
+    await servicio.buscar(dto());
+    await servicio.buscar(dto());
+
+    expect(expansiones).toBe(1);
   });
 });
 
