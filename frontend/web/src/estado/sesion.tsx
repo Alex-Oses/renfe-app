@@ -1,7 +1,7 @@
 // Sesión del usuario. Dueño: agente de cuenta.
 // Se guarda en sessionStorage: dura lo que la pestaña y no se comparte entre pestañas.
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { usarToken } from "@renfe/shared/api/cliente";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { alSesionInvalida, usarToken } from "@renfe/shared/api/cliente";
 import { CLAVE_SESION } from "@renfe/shared/api/simulado-cuenta";
 import type { Sesion, Usuario } from "@renfe/shared/api/tipos";
 
@@ -45,6 +45,8 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     persistir(null);
     setSesion(null);
   }, []);
+  // Token rechazado o API cambiada: la sesión ya no sirve y hay que volver a entrar.
+  useEffect(() => alSesionInvalida(salir), [salir]);
   const actualizarUsuario = useCallback((cambios: Partial<Usuario>) => {
     setSesion((s) => {
       if (!s) return s;

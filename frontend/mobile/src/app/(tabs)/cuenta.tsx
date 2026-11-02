@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { iniciarSesion, registrarse, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { alSesionInvalida, iniciarSesion, registrarse, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { CUENTAS_DEMO } from "@renfe/shared/api/simulado-cuenta";
 import type { Sesion } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
@@ -54,6 +54,7 @@ export default function Cuenta() {
 
   // La sesión se guarda en sessionStorage (en la app, SQLite): sobrevive a recargar sin cerrar.
   useEffect(() => setSesion(leerSesion()), []);
+  useEffect(() => alSesionInvalida(() => setSesion(null)), []);
 
   const entrar = (s: Sesion) => {
     guardarSesion(s);
