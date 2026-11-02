@@ -32,6 +32,8 @@ export interface Criterios {
 export interface CriteriosIniciales {
   origen?: string;
   destino?: string;
+  origenNombre?: string;
+  destinoNombre?: string;
   fecha?: string;
   adultos?: number;
   pasajeros?: number;
@@ -47,19 +49,19 @@ const hoyIso = () => {
 };
 
 const descuentoNombre = (id: string) => DESCUENTOS.find((d) => d.id === id)?.nombre ?? "Sin descuento";
-const estacionDe = (id?: string) => ESTACIONES.find((e) => e.id === id) ?? null;
+// Las estaciones reales no están en la lista simulada: con el nombre del enlace basta para mostrarla.
+const estacionDe = (id?: string, nombre?: string): Estacion | null =>
+  ESTACIONES.find((e) => e.id === id) ?? (id && nombre ? { id, nombre, ciudad: "", lat: 0, lon: 0 } : null);
 
 // Buscador de la portada y de los resultados: misma estructura que el de la web (trayecto con
 // línea morada, Solo ida / Ida y vuelta, fecha, viajeros y descuento) adaptada a campos táctiles.
 export function Buscador({ onBuscar, inicial }: { onBuscar: (c: Criterios) => void; inicial?: CriteriosIniciales }) {
-  const madrid = ESTACIONES.find((e) => e.id === "60000") ?? null;
-  const barcelona = ESTACIONES.find((e) => e.id === "71801") ?? null;
   const ninosInicial = inicial?.ninos ?? 0;
   const [origen, setOrigen] = useState<Estacion | null>(() =>
-    inicial?.origen !== undefined ? estacionDe(inicial.origen) : madrid,
+    estacionDe(inicial?.origen, inicial?.origenNombre),
   );
   const [destino, setDestino] = useState<Estacion | null>(() =>
-    inicial?.destino !== undefined ? estacionDe(inicial.destino) : barcelona,
+    estacionDe(inicial?.destino, inicial?.destinoNombre),
   );
   const [fecha, setFecha] = useState(inicial?.fecha || hoyIso());
   const [idaVuelta, setIdaVuelta] = useState(!!inicial?.vuelta);
@@ -76,6 +78,17 @@ export function Buscador({ onBuscar, inicial }: { onBuscar: (c: Criterios) => vo
   const intercambiar = () => {
     setOrigen(destino);
     setDestino(origen);
+  };
+
+  // Por pasos, como la web: el destino se habilita al elegir origen y se abre solo a continuación.
+  const elegirOrigen = (e: Estacion) => {
+    setOrigen(e);
+    setError("");
+    if (!destino || destino.id === e.id) {
+      setDestino(null);
+      // La hoja de origen se cierra después de onElegir: se espera a que acabe para abrir la de destino.
+      setTimeout(() => setHoja("destino"), 350);
+    }
   };
 
   const buscar = () => {
@@ -134,13 +147,15 @@ export function Buscador({ onBuscar, inicial }: { onBuscar: (c: Criterios) => vo
         <View style={styles.lineaCampo} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Destino: ${destino?.nombre ?? "sin elegir"}`}
+          accessibilityLabel={`Destino: ${destino?.nombre ?? (origen ? "sin elegir" : "elige antes el origen")}`}
+          accessibilityState={{ disabled: !origen }}
+          disabled={!origen}
           onPress={() => setHoja("destino")}
-          style={({ pressed }) => [styles.campoTrayecto, pressed && { opacity: 0.7 }]}
+          style={({ pressed }) => [styles.campoTrayecto, !origen && { opacity: 0.5 }, pressed && { opacity: 0.7 }]}
         >
           <Text style={styles.etiquetaTrayecto}>Hasta</Text>
           <Text style={[styles.valorTrayecto, !destino && styles.placeholder]} numberOfLines={1}>
-            {destino?.nombre ?? "Estación de destino"}
+            {destino?.nombre ?? (origen ? "Estación de destino" : "Elige antes el origen")}
           </Text>
         </Pressable>
         <Pressable
@@ -210,7 +225,7 @@ export function Buscador({ onBuscar, inicial }: { onBuscar: (c: Criterios) => vo
         titulo="Estación de origen"
         seleccion={origen}
         onCerrar={() => setHoja(null)}
-        onElegir={setOrigen}
+        onElegir={elegirOrigen}
       />
       <SelectorEstacion
         visible={hoja === "destino"}

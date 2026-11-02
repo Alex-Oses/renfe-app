@@ -10,9 +10,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { posicionesTrenes } from "@renfe/shared/api/cliente";
+import { completarRuta, posicionesTrenes } from "@renfe/shared/api/cliente";
 import { posicionesEn } from "@renfe/shared/api/simulado-tiempo-real";
 import type { PosicionTren } from "@renfe/shared/api/tipos";
+import { ciudadCorta, etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas } from "@renfe/shared/estado/estado-tren";
 import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { MapaTrenes } from "@/components/MapaTrenes";
@@ -42,25 +43,19 @@ function conLimite<T>(p: Promise<T>, ms: number): Promise<T> {
 
 const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
-// "Madrid-Puerta de Atocha" → "Madrid"; respeta "A Coruña".
-function ciudadCorta(estacion: string): string {
-  if (!estacion) return "";
-  const [base] = estacion.split("-");
-  const [primera, segunda] = base.split(" ");
-  return primera.length > 1 || !segunda ? primera : `${primera} ${segunda}`;
-}
 
 const horaCorta = (iso: string) =>
   new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
-function Retraso({ min, compacto }: { min: number; compacto?: boolean }) {
-  const nivel = min === 0 ? "ok" : min <= 15 ? "medio" : "alto";
-  const fondo = nivel === "ok" ? tonos.exitoFondo : nivel === "medio" ? tonos.avisoFondo : tonos.errorFondo;
-  const color = nivel === "ok" ? tonos.exito : nivel === "medio" ? tonos.aviso : colores.error;
+// Mismo criterio que la web: adelantado cuenta como puntual y null es "Sin datos", no "A tiempo".
+function Retraso({ seg, compacto }: { seg: number | null; compacto?: boolean }) {
+  const nivel = nivelRetraso(seg);
+  const fondo = nivel === "ok" ? tonos.exitoFondo : nivel === "medio" ? tonos.avisoFondo : nivel === "alto" ? tonos.errorFondo : "rgba(129,0,94,0.06)";
+  const color = nivel === "ok" ? tonos.exito : nivel === "medio" ? tonos.aviso : nivel === "alto" ? colores.error : colores.textoSuave;
   return (
     <View style={[styles.retraso, { backgroundColor: fondo }, compacto && styles.retrasoCompacto]}>
-      {min === 0 ? <View style={[styles.puntoEstado, { backgroundColor: color }]} /> : null}
-      <Text style={[styles.retrasoTexto, { color }]}>{min === 0 ? "Puntual" : `+${min} min`}</Text>
+      {nivel === "ok" ? <View style={[styles.puntoEstado, { backgroundColor: color }]} /> : null}
+      <Text style={[styles.retrasoTexto, { color }]}>{etiquetaRetraso(seg)}</Text>
     </View>
   );
 }
@@ -76,12 +71,14 @@ export default function Directo() {
   const [filtro, setFiltro] = useState("");
   const [seleccion, setSeleccion] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
+  const [rutas, setRutas] = useState<Record<string, PosicionTren>>({});
 
   const vivo = useRef(true);
   const enVuelo = useRef(false);
   const fuenteRef = useRef<Fuente>("cargando");
   const trenesRef = useRef<PosicionTren[]>([]);
   const fallos = useRef(0);
+  const pedidos = useRef(new Set<string>());
 
   const cargar = useCallback(async (primera: boolean) => {
     if (enVuelo.current) return;
@@ -138,7 +135,42 @@ export default function Directo() {
     return trenes.filter((t) => sinTildes(`${t.numero} ${t.tipo} ${t.origen} ${t.destino} ${t.proximaParada} ${t.linea ?? ""}`).includes(q));
   }, [trenes, filtro]);
 
-  const elegido = trenes.find((t) => t.trenId === seleccion);
+  const base = trenes.find((t) => t.trenId === seleccion);
+
+  // Las posiciones reales llegan sin paradas: se pide el recorrido una vez por tren, como en la web.
+  useEffect(() => {
+    if (!base || base.paradas.length || pedidos.current.has(base.trenId)) return;
+    pedidos.current.add(base.trenId);
+    completarRuta(base).then(
+      (t) => {
+        if (vivo.current && t.paradas.length) setRutas((r) => ({ ...r, [t.trenId]: t }));
+      },
+      () => {
+        /* sin recorrido: el detalle avisa de que Renfe no lo publica */
+      },
+    );
+  }, [base]);
+
+  // Lo ya recorrido se recalcula con el reloj; la posición y el retraso del tiempo real mandan.
+  const minuto = Math.floor(ahora / 60_000) * 60_000;
+  const elegido = useMemo(() => {
+    if (!base) return undefined;
+    const ruta = rutas[base.trenId] ?? base;
+    const paradas = repasarParadas(ruta.paradas, minuto);
+    if (!paradas.length) return base;
+    const proxima = proximaDe(paradas);
+    return {
+      ...ruta,
+      lat: base.lat,
+      lon: base.lon,
+      actualizado: base.actualizado,
+      retrasoSeg: base.retrasoSeg ?? ruta.retrasoSeg,
+      progreso: progresoDe(paradas),
+      proximaParada: proxima?.nombre ?? "",
+      llegadaProxima: proxima?.llegada,
+      paradas,
+    };
+  }, [base, rutas, minuto]);
   const hace = ultima === null ? null : Math.max(0, Math.round((ahora - ultima) / 1000));
 
   const elegir = (t: PosicionTren) => {
@@ -158,7 +190,12 @@ export default function Directo() {
 
   return (
     <View style={{ flex: 1 }}>
-      <MapaTrenes trenes={trenes} seleccion={seleccion} onElegir={elegir} />
+      {/* El elegido sustituye a su posición para que el mapa pinte el recorrido completado. */}
+      <MapaTrenes
+        trenes={elegido ? trenes.map((t) => (t.trenId === elegido.trenId ? elegido : t)) : trenes}
+        seleccion={seleccion}
+        onElegir={elegir}
+      />
 
       <View style={[styles.superior, { top: insets.top + 8 }]} pointerEvents="box-none">
         <Cristal intensidad={55} padding={0} gap={0} style={styles.pastilla}>
@@ -230,7 +267,7 @@ export default function Directo() {
                 <View style={[styles.tipoGrande, { backgroundColor: colorTipoDe(elegido.tipo) }]}>
                   <Text style={styles.tipoGrandeTexto}>{elegido.tipo}</Text>
                 </View>
-                <Retraso min={elegido.retrasoMin} />
+                <Retraso seg={elegido.retrasoSeg} />
               </View>
 
               {elegido.progreso > 0 ? (
@@ -370,7 +407,7 @@ export default function Directo() {
                   <Pressable
                     accessibilityRole="button"
                     accessibilityState={{ selected: activo }}
-                    accessibilityLabel={`${t.tipo} ${t.numero}. ${ruta}. ${t.retrasoMin ? `Retraso de ${t.retrasoMin} minutos` : "Puntual"}`}
+                    accessibilityLabel={`${t.tipo} ${t.numero}. ${ruta}. ${etiquetaRetraso(t.retrasoSeg)}`}
                     onPress={() => elegir(t)}
                     style={({ pressed }) => [styles.filaTren, activo && styles.filaTrenActiva, pressed && { backgroundColor: "rgba(129,0,94,0.06)" }]}
                   >
@@ -389,7 +426,7 @@ export default function Directo() {
                             : "Señal GPS recibida"}
                       </Text>
                     </View>
-                    <Retraso min={t.retrasoMin} compacto />
+                    <Retraso seg={t.retrasoSeg} compacto />
                   </Pressable>
                 );
               }}

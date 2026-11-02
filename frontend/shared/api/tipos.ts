@@ -133,6 +133,9 @@ export interface Pasajero {
 export interface OpcionTransbordo {
   tramos: [Tren, Tren];
   transbordo: { id: string; nombre: string };
+  /** El cambio es en otra estación de la misma ciudad: `transbordo` es la llegada y esto la salida. */
+  cambioEstacion?: boolean;
+  transbordoSalida?: { id: string; nombre: string };
   esperaMin: number;
   duracionMin: number;
   precio: number; // suma por plaza

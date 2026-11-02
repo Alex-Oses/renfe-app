@@ -1,7 +1,7 @@
 // Deducciones sobre un tren del mapa que no dependen de React: así se pueden probar solas.
 // El retraso de GTFS-RT puede ser negativo (el tren va adelantado) y null (la fuente no lo dice):
 // tratarlo como "0 o tarde" daría por puntual un tren del que no sabemos nada.
-import type { ParadaRuta } from "@renfe/shared/api/tipos";
+import type { ParadaRuta } from "../api/tipos";
 
 export type NivelRetraso = "ok" | "medio" | "alto" | "sin-datos";
 
