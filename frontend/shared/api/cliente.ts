@@ -48,6 +48,7 @@ import { billeteDeApi, claseDeApi, cuerpoReserva, reservaDeApi, reservaDeBillete
 import { cuerpoRegistrarCara, cuerpoVerificarCara, validarEmbedding } from "./cara";
 import { recordarEstaciones } from "./estaciones-memoria";
 import { parsearEventos } from "./flujo-chatbot";
+import { haSalido } from "./salidas";
 import * as trenes from "./simulado";
 import * as reservas from "./simulado-reservas";
 import * as cuenta from "./simulado-cuenta";
@@ -485,6 +486,8 @@ export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
 // Reserva y pago en un paso: con la API real POST /reservas ya devuelve la reserva pagada;
 // en el simulado hay que pasar por el intento de pago y la confirmación.
 export async function comprarReserva(tren: Tren, r: NuevaReserva): Promise<Reserva> {
+  // También en modo simulado: sin esto, sin API se podía comprar un tren ya salido.
+  if (haSalido(tren.salida)) throw new Error("Ese tren ya ha salido: elige otro horario.");
   const creada = await crearReserva(tren, r);
   if (BASE) return creada;
   await crearIntentoPago(creada.id);

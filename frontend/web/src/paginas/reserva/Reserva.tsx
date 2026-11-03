@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { calcularPrecio, obtenerAsientos, obtenerTren, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
+import { haSalido } from "@renfe/shared/api/salidas";
 import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
 import { DESCUENTOS, TARIFAS } from "@renfe/shared/api/simulado-precios";
 import { PasoAsientos } from "./PasoAsientos";
@@ -51,6 +52,11 @@ export default function Reserva() {
     obtenerTren(trenId)
       .then(async (detalle) => {
         const t = soloTramo(detalle, params.get("origen"), params.get("destino"));
+        // Cubre el enlace directo a /reserva/:id de un tren que ya ha salido.
+        if (haSalido(t.salida)) {
+          setError("Ese tren ya ha salido. Vuelve a buscar un horario disponible.");
+          return;
+        }
         setTren(t);
         setAsientos(await obtenerAsientos(t));
       })

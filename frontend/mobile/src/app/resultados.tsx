@@ -1,4 +1,5 @@
 import { claveTramo } from "@renfe/shared/api/comprar-transbordo";
+import { haSalido } from "@renfe/shared/api/salidas";
 import { FRANJAS, duracionMin, minutosDelDia } from "@renfe/shared/billetes/viaje";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -339,6 +340,7 @@ export default function Resultados() {
                 const izquierda = ((minutosDelDia(t.salida) - inicio) / Math.max(fin - inicio, 1)) * 100;
                 const ancho = Math.max((dur / Math.max(fin - inicio, 1)) * 100, 6);
                 const completo = t.plazasLibres < pasajeros;
+                const salido = haSalido(t.salida);
                 const expandido = abierto === t.id;
                 return (
                   <View key={t.id} style={[styles.filaTren, i > 0 && styles.filaTrenBorde]}>
@@ -361,13 +363,15 @@ export default function Resultados() {
                         <Text style={styles.tipo} numberOfLines={1}>
                           <Text style={{ fontFamily: fuentes.negrita }}>{t.tipo}</Text> {t.numero}
                         </Text>
-                        {completo ? (
+                        {salido ? (
+                          <Text style={styles.agotado}>Ya ha salido</Text>
+                        ) : completo ? (
                           <Text style={styles.agotado}>
                             {t.plazasLibres === 0 ? "Completo" : `Solo ${t.plazasLibres} plazas`}
                           </Text>
                         ) : null}
                       </View>
-                      {completo ? null : (
+                      {completo || salido ? null : (
                         <>
                           <Text style={styles.precio}>{euros(t.precioDesde)}</Text>
                           <Pressable

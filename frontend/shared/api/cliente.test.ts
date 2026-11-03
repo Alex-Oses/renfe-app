@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buscarEstaciones,
   buscarTrenes,
@@ -169,7 +169,23 @@ describe("reserva móvil autenticada", () => {
 });
 
 describe("compra completa desde móvil", () => {
+  // El fixture sale el 2026-11-02 a las 07:15: se fija el reloj para no depender del día real.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-02T07:00:00+01:00") });
+  });
+
   afterEach(() => usarToken(null));
+
+  it("no compra un tren que ya ha salido ni llama a la red", async () => {
+    configurarApi({ api: "http://api" });
+    usarToken("token-de-la-sesion");
+    const llamadas = api(() => Response.json({}, { status: 201 }));
+
+    await expect(
+      comprarReserva({ ...trenReserva, salida: "2026-11-02T06:00:00+01:00" }, nuevaReserva),
+    ).rejects.toThrow("ya ha salido");
+    expect(llamadas).toHaveLength(0);
+  });
 
   it("con API no pide /pagos/intent: la reserva creada ya está pagada", async () => {
     configurarApi({ api: "http://api" });

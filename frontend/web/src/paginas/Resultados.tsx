@@ -3,6 +3,7 @@ import { euros, hora } from "@renfe/shared/formato/formato";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { claveTramo } from "@renfe/shared/api/comprar-transbordo";
+import { haSalido } from "@renfe/shared/api/salidas";
 import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { OpcionTransbordo, TipoTren, Tren } from "@renfe/shared/api/tipos";
 import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
@@ -296,8 +297,9 @@ export function Resultados() {
             const izquierda = ((minutosDelDia(t.salida) - inicio) / (fin - inicio)) * 100;
             const ancho = (dur / (fin - inicio)) * 100;
             const completo = t.plazasLibres < pasajeros;
+            const salido = haSalido(t.salida);
             return (
-              <li key={t.id} className={`tren aparece-escalonado${completo ? " tren--completo" : ""}`} style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
+              <li key={t.id} className={`tren aparece-escalonado${completo || salido ? " tren--completo" : ""}`} style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
                 <div className="tren__horas">
                   <time dateTime={t.salida}>{hora(t.salida)}</time>
                   <span className="tren__duracion">{textoDuracion(dur)}</span>
@@ -310,7 +312,9 @@ export function Resultados() {
                   <span className="tren__tipo">{t.tipo}</span> {t.numero || t.linea}
                 </div>
                 <div className="tren__compra">
-                  {completo ? (
+                  {salido ? (
+                    <span className="tren__agotado">Ya ha salido</span>
+                  ) : completo ? (
                     <span className="tren__agotado">{t.plazasLibres === 0 ? "Completo" : `Solo ${t.plazasLibres} plazas`}</span>
                   ) : (
                     <>

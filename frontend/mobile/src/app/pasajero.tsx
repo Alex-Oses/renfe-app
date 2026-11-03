@@ -2,6 +2,7 @@ import { documentoValido, emailValido } from "@renfe/shared/billetes/viaje";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
+import { haSalido } from "@renfe/shared/api/salidas";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import {
@@ -75,11 +76,18 @@ export default function Pasajero() {
     obtenerTren(trenId)
       .then(async (detalle) => {
         const t = soloTramo(detalle, params.origen, params.destino);
+        if (haSalido(t.salida)) return null;
         return [t, await obtenerAsientos(t)] as const;
       })
       .then(
-      ([t, a]) => {
+      (par) => {
         if (!vivo) return;
+        if (!par) {
+          setError("Ese tren ya ha salido. Vuelve a los resultados y elige otro.");
+          setCargando(false);
+          return;
+        }
+        const [t, a] = par;
         setTren(t);
         setAsientos(a);
         setCargando(false);
@@ -166,6 +174,10 @@ export default function Pasajero() {
   // Compra ya validada: solo se llama con la confirmación facial de este intento.
   const comprar = useCallback(async () => {
     if (!tren) return;
+    if (haSalido(tren.salida)) {
+      setError("Ese tren ya ha salido. Vuelve a los resultados y elige otro.");
+      return;
+    }
     setError("");
     setPagando(true);
     try {
@@ -197,6 +209,11 @@ export default function Pasajero() {
 
   const pagar = () => {
     if (!tren) return;
+    if (haSalido(tren.salida)) {
+      setError("Ese tren ya ha salido. Vuelve a los resultados y elige otro.");
+      scroll.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
     if (!validar()) {
       setError("");
       scroll.current?.scrollTo({ y: 0, animated: true });

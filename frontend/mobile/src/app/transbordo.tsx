@@ -5,6 +5,7 @@ import {
   buscarTransbordos,
 } from "@renfe/shared/api/cliente";
 import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import { haSalido } from "@renfe/shared/api/salidas";
 import type { NuevaReserva, OpcionTransbordo, Pasajero, Reserva } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
@@ -46,8 +47,10 @@ export default function Transbordo() {
       (lista) => {
         if (!vivo) return;
         const elegida = lista.find((o) => o.tramos[0].id === a && o.tramos[1].id === b);
-        if (elegida) setOpcion(elegida);
-        else setError("Esa combinación ya no está disponible. Vuelve a buscar.");
+        if (!elegida) setError("Esa combinación ya no está disponible. Vuelve a buscar.");
+        else if (haSalido(elegida.tramos[0].salida)) {
+          setError("El primer tren ya ha salido. Vuelve a buscar otra combinación.");
+        } else setOpcion(elegida);
       },
       (e: Error) => vivo && setError(e.message),
     );
@@ -83,6 +86,10 @@ export default function Transbordo() {
 
   const pagar = () => {
     if (!opcion) return;
+    if (haSalido(opcion.tramos[0].salida)) {
+      setError("El primer tren ya ha salido. Vuelve a buscar otra combinación.");
+      return;
+    }
     if (datos.some((p) => !p.nombre.trim() || !p.apellidos.trim() || !validarDocumento(p.documento))) {
       setError("Rellena nombre, apellidos y documento (6 a 12 letras o números) de cada viajero.");
       return;
