@@ -21,7 +21,7 @@ import {
 } from '../../common/formato.js';
 import { PREFIJO_BILLETE, firmar } from '../../common/qr/firma.js';
 import { BdService } from '../../common/bd/bd.service.js';
-import { kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
+import { centimosViajero, kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
 import { CorreoService, htmlDeCorreo } from '../../common/correo/correo.service.js';
 import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import type { CrearReservaDto } from './dto/crear-reserva.dto.js';
@@ -371,7 +371,8 @@ export class ReservasService {
         `${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`,
       ) * 100,
     );
-    const totalCentimos = precioCentimos * plazas;
+    const centimos = dto.pasajeros.map((p) => centimosViajero(precioCentimos, p.tipo, dto.tarifa, dto.descuento));
+    const totalCentimos = centimos.reduce((s, c) => s + c, 0);
 
     const { rows: reservas } = await cliente.query<FilaReserva>(SQL_RESERVA, [
       usuarioId,
@@ -453,7 +454,7 @@ export class ReservasService {
         asiento.coche,
         asientoEtiqueta,
         asiento.clase,
-        precioCentimos,
+        centimos[indice]!,
         qr,
         expira,
       ]);
@@ -464,7 +465,7 @@ export class ReservasService {
         coche: asiento.coche,
         asiento: asientoEtiqueta,
         clase: claseVisible(asiento.clase),
-        precio: precioCentimos / 100,
+        precio: centimos[indice]! / 100,
       });
     }
 

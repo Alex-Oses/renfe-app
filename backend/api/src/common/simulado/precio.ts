@@ -37,3 +37,22 @@ export function precioSimulado(tipoServicio: string | null, km: number, clave: s
   const demanda = 0.85 + (semilla(`${clave}:precio`) % 3001) / 10000;
   return Math.round(base * demanda * 20) / 20;
 }
+
+// Mismas reglas que la web (frontend/shared/api/simulado-precios.ts): tarifa por factor, niño 40 % y la
+// tarjeta no se acumula con el niño (gana el mayor).
+export const TIPOS_VIAJERO = ['adulto', 'nino'] as const;
+export type TipoViajero = (typeof TIPOS_VIAJERO)[number];
+export const FACTOR_TARIFA: Record<string, number> = { basico: 1, elige: 1.25, 'elige-confort': 1.5, premium: 1.9 };
+export const PCT_DESCUENTO: Record<string, number> = {
+  ninguno: 0,
+  joven: 30,
+  dorada: 40,
+  'fn-general': 20,
+  'fn-especial': 50,
+};
+export const PCT_NINO = 40;
+
+export function centimosViajero(base: number, tipo = 'adulto', tarifa = 'basico', descuento = 'ninguno'): number {
+  const pct = Math.max(tipo === 'nino' ? PCT_NINO : 0, PCT_DESCUENTO[descuento] ?? 0);
+  return Math.round(base * (FACTOR_TARIFA[tarifa] ?? 1) * (1 - pct / 100));
+}
