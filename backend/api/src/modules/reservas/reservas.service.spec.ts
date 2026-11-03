@@ -147,6 +147,29 @@ describe('ReservasService.crear', () => {
     expect(reserva.billetes[1]!.asiento).toBe('1B');
   });
 
+  // Con coordenadas el precio simulado deja de ser NaN y los importes se pueden comparar.
+  const VIAJE_MEDIDO = {
+    ...VIAJE,
+    lat_o: 40.4065,
+    lon_o: -3.6895,
+    lat_d: 41.6585,
+    lon_d: -0.8804,
+  };
+
+  it('aplica tarifa, descuento y extras en el servidor y devuelve el desglose', async () => {
+    const sinNada = await servicioCon({ viaje: VIAJE_MEDIDO }).crear('usuario-1', dto());
+    const completa = await servicioCon({ viaje: VIAJE_MEDIDO }).crear(
+      'usuario-1',
+      dto({ tarifa: 'premium', descuento: 'joven', extras: ['equipaje'] }),
+    );
+
+    // 54,90 € de asiento × 1,9 (premium) × 0,7 (joven, −30 %) = 73,02 € + 15 € de equipaje.
+    expect(completa.billetes[0]!.precio).toBe(73.02);
+    expect(completa.desglose).toEqual({ billetes: 73.02, extras: 15, total: 88.02 });
+    expect(completa.total).toBe(88.02);
+    expect(completa.total).toBeGreaterThan(sinNada.total);
+  });
+
   it('rechaza fechas pasadas sin tocar la BD', async () => {
     await expect(
       servicioCon().crear('usuario-1', dto({ fecha: '2020-01-01' })),
