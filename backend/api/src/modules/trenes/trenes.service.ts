@@ -5,6 +5,7 @@ import { duracionMin, intervaloAIso } from '../../common/gtfs/tiempo.js';
 import type { BuscarTrenesDto } from './dto/buscar-trenes.dto.js';
 import { claseVisible, etiquetaAsiento } from '../../common/formato.js';
 import { kmTrayecto, plazasSimuladas, precioSimulado } from './simulado.js';
+import { esperaSuficiente } from './transbordos.js';
 
 export interface Tren {
   id: string;
@@ -316,11 +317,6 @@ const SQL_TRANSBORDOS = `with ida as (
    order by llega_i limit $4
 `;
 
-const minutosDe = (hora: string) => {
-  const [h, m] = hora.split(':').map(Number);
-  return h! * 60 + m!;
-};
-
 @Injectable()
 export class TrenesService {
   constructor(private readonly bd: BdService) {}
@@ -391,19 +387,29 @@ export class TrenesService {
       if (error instanceof NotFoundException) throw error;
       throw new ServiceUnavailableException('La base de datos no está disponible');
     }
-    const datos = filas.map(({ a, b }) => {
-      const tramos: [Tren, Tren] = [aTren(a, fecha), aTren(b, fecha)];
-      const cambioEstacion = a.destino_id !== b.origen_id;
-      return {
-        tramos,
-        transbordo: { id: a.destino_id, nombre: a.destino_nombre },
-        cambioEstacion,
-        ...(cambioEstacion && { transbordoSalida: { id: b.origen_id, nombre: b.origen_nombre } }),
-        esperaMin: minutosDe(b.sale) - minutosDe(a.llega),
-        duracionMin: minutosDe(b.llega) - minutosDe(a.sale),
-        precio: Math.round((tramos[0].precioDesde + tramos[1].precioDesde) * 100) / 100,
-      };
-    });
+    const datos = filas
+      .map(({ a, b }) => {
+        const tramos: [Tren, Tren] = [aTren(a, fecha), aTren(b, fecha)];
+        const cambioEstacion = a.destino_id !== b.origen_id;
+        return {
+          tramos,
+          transbordo: { id: a.destino_id, nombre: a.destino_nombre },
+          cambioEstacion,
+          ...(cambioEstacion && { transbordoSalida: { id: b.origen_id, nombre: b.origen_nombre } }),
+          // Se recalcula con los ISO: `minutosDe` fallaba al cruzar la medianoche.
+          esperaMin: Math.round(
+            (Date.parse(tramos[1].salida) - Date.parse(tramos[0].llegada)) / 60_000,
+          ),
+          duracionMin: Math.round(
+            (Date.parse(tramos[1].llegada) - Date.parse(tramos[0].salida)) / 60_000,
+          ),
+          precio: Math.round((tramos[0].precioDesde + tramos[1].precioDesde) * 100) / 100,
+        };
+      })
+      // Defensa en profundidad: si el SQL o los datos cambian, nunca sale un enlace imposible.
+      .filter((opcion) =>
+        esperaSuficiente(opcion.tramos[0].llegada, opcion.tramos[1].salida, opcion.cambioEstacion),
+      );
     return { datos, total: datos.length };
   }
 

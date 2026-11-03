@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { buscarTransbordos } from "@renfe/shared/api/cliente";
-import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
 import type { NuevaReserva, OpcionTransbordo, Pasajero } from "@renfe/shared/api/tipos";
 import { useSesion } from "../../estado/sesion";
 import { euros, hora } from "@renfe/shared/formato/formato";
@@ -26,7 +26,8 @@ export default function ReservaTransbordo() {
   useEffect(() => {
     buscarTransbordos({ origen, destino, fecha }).then(
       (lista) => {
-        const elegida = lista.find((o) => o.tramos[0].id === a && o.tramos[1].id === b);
+        // En la URL va `claveTramo` (tipo|número|salida), no el `id`, que cambia entre búsquedas.
+        const elegida = buscarOpcion(lista, a, b);
         if (elegida) setOpcion(elegida);
         else setError("Esa combinación ya no está disponible. Vuelve a buscar.");
       },

@@ -49,6 +49,7 @@ import { cuerpoRegistrarCara, cuerpoVerificarCara, validarEmbedding } from "./ca
 import { recordarEstaciones } from "./estaciones-memoria";
 import { parsearEventos } from "./flujo-chatbot";
 import { haSalido } from "./salidas";
+import { transbordoViable } from "./transbordos";
 import * as trenes from "./simulado";
 import * as reservas from "./simulado-reservas";
 import * as cuenta from "./simulado-cuenta";
@@ -416,7 +417,9 @@ export async function buscarTransbordos(b: BusquedaTrenes): Promise<OpcionTransb
   const opciones = await datos<Omit<OpcionTransbordo, "tramos"> & { tramos: [TrenApi, TrenApi] }>(
     `/trenes/transbordos?${new URLSearchParams({ ...b })}`,
   );
-  return opciones.map((o) => ({ ...o, tramos: [aTren(o.tramos[0]), aTren(o.tramos[1])] }));
+  return opciones
+    .map((o) => ({ ...o, tramos: [aTren(o.tramos[0]), aTren(o.tramos[1])] as [Tren, Tren] }))
+    .filter(transbordoViable);
 }
 
 // GET /trenes/:feed/:tripId?fecha=  (detalle: paradas, horas y retraso por parada)

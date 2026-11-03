@@ -4,7 +4,7 @@ import { ActivityIndicator, Text, View } from "react-native";
 import {
   buscarTransbordos,
 } from "@renfe/shared/api/cliente";
-import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
 import { haSalido } from "@renfe/shared/api/salidas";
 import type { NuevaReserva, OpcionTransbordo, Pasajero, Reserva } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
@@ -46,7 +46,8 @@ export default function Transbordo() {
     buscarTransbordos({ origen, destino, fecha }).then(
       (lista) => {
         if (!vivo) return;
-        const elegida = lista.find((o) => o.tramos[0].id === a && o.tramos[1].id === b);
+        // La URL lleva `claveTramo` (tipo|número|salida), no el `id` del viaje.
+        const elegida = buscarOpcion(lista, a, b);
         if (!elegida) setError("Esa combinación ya no está disponible. Vuelve a buscar.");
         else if (haSalido(elegida.tramos[0].salida)) {
           setError("El primer tren ya ha salido. Vuelve a buscar otra combinación.");
