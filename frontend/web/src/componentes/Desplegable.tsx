@@ -1,13 +1,13 @@
 // Combobox accesible de estaciones (patrón ARIA 1.2 combobox + listbox).
+import { sinTildes } from "@renfe/shared/formato/texto";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { buscarEstaciones } from "@renfe/shared/api/cliente";
 import type { Estacion } from "@renfe/shared/api/tipos";
 
-const base = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
-// Resalta la primera coincidencia; base() conserva la longitud con los acentos del español.
+// Resalta la primera coincidencia; sinTildes() conserva la longitud con los acentos del español.
 function resaltar(texto: string, q: string): ReactNode {
-  const i = q.trim() ? base(texto).indexOf(base(q.trim())) : -1;
+  const i = q.trim() ? sinTildes(texto).indexOf(sinTildes(q.trim())) : -1;
   if (i < 0) return texto;
   const f = i + q.trim().length;
   return (

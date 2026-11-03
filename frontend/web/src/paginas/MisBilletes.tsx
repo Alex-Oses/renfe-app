@@ -1,3 +1,4 @@
+import { slug } from "@renfe/shared/formato/texto";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Link, Navigate, useLocation } from "react-router-dom";
@@ -92,9 +93,6 @@ function Lista({ titulo, viajes, vacio, pasado }: { titulo: string; viajes: Viaj
   );
 }
 
-// Slug de la ciudad para buscar su foto ("Málaga" -> "malaga", "A Coruña" -> "a-coruna").
-const slug = (t: string) =>
-  t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // Barras decorativas del talón sacadas del localizador: siempre las mismas para el mismo billete.
 const barras = (codigo: string) => [...codigo.repeat(3)].map((c, i) => ({ x: i * 4, w: 1 + (c.charCodeAt(0) % 3) }));

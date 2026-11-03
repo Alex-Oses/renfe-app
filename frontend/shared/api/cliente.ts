@@ -1,5 +1,6 @@
 // Único punto de acceso a la API. Sin VITE_API_URL se usan datos simulados.
 // Cada función corresponde a un endpoint de obsidian/02-contratos-api/endpoints.md.
+import { sinTildes } from "../formato/texto";
 import type {
   TipoTren,
   Abono,
@@ -524,7 +525,6 @@ export async function posicionDeTren(id: string): Promise<PosicionTren | null> {
 // El detalle de un viaje solo da id y nombre de cada parada; las coordenadas están en /estaciones.
 // Se guardan por id para no repetir la búsqueda al volver a elegir el mismo tren.
 const coordenadas = new Map<string, { lat: number; lon: number }>();
-const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 async function coordenadasDe(p: ParadaViaje): Promise<{ lat: number; lon: number } | null> {
   const guardada = coordenadas.get(p.estacionId);

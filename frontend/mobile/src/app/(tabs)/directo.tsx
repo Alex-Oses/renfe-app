@@ -1,3 +1,4 @@
+import { sinTildes } from "@renfe/shared/formato/texto";
 import { horaLocal } from "@renfe/shared/formato/formato";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -42,7 +43,6 @@ function conLimite<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 // Mismo criterio que la web: adelantado cuenta como puntual y null es "Sin datos", no "A tiempo".
 function Retraso({ seg, compacto }: { seg: number | null; compacto?: boolean }) {

@@ -1,3 +1,4 @@
+import { sinTildes } from "@renfe/shared/formato/texto";
 import { horaLocal } from "@renfe/shared/formato/formato";
 import "leaflet/dist/leaflet.css";
 import "./mapa/mapa.css";
@@ -70,7 +71,6 @@ function Paradas({ tren, ahora }: { tren: PosicionTren; ahora: number }) {
   );
 }
 
-const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 const reducidoInicial = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
