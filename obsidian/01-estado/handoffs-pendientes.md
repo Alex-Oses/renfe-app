@@ -86,7 +86,7 @@ queda, con dueño y motivo:
 | **Medir el umbral de `config_cara`** con cámara real (misma cara con gafas/rotación vs. otra persona) | Rubén | El umbral es dato en BD; sin build no hay medidas. Si no da tiempo, el valor por defecto se queda como está |
 | **Liveness** (parpadeo / profundidad) | Rubén | Los 5 puntos de SCRFD no dan párpados. Límite anotado con `shortcut:` en `ficha.ts`; fuera del alcance de la entrega |
 | **Quitar `EXPO_PUBLIC_WEB_URL` de `frontend/Dockerfile`** (`ARG WEB_URL` + `ENV`) | Kevin | Ya no la lee nadie desde que el facial es nativo; no rompe nada, es limpieza |
-| **Migración de la lógica de negocio** (Fases 0–3) | Rubén (API), Alex (web y móvil) | Plan en [[plan-migracion-logica-frontend]], estado `propuesta`, **ninguna fase empezada**. Mínimo antes de congelar: Fase 0 (contrato de precios) y Fase 1 (cálculo en la API) |
+| **Migración de la lógica de negocio** (Fases 0–3) | Rubén (API), Alex (web y móvil) | Fases 0 y 1 **hechas en la API** ([[2026-11-03-ruben-precios-en-servidor]]): `POST /precios/calcular` y tarifas en `POST /reservas`. **Falta que la web llame a la API** (`Reserva.tsx`, `PasoPago.tsx`, `cuerpoReserva`) y la Fase 2 (transbordos). Fase 3 (aislar simulado): post-entrega |
 | **Latencia de Gemini en el chatbot** | Rubén | Sigue siendo el riesgo de la demo; hay que medirla en el ensayo |
 | **QR: HMAC-SHA256 vs. Ed25519** | Rubén | El código usa HMAC y el contrato histórico decía Ed25519; hay que decidir y alinear [[endpoints]] |
 | **Revisar el fixture de fecha de `cliente.test.ts`** (cambio de 3 líneas) | Alex | El test caducaba el 02/11; lo pasé a 2099 dentro del PR #123 y es su área |
