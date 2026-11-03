@@ -1,8 +1,9 @@
-import type { Billete } from "../api/tipos";
+import type { Billete, TransbordoApi } from "../api/tipos";
 
 export interface Viaje {
   reservaId: string;
   billetes: Billete[]; // ordenados por id (LOC-1, LOC-2...)
+  transbordos?: TransbordoApi[];
   // Segundo tren del mismo viaje, si este se compró con transbordo.
   enlace?: Viaje;
 }
@@ -12,7 +13,11 @@ export function agrupar(billetes: Billete[]): Viaje[] {
   const mapa = new Map<string, Billete[]>();
   for (const b of billetes) mapa.set(b.reservaId, [...(mapa.get(b.reservaId) ?? []), b]);
   return [...mapa]
-    .map(([reservaId, bs]) => ({ reservaId, billetes: bs.sort((a, b) => a.id.localeCompare(b.id, "es", { numeric: true })) }))
+    .map(([reservaId, bs]) => ({
+      reservaId,
+      billetes: bs.sort((a, b) => a.id.localeCompare(b.id, "es", { numeric: true })),
+      transbordos: bs[0]?.transbordos,
+    }))
     .sort((a, b) => a.billetes[0].tren.salida.localeCompare(b.billetes[0].tren.salida));
 }
 
@@ -21,6 +26,8 @@ const MINUTO = 60_000;
 // No se guarda un id de transbordo: dos reservas forman uno si se compraron juntas y una acaba donde
 // empieza la otra, con la espera que ofrece GET /trenes/transbordos (15 min a 3 h).
 function sonTransbordo(a: Viaje, b: Viaje): boolean {
+  if (a.transbordos?.some((t) => t.desde === a.reservaId && t.hasta === b.reservaId)) return true;
+  if (a.transbordos || b.transbordos) return false;
   const [x, y] = [a.billetes[0]!, b.billetes[0]!];
   if (!x.emitido || !y.emitido || a.billetes.length !== b.billetes.length) return false;
   if (x.tren.destino.id !== y.tren.origen.id) return false;

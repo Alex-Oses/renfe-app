@@ -95,7 +95,7 @@ export function datosDeQr(qr: string): DatosQr {
 const aPasajeroApi = (p: Pasajero): PasajeroApi => ({
   nombre: `${p.nombre} ${p.apellidos}`.trim(),
   documento: p.documento.trim(),
-  ...(p.tipo === "nino" ? { tipo: "nino" as const } : {}),
+  tipo: p.tipo ?? "adulto",
 });
 
 // POST /reservas: el tren ya dice feed, tripId, fecha, origen y destino.
@@ -114,10 +114,10 @@ export function cuerpoReserva(tren: Tren, datos: NuevaReserva): NuevaReservaApi 
     origenId: tren.origen.id,
     destinoId: tren.destino.id,
     pasajeros: datos.pasajeros.map(aPasajeroApi),
-    ...(datos.asientos.length ? { asientos: datos.asientos } : {}),
-    ...(datos.tarifa ? { tarifa: datos.tarifa } : {}),
-    ...(datos.descuento && datos.descuento !== "ninguno" ? { descuento: datos.descuento } : {}),
+    ...(datos.tarifa && { tarifa: datos.tarifa }),
+    ...(datos.descuento && { descuento: datos.descuento }),
     ...(datos.extras?.length ? { extras: datos.extras } : {}),
+    ...(datos.asientos.length ? { asientos: datos.asientos } : {}),
   };
 }
 
@@ -132,7 +132,7 @@ export function reservaDeApi(creada: ReservaApi, tren: Tren, datos: NuevaReserva
     tren,
     asientos: creada.billetes.map(asientoEmitido),
     pasajeros: datos.pasajeros.map((p) => ({ ...p, documento: enmascararDocumento(p.documento) })),
-    total: creada.total, // la API ya cobra billetes (tarifa, niño, descuento) y extras
+    total: creada.total,
     tarifa: datos.tarifa,
     descuento: datos.descuento,
     extras: datos.extras,
@@ -166,8 +166,6 @@ export function billeteDeApi(api: BilleteApi): Billete {
     asiento: asientoDeApi(api.asiento, api.coche, api.clase, api.precio),
     pasajero: { nombre, apellidos, documento: qr.doc ?? "", email: "" },
     emitido: api.emitido,
-    extras: api.extras,
-    extrasReserva: api.extrasReserva,
     qr: api.qr,
   };
 }
@@ -182,8 +180,7 @@ export function reservaDeBilletes(billetes: BilleteApi[]): Reserva {
     tren: primero.tren,
     asientos: propios.map((b) => b.asiento),
     pasajeros: propios.map((b) => b.pasajero),
-    total: Math.round((billetes.reduce((suma, b) => suma + b.precio, 0) + (billetes[0]!.extrasReserva ?? 0)) * 100) / 100,
-    extras: billetes[0]!.extras,
+    total: Math.round(billetes.reduce((suma, b) => suma + b.precio, 0) * 100) / 100,
     estado: billetes.some((b) => b.estado === "anulado") ? "cancelada" : "pagada",
     creada: billetes[0]!.emitido,
   };
