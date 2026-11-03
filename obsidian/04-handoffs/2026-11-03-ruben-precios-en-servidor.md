@@ -25,6 +25,10 @@ billete ya no lo decide el frontend.
   (espejo de `frontend/shared/api/simulado-precios.ts`) con sus tests.
 - `common/simulado/precio-trayecto.ts`: el precio base de la butaca de un trayecto, con la misma
   clave determinista que usa la reserva, para que previsualización y cobro coincidan.
+- **`GET /billetes` devuelve `transbordos`** (`[{ desde, hasta }]`, localizadores): la regla que hasta
+  ahora solo vivía en `frontend/shared/billetes/agrupar.ts` (`sonTransbordo`) se resuelve ya en el
+  servidor, así que el cliente solo ordena y pinta. Misma regla: mismo número de billetes, una
+  reserva acaba donde empieza la otra, espera de 15 min a 3 h y menos de 15 min entre emisiones.
 
 ## Qué queda
 
@@ -32,8 +36,12 @@ billete ya no lo decide el frontend.
   llamar a `calcularTotal`, y que `cuerpoReserva` de `adaptador-reservas.ts` envíe `tarifa`,
   `descuento`, `extras` y `tipo` (hoy no los manda, así que la API cobra sin ellos). Móvil: hereda.
   Sin eso el bug sigue, solo que ahora hay servidor para arreglarlo.
-- **Fase 2 (transbordos en la API)** y **Fase 3 (aislar el simulado)**: no empezadas. La 3 se queda
-  para después de la entrega, como pediste.
+- **Alex:** que `unirTransbordos` use el `transbordos` de `GET /billetes` en vez de `sonTransbordo`.
+- **Comprar un transbordo sigue orquestándose en el cliente** (`shared/api/comprar-transbordo.ts`:
+  compra el tramo 1 y, si falla el 2, cancela el 1). No está en el plan y son dos llamadas con
+  compensación; si se quiere en el servidor hace falta un `POST /reservas/transbordo` atómico. No lo
+  he hecho.
+- **Fase 3 (aislar el simulado)**: no empezada. Se queda para después de la entrega, como pediste.
 - `GET /billetes` con `reservaId`: no hecho (el agrupamiento por `localizador` funciona).
 
 ## Bloqueos / preguntas para otros
@@ -42,11 +50,13 @@ billete ya no lo decide el frontend.
 
 ## Cambios en contratos
 
-[[endpoints]]: `POST /precios/calcular` (nuevo) y `POST /reservas` (campos opcionales + `desglose`).
+[[endpoints]]: `POST /precios/calcular` (nuevo), `POST /reservas` (campos opcionales + `desglose`) y
+`GET /billetes` (`transbordos`).
 
 ## Ficheros tocados
 
 - `backend/api/src/common/simulado/precios.ts` (+ `precios.spec.ts`), `precio-trayecto.ts`
 - `backend/api/src/modules/precios/` (`dto/`, controlador, servicio, módulo)
 - `backend/api/src/modules/reservas/` (DTO, servicio, spec) y `app.module.ts`
+- `backend/api/src/modules/billetes/` (`transbordos.ts` + spec, servicio, controlador)
 - `obsidian/02-contratos-api/endpoints.md`
