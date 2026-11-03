@@ -5,7 +5,6 @@
 // - GET /billetes devuelve un billete plano (coche y asiento como texto) y el viajero solo va
 //   dentro del QR firmado; la UI trabaja con un Tren y un Pasajero.
 import { numeroDeServicio, partirIdTren, tipoDeServicio } from "./adaptador-trenes";
-import { calcularTotal } from "./simulado-precios";
 import type {
   Asiento,
   Billete,
@@ -118,6 +117,7 @@ export function cuerpoReserva(tren: Tren, datos: NuevaReserva): NuevaReservaApi 
     ...(datos.asientos.length ? { asientos: datos.asientos } : {}),
     ...(datos.tarifa ? { tarifa: datos.tarifa } : {}),
     ...(datos.descuento && datos.descuento !== "ninguno" ? { descuento: datos.descuento } : {}),
+    ...(datos.extras?.length ? { extras: datos.extras } : {}),
   };
 }
 
@@ -132,8 +132,7 @@ export function reservaDeApi(creada: ReservaApi, tren: Tren, datos: NuevaReserva
     tren,
     asientos: creada.billetes.map(asientoEmitido),
     pasajeros: datos.pasajeros.map((p) => ({ ...p, documento: enmascararDocumento(p.documento) })),
-    // La API ya cobra cada billete con tarifa, niño y descuento; los extras solo los conoce la web.
-    total: Math.round((creada.total + calcularTotal({ precios: creada.billetes.map(() => 0), tarifa: datos.tarifa, extras: datos.extras }).extras) * 100) / 100,
+    total: creada.total, // la API ya cobra billetes (tarifa, niño, descuento) y extras
     tarifa: datos.tarifa,
     descuento: datos.descuento,
     extras: datos.extras,
@@ -167,6 +166,8 @@ export function billeteDeApi(api: BilleteApi): Billete {
     asiento: asientoDeApi(api.asiento, api.coche, api.clase, api.precio),
     pasajero: { nombre, apellidos, documento: qr.doc ?? "", email: "" },
     emitido: api.emitido,
+    extras: api.extras,
+    extrasReserva: api.extrasReserva,
     qr: api.qr,
   };
 }
@@ -181,7 +182,8 @@ export function reservaDeBilletes(billetes: BilleteApi[]): Reserva {
     tren: primero.tren,
     asientos: propios.map((b) => b.asiento),
     pasajeros: propios.map((b) => b.pasajero),
-    total: Math.round(billetes.reduce((suma, b) => suma + b.precio, 0) * 100) / 100,
+    total: Math.round((billetes.reduce((suma, b) => suma + b.precio, 0) + (billetes[0]!.extrasReserva ?? 0)) * 100) / 100,
+    extras: billetes[0]!.extras,
     estado: billetes.some((b) => b.estado === "anulado") ? "cancelada" : "pagada",
     creada: billetes[0]!.emitido,
   };

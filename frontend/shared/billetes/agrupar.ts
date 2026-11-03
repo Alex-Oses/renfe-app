@@ -42,3 +42,12 @@ export function unirTransbordos(viajes: Viaje[]): Viaje[] {
   }
   return salida;
 }
+
+// Lo pagado por un viaje (con su transbordo): billetes más los extras de cada reserva, una vez.
+export const totalViaje = (v: Viaje): number =>
+  Math.round(
+    [v, ...(v.enlace ? [v.enlace] : [])].reduce(
+      (suma, r) => suma + r.billetes.reduce((s, b) => s + b.asiento.precio, 0) + (r.billetes[0]?.extrasReserva ?? 0),
+      0,
+    ) * 100,
+  ) / 100;

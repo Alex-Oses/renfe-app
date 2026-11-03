@@ -207,11 +207,9 @@ describe("precio por viajero en la API", () => {
     expect(cuerpo).toMatchObject({ tarifa: "elige", descuento: "joven" });
   });
 
-  it("suma los extras al total que cobra la API", () => {
-    const creada = { id: "r", localizador: "R-1", total: 80, estado: "pagada", creada: "", billetes: [
-      { asiento: "1A", coche: 1, clase: "Turista", precio: 50 },
-      { asiento: "1B", coche: 1, clase: "Turista", precio: 30 },
-    ] } as never;
+  it("manda los extras y usa el total que cobra la API", () => {
+    expect(cuerpoReserva(tren, datos).extras).toEqual(["mascota"]);
+    const creada = { id: "r", localizador: "R-1", total: 105, estado: "pagada", creada: "", billetes: [] } as never;
     expect(reservaDeApi(creada, tren, datos).total).toBe(105);
   });
 });
