@@ -4,7 +4,20 @@
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
 import jpeg from "jpeg-js";
-import { InferenceSession, Tensor } from "onnxruntime-react-native";
+import type { InferenceSession } from "onnxruntime-react-native";
+
+// El runtime es un módulo nativo que Expo Go no trae: importarlo arriba tumba la app entera al cargar las
+// rutas. Se pide al usarlo, y en Expo Go el error se queda en la pantalla del facial.
+type Ort = typeof import("onnxruntime-react-native");
+let ort: Ort | undefined;
+function runtime(): Ort {
+  try {
+    ort ??= require("onnxruntime-react-native") as Ort;
+    return ort;
+  } catch {
+    throw new Error("El acceso con la cara necesita la app instalada (development build): Expo Go no lo trae.");
+  }
+}
 import {
   agrupar,
   decodificar,
@@ -34,8 +47,8 @@ export function cargarModelos() {
       bytesDe(require("../../assets/modelos/arcface-w600k-mbf.onnx")),
     ]);
     return {
-      deteccion: await InferenceSession.create(det),
-      cara: await InferenceSession.create(arc),
+      deteccion: await runtime().InferenceSession.create(det),
+      cara: await runtime().InferenceSession.create(arc),
     };
   })();
   modelos.catch(() => (modelos = undefined)); // si falla, el siguiente intento vuelve a probar
@@ -61,7 +74,7 @@ export async function detectarCara(
   alto: number,
 ): Promise<Deteccion | null> {
   const { escala, lienzo } = preparar(foto, ancho, alto);
-  const salida = await sesion.run({ "input.1": new Tensor("float32", lienzo, [1, 3, LADO_DET, LADO_DET]) });
+  const salida = await sesion.run({ "input.1": new (runtime().Tensor)("float32", lienzo, [1, 3, LADO_DET, LADO_DET]) });
   return decodificar(agrupar(Object.values(salida) as unknown as { dims: readonly number[]; data: Float32Array }[]), escala);
 }
 
@@ -74,7 +87,7 @@ export async function huellaArcFace(
   puntos: [number, number][],
 ): Promise<number[]> {
   const entrada = recortar(foto, ancho, alto, puntos);
-  const salida = await sesion.run({ "input.1": new Tensor("float32", entrada, [1, 3, LADO, LADO]) });
+  const salida = await sesion.run({ "input.1": new (runtime().Tensor)("float32", entrada, [1, 3, LADO, LADO]) });
   const datos = salida[Object.keys(salida)[0]!].data as Float32Array;
   return normalizar(datos);
 }
