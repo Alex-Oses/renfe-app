@@ -162,8 +162,8 @@ const SQL_PLANTILLA = `
 // Sin Stripe: la reserva nace pagada (el pago es simulado).
 const SQL_RESERVA = `
   insert into reservas (usuario_id, feed, viaje_id, fecha_servicio, origen_id, destino_id,
-                        referencia, estado, importe_centimos)
-  values ($1, $2, $3, $4::date, $5, $6, $7, 'pagada', $8)
+                        referencia, estado, importe_centimos, extras, extras_centimos)
+  values ($1, $2, $3, $4::date, $5, $6, $7, 'pagada', $8, $9, $10)
   returning id, referencia, creada_en
 `;
 
@@ -310,6 +310,7 @@ export class ReservasService {
           (b, i) =>
             `${dto.pasajeros[i]!.nombre}: coche ${b.coche}, asiento ${b.asiento}, ${b.clase}, ${euros(b.precio)}`,
         ),
+        ...(dto.extras?.length ? [`Extras: ${[...new Set(dto.extras)].join(', ')}`] : []),
         `Total pagado: ${euros(r.total)}`,
       ];
       await this.correo.enviar({
@@ -383,6 +384,8 @@ export class ReservasService {
       extras: dto.extras,
     });
     const totalCentimos = Math.round(desglose.total * 100);
+    const extras = [...new Set(dto.extras ?? [])];
+    const extrasCentimos = Math.round(desglose.extras * 100);
 
     const { rows: reservas } = await cliente.query<FilaReserva>(SQL_RESERVA, [
       usuarioId,
@@ -393,6 +396,8 @@ export class ReservasService {
       dto.destinoId,
       `R-${referencia()}`,
       totalCentimos,
+      extras,
+      extrasCentimos,
     ]);
     const reserva = reservas[0]!;
 

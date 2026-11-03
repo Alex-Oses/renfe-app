@@ -10,10 +10,20 @@ import { Hoja } from "./Hoja";
 import { Icono, type NombreIcono } from "./Icono";
 
 const CLAVE_AVISO = "anden-aviso";
+const CLAVE_CAMPANA = "anden-campana-leida";
 
 const leerAviso = () => {
   try {
     return localStorage.getItem(CLAVE_AVISO) !== "0";
+  } catch {
+    return true;
+  }
+};
+
+// El punto de la campana avisa de que hay avisos sin mirar: desaparece al abrir el panel.
+const leerCampana = () => {
+  try {
+    return localStorage.getItem(CLAVE_CAMPANA) !== "1";
   } catch {
     return true;
   }
@@ -33,6 +43,7 @@ export function Cabecera({ volver, sinAviso }: { volver?: () => void; sinAviso?:
   const [aviso, setAviso] = useState(leerAviso);
   const [menu, setMenu] = useState(false);
   const [campana, setCampana] = useState(false);
+  const [sinLeer, setSinLeer] = useState(leerCampana);
 
   const cerrarAviso = () => {
     setAviso(false);
@@ -47,6 +58,17 @@ export function Cabecera({ volver, sinAviso }: { volver?: () => void; sinAviso?:
     setMenu(false);
     setCampana(false);
     router.navigate(ruta as never);
+  };
+
+  const abrirCampana = () => {
+    setCampana(true);
+    if (!sinLeer) return;
+    setSinLeer(false);
+    try {
+      localStorage.setItem(CLAVE_CAMPANA, "1");
+    } catch {
+      /* sin almacenamiento: se recuerda solo en esta pantalla */
+    }
   };
 
   return (
@@ -92,13 +114,13 @@ export function Cabecera({ volver, sinAviso }: { volver?: () => void; sinAviso?:
           <View style={{ flex: 1 }} />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Avisos"
-            onPress={() => setCampana(true)}
+            accessibilityLabel={sinLeer ? "Avisos, sin leer" : "Avisos"}
+            onPress={abrirCampana}
             hitSlop={6}
             style={({ pressed }) => [styles.iconoBoton, pressed && styles.pulsado]}
           >
             <Icono nombre="campana" tamano={23} color={colores.marca} grosor={1.9} />
-            <View style={styles.punto} />
+            {sinLeer ? <View style={styles.punto} /> : null}
           </Pressable>
           <Pressable
             accessibilityRole="button"

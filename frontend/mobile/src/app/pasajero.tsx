@@ -4,13 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
-import {
-  confirmarPagoSimulado,
-  crearIntentoPago,
-  crearReserva,
-  obtenerAsientos,
-  obtenerTren,
-} from "@renfe/shared/api/cliente";
+import { comprarReserva, obtenerAsientos, obtenerTren } from "@renfe/shared/api/cliente";
 import { DESCUENTOS, EXTRAS, TARIFAS, calcularTotal, precioExtra } from "@renfe/shared/api/simulado-precios";
 import { ciudadDe, type Asiento, type IdDescuento, type IdExtra, type IdTarifa, type Pasajero, type Reserva, type Tren } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
@@ -158,7 +152,7 @@ export default function Pasajero() {
         email: email.trim(),
         tipo: tipos[i],
       }));
-      const r = await crearReserva(tren, {
+      const r = await comprarReserva(tren, {
         trenId,
         asientos: elegidos.map((a) => a.id),
         pasajeros,
@@ -167,9 +161,7 @@ export default function Pasajero() {
         extras,
         bebes,
       });
-      await crearIntentoPago(r.id);
-      const pagada = await confirmarPagoSimulado(r.id);
-      setReserva(pagada);
+      setReserva(r);
       scroll.current?.scrollTo({ y: 0, animated: false });
     } catch (e) {
       setError((e as Error).message);
