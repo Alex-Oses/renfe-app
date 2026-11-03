@@ -23,6 +23,8 @@ import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { useArrastreCierre } from "@/components/Hoja";
 import { MapaTrenes } from "@/components/MapaTrenes";
+import { Leyenda } from "@/components/mapa/Leyenda";
+import { useAvisoLlegada } from "@/components/mapa/avisoLlegada";
 import { colorTipo, colores, espaciado, estilos, fuentes, paleta, siglaTipo, sombraFlotante, sombras, tonos } from "@/tema";
 
 const REFRESCO_MS = 7000;
@@ -76,6 +78,8 @@ export default function Directo() {
   const [seleccion, setSeleccion] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [rutas, setRutas] = useState<Record<string, PosicionTren>>({});
+  const [siguiendo, setSiguiendo] = useState(false);
+  const aviso = useAvisoLlegada();
 
   const vivo = useRef(true);
   const enVuelo = useRef(false);
@@ -193,12 +197,14 @@ export default function Directo() {
   const hace = ultima === null ? null : Math.max(0, Math.round((ahora - ultima) / 1000));
 
   const elegir = (t: PosicionTren) => {
+    if (t.trenId !== seleccion) setSiguiendo(false);
     setSeleccion(t.trenId);
     setAbierto(true);
   };
 
   const cerrarDetalle = () => {
     setSeleccion(null);
+    setSiguiendo(false);
     setAbierto(false);
   };
 
@@ -220,6 +226,8 @@ export default function Directo() {
         seleccion={seleccion}
         onElegir={elegir}
         espacioInferior={espacioInferior}
+        siguiendo={siguiendo}
+        onSoltar={() => setSiguiendo(false)}
       />
 
       <View style={[styles.superior, { top: insets.top + 8 }]} pointerEvents="box-none">
@@ -236,6 +244,9 @@ export default function Directo() {
             </View>
           </View>
         </Cristal>
+        <View style={styles.leyenda}>
+          <Leyenda />
+        </View>
       </View>
 
       <Animated.View
@@ -355,6 +366,25 @@ export default function Directo() {
                               {horaLocal(p.llegada)} · {p.pasada ? "pasada" : min === 0 ? "llegando" : `en ${min} min`}
                             </Text>
                           </View>
+                          {p.pasada ? null : (
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: aviso.avisaEn(elegido.trenId, p.estacionId) }}
+                              accessibilityHint="Te avisa 5 minutos antes de llegar a esta parada"
+                              onPress={() =>
+                                aviso.avisaEn(elegido.trenId, p.estacionId) ? void aviso.quitar(elegido.trenId) : void aviso.avisar(elegido, p)
+                              }
+                              style={({ pressed }) => [
+                                styles.botonAviso,
+                                aviso.avisaEn(elegido.trenId, p.estacionId) && styles.botonAvisoActivo,
+                                pressed && { opacity: 0.72 },
+                              ]}
+                            >
+                              <Text style={styles.botonAvisoTexto}>
+                                {aviso.avisaEn(elegido.trenId, p.estacionId) ? "Quitar aviso" : "Avísame al llegar"}
+                              </Text>
+                            </Pressable>
+                          )}
                         </View>
                       );
                     })}
@@ -365,6 +395,14 @@ export default function Directo() {
               )}
 
               <View style={{ flexDirection: "row", gap: espaciado[2] }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: siguiendo }}
+                  onPress={() => setSiguiendo((s) => !s)}
+                  style={({ pressed }) => [estilos.botonSecundario, { flex: 1 }, pressed && { opacity: 0.72 }]}
+                >
+                  <Text style={estilos.botonTextoSecundario}>{siguiendo ? "Dejar de seguir" : "Seguir en el mapa"}</Text>
+                </Pressable>
                 <Pressable
                   accessibilityRole="button"
                   onPress={cerrarDetalle}
@@ -583,6 +621,17 @@ const styles = StyleSheet.create({
   paradaVia: { width: 14, alignItems: "center" },
   paradaPunto: { width: 12, height: 12, borderRadius: 6, borderWidth: 2.6, backgroundColor: "#fff", marginTop: 3 },
   paradaLinea: { flex: 1, width: 2, backgroundColor: "rgba(129,0,94,0.15)", marginVertical: 1 },
+  leyenda: { alignSelf: "flex-end", marginTop: espaciado[2] },
+  botonAviso: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(129,0,94,0.22)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  botonAvisoActivo: { backgroundColor: tonos.rosa },
+  botonAvisoTexto: { fontFamily: fuentes.seminegrita, fontSize: 11.5, color: colores.marca },
   paradaNombre: { fontFamily: fuentes.seminegrita, fontSize: 13, color: colores.texto },
   detalleVacio: { flex: 1, justifyContent: "center", gap: espaciado[3], paddingBottom: espaciado[4] },
 });

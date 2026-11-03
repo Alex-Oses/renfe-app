@@ -8,4 +8,8 @@ export interface PropsMapa {
   // Alto aproximado (px) que el panel inferior tapa del mapa: se descuenta al encuadrar el
   // recorrido para que no quede detrás de la hoja.
   espacioInferior?: number;
+  // «Seguir en el mapa»: la cámara acompaña al tren elegido en cada lectura.
+  siguiendo?: boolean;
+  // El usuario ha movido el mapa a mano: se deja de seguir.
+  onSoltar?: () => void;
 }

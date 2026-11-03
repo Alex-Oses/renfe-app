@@ -1,16 +1,22 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
+import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ParadaRuta, PosicionTren } from "@renfe/shared/api/tipos";
 import { extremos } from "@renfe/shared/estado/estado-tren";
 import { partirRuta, type PuntoRuta } from "@renfe/shared/estado/partir-ruta";
 import { colorTipo, colores, fuentes } from "@/tema";
-import { TrenMarcador } from "./Icono";
+import { SimboloEstacion } from "./mapa/SimboloEstacion";
+import { TrenAnimado } from "./mapa/TrenAnimado";
+import { useReducirMovimiento } from "./mapa/movimiento";
 import type { PropsMapa } from "./mapa-tipos";
 
 // Centro de la península; el usuario hace zoom donde quiera.
 const ESPANA = { latitude: 40.2, longitude: -3.7, latitudeDelta: 9.4, longitudeDelta: 9.4 };
+
+// Por debajo de este ancho de mapa (grados) se ve de cerca: salen los nombres de las ciudades.
+const DELTA_CERCA = 4;
 
 const dibujable = (p: ParadaRuta) => Number.isFinite(p.lat) && Number.isFinite(p.lon);
 
@@ -45,12 +51,25 @@ function envolvente(puntos: PuntoRuta[]): { latitude: number; longitude: number 
 // Mapa nativo: OpenStreetMap/Apple Maps con un tren dibujado por cada posición real.
 // El marcador del tren elegido lleva un anillo y, como en la web, su recorrido se pinta encima:
 // lo ya recorrido en trazo discontinuo y lo que queda con un halo blanco y el color del tipo.
-export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300 }: PropsMapa) {
+export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300, siguiendo = false, onSoltar }: PropsMapa) {
   const mapa = useRef<MapView>(null);
   const insets = useSafeAreaInsets();
   const { height: altoPantalla } = useWindowDimensions();
   const elegido = trenes.find((t) => t.trenId === seleccion);
   const encuadrado = useRef("");
+  const reducir = useReducirMovimiento();
+  const [cerca, setCerca] = useState(false);
+
+  // Seguir en el mapa: la cámara acompaña cada lectura del elegido (como CapaTrenes.tsx de la web).
+  const seguidoLat = elegido?.lat;
+  const seguidoLon = elegido?.lon;
+  useEffect(() => {
+    if (!siguiendo || seguidoLat === undefined || seguidoLon === undefined) return;
+    mapa.current?.animateCamera(
+      { center: { latitude: seguidoLat, longitude: seguidoLon } },
+      { duration: reducir ? 0 : 1200 },
+    );
+  }, [siguiendo, seguidoLat, seguidoLon, reducir]);
 
   // Encuadra el recorrido al elegir el tren y otra vez cuando llega el trazado completo: el
   // snapshot solo trae la posición y el recorrido se pide después a la API.
@@ -100,7 +119,31 @@ export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300 
       loadingEnabled
       loadingBackgroundColor="#eff3f6"
       loadingIndicatorColor={colores.marca}
+      // Solo el gesto del usuario suelta el seguimiento; las animaciones propias no lo disparan.
+      onPanDrag={siguiendo ? onSoltar : undefined}
+      onRegionChangeComplete={(r) => setCerca(r.longitudeDelta < DELTA_CERCA)}
     >
+      {ESTACIONES.map((e, i) => {
+        // Etiqueta de ciudad una sola vez por ciudad, y solo con el mapa cerca (como la web).
+        const etiqueta = cerca && ESTACIONES.findIndex((x) => x.ciudad === e.ciudad) === i;
+        return (
+          <Marker
+            key={`estacion-${e.id}-${etiqueta}`}
+            coordinate={{ latitude: e.lat, longitude: e.lon }}
+            anchor={{ x: 0.5, y: etiqueta ? 0.78 : 0.5 }}
+            tracksViewChanges={false}
+            title={e.nombre}
+            accessibilityLabel={`Estación ${e.nombre}`}
+            zIndex={2}
+          >
+            <View style={styles.estacion}>
+              {etiqueta ? <Text style={styles.ciudad}>{e.ciudad}</Text> : null}
+              <SimboloEstacion tamano={18} />
+            </View>
+          </Marker>
+        );
+      })}
+
       {corte && corte.hecho.length > 1 ? (
         <Polyline
           coordinates={aCoordenadas(corte.hecho)}
@@ -139,12 +182,17 @@ export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300 
           <Marker
             key={`parada-${p.estacionId}`}
             coordinate={{ latitude: p.lat, longitude: p.lon }}
-            anchor={{ x: 0.5, y: 0.5 }}
+            anchor={{ x: 0.04, y: 0.5 }}
             tracksViewChanges={false}
             accessibilityLabel={p.pasada ? `${p.nombre}, ya pasada` : `Parada en ${p.nombre}`}
             zIndex={6}
           >
-            <View style={[styles.parada, { borderColor: color }, p.pasada && styles.paradaPasada]} />
+            <View style={styles.extremo}>
+              <View style={[styles.parada, { borderColor: color }, p.pasada && styles.paradaPasada]} />
+              <Text style={[styles.extremoTexto, styles.paradaTexto, p.pasada && styles.paradaTextoPasada]} numberOfLines={1}>
+                {p.nombre}
+              </Text>
+            </View>
           </Marker>
         ),
       )}
@@ -160,7 +208,7 @@ export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300 
           <View style={styles.extremo}>
             <View style={[styles.extremoPunto, { backgroundColor: color, borderColor: color }]} />
             <Text style={styles.extremoTexto} numberOfLines={1}>
-              {p.nombre}
+              {etiqueta} {p.nombre}
             </Text>
           </View>
         </Marker>
@@ -168,27 +216,15 @@ export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300 
 
       {trenes.map((t) => {
         const activo = t.trenId === seleccion;
+        // La clave cambia al elegirlo para que el marcador nativo rehaga su tamaño.
         return (
-          <Marker
+          <TrenAnimado
             key={`${t.trenId}-${activo ? "on" : "off"}`}
-            coordinate={{ latitude: t.lat, longitude: t.lon }}
+            tren={t}
+            activo={activo}
+            reducir={reducir}
             onPress={() => onElegir?.(t)}
-            anchor={{ x: 0.5, y: 0.55 }}
-            tracksViewChanges={activo}
-            zIndex={activo ? 1000 : 1}
-            accessibilityLabel={`${t.tipo} ${t.numero}, ${t.origen || "sin origen"} a ${t.destino || "sin destino"}`}
-          >
-            <View style={styles.marcador}>
-              {activo ? <View style={styles.anillo} /> : null}
-              <View
-                style={{
-                  transform: [{ rotate: `${Number.isFinite(t.rumbo) ? t.rumbo : 0}deg` }],
-                }}
-              >
-                <TrenMarcador tipo={t.tipo} tamano={activo ? 32 : 24} />
-              </View>
-            </View>
-          </Marker>
+          />
         );
       })}
     </MapView>
@@ -196,20 +232,15 @@ export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300 
 }
 
 const styles = StyleSheet.create({
-  marcador: {
-    width: 58,
-    height: 62,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  anillo: {
-    position: "absolute",
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: colores.accion,
-    backgroundColor: "rgba(214,45,97,0.10)",
+  estacion: { alignItems: "center", gap: 1 },
+  ciudad: {
+    fontFamily: fuentes.seminegrita,
+    fontSize: 10,
+    color: "#464646",
+    backgroundColor: "rgba(255,255,255,0.85)",
+    paddingHorizontal: 3,
+    borderRadius: 4,
+    overflow: "hidden",
   },
   parada: {
     width: 12,
@@ -219,6 +250,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   paradaPasada: { backgroundColor: "#d9dde2", opacity: 0.5 },
+  paradaTexto: { fontFamily: fuentes.medio, fontSize: 9.5 },
+  paradaTextoPasada: { opacity: 0.55 },
   extremo: { flexDirection: "row", alignItems: "center", gap: 4 },
   extremoPunto: { width: 16, height: 16, borderRadius: 8, borderWidth: 3 },
   extremoTexto: {
