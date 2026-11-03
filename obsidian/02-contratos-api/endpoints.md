@@ -84,7 +84,7 @@ Eventos, en orden:
 
 ## Autenticación
 
-- Dos formas de entrar, **un solo formato de token** (HS256 con `SUPABASE_JWT_SECRET`):
+- Dos formas de entrar, **un solo formato de token** (HS256 con `JWT_SECRET`, 12 h):
   - **Contraseña**: el token lo emite **Supabase Auth**; la API solo lo verifica. Trae
     `access_token` + `refresh_token`.
   - **Cara**: la API firma el token cuando `verificar_cara` dice que coincide. Ver
@@ -700,9 +700,11 @@ Errores: `401` sin token · `404` no existe o es de otro usuario.
 - **API real:** Ed25519 con `QR_SIGNING_PRIVATE_KEY` (ver `.env.example`). La web nunca tiene la clave privada.
 - **Sin API (simulado):** HMAC-SHA256 con una clave de demostración en la web
   (`frontend/web/src/api/qr-billete.ts`). Detecta QR manipulados en la demo, pero no es seguridad real.
-- **Implementado (2026-10-29):** mientras no existan las claves Ed25519, la API firma con
-  **HMAC-SHA256** y `QR_SIGNING_SECRET` (secreto nuevo, ver `.env.example`). El formato del token y
-  las claves de `datos` son los mismos: cambiar a Ed25519 solo toca `common/qr/firma.ts`.
+- **Implementado (2026-11-03):** la API ya firma con **Ed25519** (era HMAC-SHA256 desde el 29/10).
+  `QR_SIGNING_PRIVATE_KEY` es la clave privada en PKCS8/DER base64 —una sola línea— y la clave
+  pública se deriva de ella, así que `QR_SIGNING_PUBLIC_KEY` y `QR_SIGNING_SECRET` desaparecen. El
+  formato del token y las claves de `datos` no cambian. **Los QR emitidos con HMAC dejan de validar**
+  (responden `falso`): son datos de demo y se regeneran al volver a comprar.
 - `datos` es JSON con claves cortas para que el QR sea pequeño:
 
 | Clave | Contenido |
@@ -937,6 +939,8 @@ GTFS. Se detallan en el sprint que los implemente, siempre aquí antes del códi
 
 ## Historial
 
+- 2026-11-03 — Los QR `RNF1`/`RNA1` pasan a **Ed25519** con `QR_SIGNING_PRIVATE_KEY` (una sola
+  variable; la pública se deriva). Los QR firmados con HMAC dejan de validar.
 - 2026-10-29 — Implementados `/auth/registro`, `/auth/login`, `/reservas`, `/billetes`,
   `/billetes/:id/qr`, `/billetes/validar` y las tres rutas de `/abonos`. QRs firmados con
   HMAC-SHA256 (`QR_SIGNING_SECRET`) hasta que existan las claves Ed25519. Los abonos nacen `activo`

@@ -1,5 +1,7 @@
 // Validación del entorno al arrancar: si algo está mal, el proceso no levanta
 // (mejor fallar en el arranque que a mitad de una reserva).
+import { claveValida } from '../common/qr/firma.js';
+
 export interface EntornoValidado {
   API_PORT: number;
   CORS_ORIGINS: string[];
@@ -29,19 +31,14 @@ export function validarEntorno(
     throw new Error('CORS_ORIGINS es obligatorio en producción');
   }
 
-  const secreto = config.SUPABASE_JWT_SECRET;
-  if (typeof secreto === 'string' && secreto.length > 0 && secreto.length < 32) {
-    throw new Error('SUPABASE_JWT_SECRET parece demasiado corto');
-  }
-
   const jwtSecret = config.JWT_SECRET;
   if (typeof jwtSecret !== 'string' || jwtSecret.length < 32) {
     throw new Error('JWT_SECRET es obligatorio y debe tener al menos 32 caracteres');
   }
 
-  const firmaQr = config.QR_SIGNING_SECRET;
-  if (typeof firmaQr === 'string' && firmaQr.length > 0 && firmaQr.length < 32) {
-    throw new Error('QR_SIGNING_SECRET parece demasiado corto (HMAC de los QR)');
+  const claveQr = config.QR_SIGNING_PRIVATE_KEY;
+  if (typeof claveQr === 'string' && claveQr.length > 0 && !claveValida(claveQr)) {
+    throw new Error('QR_SIGNING_PRIVATE_KEY no es una clave Ed25519 en base64');
   }
 
   return {

@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -10,7 +11,10 @@ import { BdService } from '../../common/bd/bd.service.js';
 import type { CorreoService } from '../../common/correo/correo.service.js';
 import { ReservasService } from './reservas.service.js';
 
-const SECRETO = 'secreto-de-pruebas-con-mas-de-32-caracteres';
+// La API firma los QR con Ed25519: la clave de pruebas se genera en cada ejecución.
+const CLAVE = generateKeyPairSync('ed25519')
+  .privateKey.export({ format: 'der', type: 'pkcs8' })
+  .toString('base64');
 const RESERVA_ID = '6f1c0f9e-1a2b-4c3d-8e4f-5a6b7c8d9e0f';
 
 const VIAJE = {
@@ -68,7 +72,7 @@ const crearCliente = (opciones: Opciones = {}) => {
 
 const servicioCon = (
   opciones: Opciones = {},
-  entorno: Record<string, string | undefined> = { QR_SIGNING_SECRET: SECRETO },
+  entorno: Record<string, string | undefined> = { QR_SIGNING_PRIVATE_KEY: CLAVE },
 ) =>
   new ReservasService(
     {
@@ -107,7 +111,7 @@ describe('ReservasService.crear', () => {
       clase: 'Confort',
     });
 
-    const qr = verificar(reserva.billetes[0]!.qr, SECRETO);
+    const qr = verificar(reserva.billetes[0]!.qr, CLAVE);
     expect(qr?.prefijo).toBe('RNF1');
     expect(qr?.datos).toMatchObject({
       v: 1,
@@ -167,9 +171,9 @@ describe('ReservasService.crear', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('sin QR_SIGNING_SECRET responde 503', async () => {
+  it('sin QR_SIGNING_PRIVATE_KEY responde 503', async () => {
     await expect(
-      servicioCon({}, { QR_SIGNING_SECRET: undefined }).crear('usuario-1', dto()),
+      servicioCon({}, { QR_SIGNING_PRIVATE_KEY: undefined }).crear('usuario-1', dto()),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 

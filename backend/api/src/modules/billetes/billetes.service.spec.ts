@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'node:crypto';
 import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { BdService } from '../../common/bd/bd.service.js';
@@ -5,7 +6,10 @@ import { hoyMadrid, intervaloAIso } from '../../common/gtfs/tiempo.js';
 import { firmar } from '../../common/qr/firma.js';
 import { BilletesService } from './billetes.service.js';
 
-const SECRETO = 'secreto-de-pruebas-con-mas-de-32-caracteres';
+// La API firma los QR con Ed25519: la clave de pruebas se genera en cada ejecución.
+const CLAVE = generateKeyPairSync('ed25519')
+  .privateKey.export({ format: 'der', type: 'pkcs8' })
+  .toString('base64');
 const BILLETE_ID = '6f1c0f9e-1a2b-4c3d-8e4f-5a6b7c8d9e0f';
 const OTRO_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -30,7 +34,7 @@ const qrBillete = (extra: Record<string, unknown> = {}) =>
       doc: '••••678Z',
       ...extra,
     },
-    SECRETO,
+    CLAVE,
   );
 
 const FILA = {
@@ -102,7 +106,7 @@ const servicioCon = (respuestas: Respuestas = {}) => {
 
   const servicio = new BilletesService(
     { consultar } as unknown as BdService,
-    { get: () => SECRETO } as unknown as ConfigService,
+    { get: () => CLAVE } as unknown as ConfigService,
   );
 
   return { servicio, validaciones };
@@ -243,7 +247,7 @@ describe('BilletesService.validar', () => {
 
   it('un bono sin viajes es `agotado`', async () => {
     const { servicio } = servicioCon({ abono: [{ ...ABONO, viajes_restantes: 0 }] });
-    const qr = firmar('RNA1', { v: 1, id: 'AB-7K2M9Q', p: 'Lucía Pérez Gómez' }, SECRETO);
+    const qr = firmar('RNA1', { v: 1, id: 'AB-7K2M9Q', p: 'Lucía Pérez Gómez' }, CLAVE);
 
     await expect(servicio.validar('revisor-1', { qr })).resolves.toMatchObject({
       estado: 'agotado',
@@ -256,7 +260,7 @@ describe('BilletesService.validar', () => {
       abono: [ABONO],
       descuento: [{ viajes_restantes: 9 }],
     });
-    const qr = firmar('RNA1', { v: 1, id: 'AB-7K2M9Q', p: 'Lucía Pérez Gómez' }, SECRETO);
+    const qr = firmar('RNA1', { v: 1, id: 'AB-7K2M9Q', p: 'Lucía Pérez Gómez' }, CLAVE);
 
     const resultado = await servicio.validar('revisor-1', { qr });
 
@@ -273,7 +277,7 @@ describe('BilletesService.validar', () => {
     });
   });
 
-  it('sin QR_SIGNING_SECRET responde 503', async () => {
+  it('sin QR_SIGNING_PRIVATE_KEY responde 503', async () => {
     const servicio = new BilletesService(
       { consultar: async () => ({ rows: [] }) } as unknown as BdService,
       { get: () => undefined } as unknown as ConfigService,
