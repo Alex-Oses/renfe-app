@@ -2,7 +2,7 @@
 
 - **Prioridad:** P1
 - **Área:** documentación e instrucciones de agentes
-- **Estado:** Pendiente
+- **Estado:** Arreglado
 - **Dependencias:** Ninguna
 
 ## Problema observado
@@ -20,3 +20,30 @@ El README raíz y `AGENTS.md` todavía describen el repositorio como un esquelet
 ## Verificación
 
 Buscar afirmaciones obsoletas de “esqueleto”, “ninguna funcionalidad implementada” y descripciones de stack/flujo que contradigan los paquetes actuales.
+
+## Resolución (2026-11-03, rama `fix/mobile-tickets-pendientes`)
+
+**Contraste:** el código confirma una web React/Vite propia, una app Expo, el paquete `@renfe/shared`,
+la API NestJS, un worker que solo importa GTFS estático de AVE/LD y `GET /posiciones` con caché de
+GTFS-RT en memoria. Stripe no está conectado; el pago de la demo es simulado.
+
+**Cambios:**
+
+- `README.md` y `AGENTS.md`: Andén 0 como demo funcional, no esqueleto; web, app Expo y shared;
+  TypeScript en todas las piezas.
+- `frontend/README.md`, `frontend/web/README.md`, `frontend/mobile/README.md` y
+  `frontend/shared/README.md`: estado, comandos, cobertura y límites actuales; Expo Go solo para lo
+  que no requiere el facial nativo.
+- `backend/README.md`, `backend/api/README.md` y `backend/database/README.md`: API y worker en
+  desarrollo activo, autenticación real, datos GTFS/GTFS-RT reales y precios/reservas/pagos simulados;
+  sin servicio facial ni Realtime en la entrega.
+- `docs/arquitectura.md`: diagrama y flujos alineados con web/shared, pago simulado, caché de
+  `/posiciones` y login facial en el dispositivo. El plan por sprints queda marcado como histórico.
+
+Se conservaron responsables, contratos, seguridad facial, ramas, reglas del vault, ADRs y tiquets
+históricos. No se afirma que nada esté desplegado; la disponibilidad depende del entorno.
+
+**Comprobación:** búsqueda final sin afirmaciones obsoletas (solo quedan negaciones explícitas como
+«no es un esqueleto» y el ejemplo histórico de `docs/git-github.md`); 172 pruebas shared, 39 web,
+lints shared/móvil/API y build web en verde. Detalles en
+[[2026-11-03-buffy-ticket-022-docs-estado-real]].

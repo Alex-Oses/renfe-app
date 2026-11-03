@@ -52,7 +52,7 @@ Linux de Azure: `db:start`, Studio/API/PostgreSQL, `seed.sql` y `db:stop`.
 - **El modelo de datos se diseña primero en** `obsidian/02-contratos-api/modelo-datos.md` y luego se migra. El contrato manda.
 - Toda tabla con datos de usuario lleva RLS.
 - Embeddings faciales en `vector(512)` con pgvector (`create extension vector`). Nunca fotos.
-- Posiciones de trenes en una tabla con Realtime activado (la escribe gtfs-worker).
+- Posiciones: el diseño inicial usaba una tabla con Realtime, pero la entrega las cachea en memoria en la API (decisión del 27/10); no las escribe el worker.
 - Nunca edites una migración ya mergeada en `develop`: crea otra nueva.
 - No commitees `.temp/` ni `.branches/` (los ignora `supabase/.gitignore`).
 
@@ -77,5 +77,5 @@ Decisiones del SQL y qué mirar en la revisión:
 - Aplicar las migraciones en la VM y validar que `pnpm db:reset` termina en verde.
 - Proyecto de Supabase en la nube y `DATABASE_URL` en Render.
 - Importar el feed `avld` (ver `obsidian/05-areas/plan-ingesta-gtfs.md`).
-- Segunda migración: tiempo real (`posiciones_trenes`, `incidencias`) y reserva/pago/billete.
+- Segunda migración: tablas de negocio (reserva/pago/billete) e incidencias. El tiempo real con worker + Realtime queda fuera de alcance; la API cachea GTFS-RT.
 - Kevin: cerrar `modelo-datos` §10.2 (campos del webhook de Stripe) antes de implementar el pago. No bloquea nada de lo anterior.

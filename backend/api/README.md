@@ -6,8 +6,9 @@ API REST única de la app. Contexto y diagramas: [`docs/arquitectura.md`](../../
 
 ## Estado
 
-Esqueleto listo (fase F0): Nest 12 (ESM), validación de entorno al arrancar, CORS, Swagger,
-autenticación propia con roles y acceso opcional a Postgres.
+API en desarrollo activo (no un esqueleto): Nest 12 (ESM), validación de entorno al arrancar, CORS,
+Swagger, autenticación propia con roles y acceso opcional a Postgres. Ya sirve datos, reservas, billetes,
+abonos, chatbot y validación para el revisor; su disponibilidad depende de la configuración y la BD.
 
 **Endpoints de datos (fase F1): `GET /estaciones`, `GET /trenes`, `GET /trenes/:feed/:tripId`,
 `GET /trenes/:feed/:tripId/posicion` y `GET /posiciones`**, con SQL directo contra el modelo de datos
@@ -16,11 +17,12 @@ de [`obsidian/02-contratos-api/modelo-datos.md`](../../obsidian/02-contratos-api
 la excepción: leen GTFS-RT de Renfe en memoria cada 30 s, no tocan la BD y funcionan sin Supabase.
 `/posiciones` trae también el retraso real de `trip_updates` (puede ser negativo: tren adelantado).
 
-Los datos son reales (GTFS) y el resto va simulado: **`POST /auth/registro` y `POST /auth/login`**
-(Supabase Auth con `service_role`), **login facial** (`/auth/cara/*`), **`POST /reservas`** (pago
-simulado: crea la reserva pagada y emite un billete con QR por pasajero), **`GET /billetes`**,
+Los horarios y posiciones son datos reales (GTFS/GTFS-RT); precios, asientos, reservas, abonos y pagos
+son simulados. La autenticación es real: **`POST /auth/registro` y `POST /auth/login`** usan Supabase
+Auth con `service_role`, y el **login facial** (`/auth/cara/*`) lo decide Postgres. **`POST /reservas`**
+crea la reserva pagada simulada y emite un billete con QR por pasajero; **`GET /billetes`**,
 **`GET /billetes/:id/qr`**, **`POST /billetes/validar`** (rol `revisor`/`admin`) y **`/abonos`**
-(`GET`, `POST` y `GET /:id`). El contrato está en
+(`GET`, `POST` y `GET /:id`) completan ese flujo. El contrato está en
 [`obsidian/02-contratos-api/endpoints.md`](../../obsidian/02-contratos-api/endpoints.md).
 
 `POST /chatbot/mensaje` ofrece consultas conversacionales sobre estaciones, trenes y posiciones en
@@ -29,8 +31,8 @@ prompt injection, acceso a SQL, URLs arbitrarias ni a los datos privados de otro
 `GEMINI_API_KEY`; sin esa
 variable responde `503`, pero la API puede arrancar y servir el resto de rutas.
 
-Lo demás sigue pendiente: `/incidencias` y compañía necesitan las migraciones de Marina
-(`backend/database/`) y el worker GTFS, y `/pagos/*` es Stripe en modo test (Kevin).
+Lo demás sigue pendiente: `/incidencias` y otras rutas de datos necesitan contrato y, si guardan
+histórico, migraciones; `/pagos/*` es Stripe en modo test (Kevin).
 
 ## Arrancar
 

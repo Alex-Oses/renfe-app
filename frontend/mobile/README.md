@@ -1,4 +1,4 @@
-# @renfe/mobile — App Expo (iOS y Android)
+# @renfe/mobile — App Expo (iOS, Android y web)
 
 Expo SDK 58 con expo-router y TypeScript estricto. La lógica (cliente de la API, simulados, QR,
 tokens de diseño) viene de `@renfe/shared` (ver ADR-005).
@@ -27,7 +27,7 @@ En el móvil **no uses `localhost`**: es el propio teléfono. Pon la IP del PC e
 sirve en modo web (`expo start --web`, puerto 8081, que es el único origen que admite el CORS de la API local).
 
 Expo Go: instala la versión compatible con **SDK 58** (la de la tienda si está al día; si no, la que
-ofrece `expo start` al pulsar `a`/`i`). Todo funciona en Expo Go:
+ofrece `expo start` al pulsar `a`/`i`). El resto de la app funciona en Expo Go:
 
 - Abonos (`/abonos`, `/comprar-abono`, `/abono/[id]` con QR), desde Cuenta.
 - Modo revisor (`/revisor`, cuentas con rol `revisor` o `admin`): lee el QR con `expo-camera`.

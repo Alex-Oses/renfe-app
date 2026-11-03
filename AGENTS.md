@@ -4,9 +4,9 @@ Este fichero lo leen automáticamente OpenCode, Codex, Claude Code (vía `CLAUDE
 
 ## 1. Qué es este repo
 
-Monorepo pnpm de una app tipo Renfe hecha por un equipo de 4 personas con Scrum. Está dividido en tres zonas:
+Monorepo pnpm de una demo funcional tipo Renfe hecha por un equipo de 4 personas con Scrum. No es un esqueleto: ya hay web, app Expo, API, datos GTFS, flujos de cuenta/reserva y pruebas, aunque su disponibilidad depende del entorno. Está dividido en tres zonas:
 
-- `frontend/` → app Expo / React Native (responsable: Alex).
+- `frontend/` → web React/Vite, app Expo / React Native y `@renfe/shared` (responsable: Alex).
 - `backend/` → API NestJS (Rubén, con el login facial dentro), Supabase (Marina), worker GTFS (Marina).
 - `obsidian/` → **vault de Obsidian, memoria compartida entre humanos e IAs.**
 
@@ -81,8 +81,8 @@ Comandos: `/rama` (empezar tarea), `/pr` (commits + handoff + push + PR), `/hand
 ## 4. Convenciones de código
 
 - Gestor de paquetes: **pnpm** (nunca npm ni yarn). Node 22.
-- TypeScript estricto en frontend, API y worker. No hay servicio facial aparte ni código Python: el
-  vector lo calcula el dispositivo y decide Postgres (ADR-007).
+- TypeScript estricto en web, app, `shared`, API y worker. No hay servicio facial aparte ni código
+  Python: el vector lo calcula el dispositivo y decide Postgres (ADR-007).
 - Variables de entorno: añade la clave a `.env.example` (sin valor real). Nunca subas `.env`.
 
 ## 5. Límites

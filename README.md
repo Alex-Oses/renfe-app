@@ -1,6 +1,8 @@
-# 🚆 Renfe App — Monorepo del equipo
+# 🚆 Andén 0 — Monorepo del equipo
 
-Prototipo de app Renfe en desarrollo: monorepo con cliente web y móvil, API, catálogo/horarios GTFS, chatbot y flujos de cuenta, reservas simuladas y reconocimiento facial móvil.
+Demo funcional de una app tipo Renfe: monorepo con web React/Vite, app Expo, lógica compartida, API, catálogo/horarios GTFS, chatbot, cuenta, reservas simuladas y reconocimiento facial.
+
+No es un esqueleto: hay pantallas, endpoints, datos GTFS reales y pruebas automatizadas en varias áreas. Que una función exista en el repositorio no significa que esté desplegada o lista para producción.
 
 > **Estado y límites:** ya hay funcionalidades y pruebas en varias áreas, pero su disponibilidad depende de la configuración, los datos y la plataforma. No equivale a un servicio de venta real: Renfe no publica API de reservas ni precios; reservas, asientos y pagos del proyecto son simulados. El reconocimiento facial usa código nativo y requiere compilar la app móvil.
 
@@ -12,7 +14,7 @@ El repositorio está dividido en **tres zonas que no se mezclan**:
 
 | Carpeta | Qué es | Responsable |
 |---|---|---|
-| [`frontend/`](frontend/README.md) | 📱 App móvil/web (Expo + React Native). Todo lo que ve el usuario. | **Alex** |
+| [`frontend/`](frontend/README.md) | 🖥️ Web React/Vite + app Expo/React Native + `shared` (cliente, tipos, simulados y contenido). Todo lo que ve el usuario. | **Alex** |
 | [`backend/`](backend/README.md) | ⚙️ API (NestJS), base de datos (Supabase) y worker de datos Renfe (GTFS). | **Rubén** (API), **Marina** (BD + GTFS), **Kevin** (Stripe) |
 | [`obsidian/`](obsidian/README.md) | 🧠 Vault de Obsidian: memoria compartida del equipo y de las IAs (estado, contratos de API, decisiones, handoffs). | **Todos** (lo mantiene Marina como Scrum Master) |
 
@@ -33,7 +35,9 @@ Además, en la raíz:
 ```
 renfe-app/
 ├── frontend/
-│   └── mobile/            # App Expo (viajero + revisor)
+│   ├── web/               # Web React + Vite
+│   ├── mobile/            # App Expo (viajero + revisor)
+│   └── shared/            # Cliente, tipos, simulados y contenido común
 ├── backend/
 │   ├── api/               # API NestJS (Rubén)
 │   ├── database/          # Supabase: migraciones, seeds, políticas (Marina)
