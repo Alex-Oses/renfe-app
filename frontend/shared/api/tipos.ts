@@ -393,6 +393,7 @@ export interface RespuestaChatbot {
 export interface PasajeroApi {
   nombre: string; // nombre completo ("Lucía Pérez Gómez")
   documento: string; // se guarda entero; el QR solo lleva los 4 últimos
+  tipo?: "adulto" | "nino"; // el bebé no ocupa butaca y no se manda
 }
 
 export interface NuevaReservaApi {
@@ -403,6 +404,8 @@ export interface NuevaReservaApi {
   destinoId: string;
   pasajeros: PasajeroApi[]; // de 1 a 6: una butaca por pasajero
   asientos?: string[]; // butacas elegidas: "coche-asiento"
+  tarifa?: IdTarifa; // la API cobra cada billete con tarifa, tipo y descuento
+  descuento?: IdDescuento;
 }
 
 export interface BilleteEmitidoApi {

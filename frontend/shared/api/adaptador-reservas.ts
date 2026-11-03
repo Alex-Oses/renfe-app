@@ -96,6 +96,7 @@ export function datosDeQr(qr: string): DatosQr {
 const aPasajeroApi = (p: Pasajero): PasajeroApi => ({
   nombre: `${p.nombre} ${p.apellidos}`.trim(),
   documento: p.documento.trim(),
+  ...(p.tipo === "nino" ? { tipo: "nino" as const } : {}),
 });
 
 // POST /reservas: el tren ya dice feed, tripId, fecha, origen y destino.
@@ -115,6 +116,8 @@ export function cuerpoReserva(tren: Tren, datos: NuevaReserva): NuevaReservaApi 
     destinoId: tren.destino.id,
     pasajeros: datos.pasajeros.map(aPasajeroApi),
     ...(datos.asientos.length ? { asientos: datos.asientos } : {}),
+    ...(datos.tarifa ? { tarifa: datos.tarifa } : {}),
+    ...(datos.descuento && datos.descuento !== "ninguno" ? { descuento: datos.descuento } : {}),
   };
 }
 
@@ -129,14 +132,8 @@ export function reservaDeApi(creada: ReservaApi, tren: Tren, datos: NuevaReserva
     tren,
     asientos: creada.billetes.map(asientoEmitido),
     pasajeros: datos.pasajeros.map((p) => ({ ...p, documento: enmascararDocumento(p.documento) })),
-    // La API no sabe de tarifas ni de niños: el total se recalcula con las mismas reglas que la web.
-    total: calcularTotal({
-      precios: creada.billetes.map((b) => b.precio),
-      tipos: datos.pasajeros.map((p) => p.tipo ?? "adulto"),
-      tarifa: datos.tarifa,
-      descuento: datos.descuento,
-      extras: datos.extras,
-    }).total,
+    // La API ya cobra cada billete con tarifa, niño y descuento; los extras solo los conoce la web.
+    total: Math.round((creada.total + calcularTotal({ precios: creada.billetes.map(() => 0), tarifa: datos.tarifa, extras: datos.extras }).extras) * 100) / 100,
     tarifa: datos.tarifa,
     descuento: datos.descuento,
     extras: datos.extras,

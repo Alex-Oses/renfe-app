@@ -31,4 +31,11 @@ describe("unirTransbordos", () => {
     expect(unirTransbordos([{ ...a }, tarde])).toHaveLength(2);
     expect(unirTransbordos([{ ...a }, corta])).toHaveLength(2);
   });
+
+  it("con el mismo viaje comprado dos veces, une cada tramo con su compra", () => {
+    const t = (id: string, o: string, d: string, sal: string, lle: string, min: string) =>
+      viaje(id, o, d, `2026-11-04T${sal}:00+01:00`, `2026-11-04T${lle}:00+01:00`, `2026-11-03T10:${min}:00+01:00`);
+    const r = unirTransbordos([t("A1", "1", "2", "09:05", "14:47", "00"), t("B1", "1", "2", "09:05", "14:47", "08"), t("A2", "2", "3", "17:17", "19:13", "01"), t("B2", "2", "3", "17:17", "19:13", "09")]);
+    expect(r.map((v) => `${v.reservaId}+${v.enlace?.reservaId}`)).toEqual(["A1+A2", "B1+B2"]);
+  });
 });
