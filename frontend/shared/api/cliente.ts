@@ -489,7 +489,7 @@ export async function buscarReservaPorLocalizador(localizador: string): Promise<
   const limpio = localizador.trim().toUpperCase();
   const buscado = limpio.startsWith("R-") ? limpio : `R-${limpio}`;
   if (!BASE) {
-    return undefined;
+    return reservas.reservaPorLocalizador(buscado);
   }
 
   try {
