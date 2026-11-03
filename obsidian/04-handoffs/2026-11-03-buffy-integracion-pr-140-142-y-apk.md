@@ -18,6 +18,9 @@ estado: abierto
 - Se recuperaron los contratos que la PR 142 dejó atrás: `TransbordoApi`, `Billete.transbordos`,
   `obtenerEstacion`, `calcularPrecio`, el corte de compra sin sesión, el aviso de tren ya salido y
   `misBilletes` con transbordos.
+- Se restauraron `reservas.service.ts` y `crear-reserva.dto.ts` desde el commit anterior al merge:
+  la PR 142 había hecho retroceder el servicio y rompía el desglose, el guard de salida y los
+  transbordos.
 - Se corrigieron los tipos de `Animated.View` y `Animated.ScrollView` para React 19 y se resolvió el
   choque de `react-native-view-shot` con `@types/react` 18 usando su declaración pública.
 - Se restauró el script de tests móviles y se actualizó `hoja.test.mjs` al contrato nuevo de la PR
@@ -44,10 +47,8 @@ estado: abierto
 
 ## Comprobación
 
-- `pnpm --filter @renfe/shared test` → **179**.
-- `pnpm --filter @renfe/web test` → **39**.
-- `pnpm --filter @renfe/mobile test` → **21**.
-- `shared lint`, `web lint`, `mobile lint` y `api lint` en verde.
+- `pnpm --filter @renfe/api test` → **194**; `test:e2e` → **5**.
+- `pnpm test` completo, `pnpm lint` y `pnpm build` en verde.
 - `git diff --check` sin errores.
 - APK: build release ARM64 firmado con la clave de debug; comandos y salida documentados en el
   README móvil.
@@ -64,5 +65,7 @@ estado: abierto
 - `frontend/mobile/src/components/hoja.test.mjs`
 - `frontend/shared/api/cliente.ts`
 - `frontend/shared/api/tipos.ts`
+- `backend/api/src/modules/reservas/reservas.service.ts`
+- `backend/api/src/modules/reservas/dto/crear-reserva.dto.ts`
 - `tickets/README.md`
 - `obsidian/04-handoffs/2026-11-03-buffy-integracion-pr-140-142-y-apk.md`
