@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { aTren, nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
 import { enviarMensajeChatbotFlujo, type PasoChatbot } from "@renfe/shared/api/cliente";
 import type { TrenApi } from "@renfe/shared/api/tipos";
-import { euros, hora } from "../paginas/reserva/formato";
+import { euros, hora } from "@renfe/shared/formato/formato";
 import { bloques, enfasis } from "./chatbot/markdown";
 
 interface Mensaje {
@@ -180,7 +180,7 @@ export function Chatbot() {
                               <span className="chatbot__tren-horas">
                                 {hora(tren.salida)} → {hora(tren.llegada)} · {duracion(tren.duracionMin)}
                               </span>
-                              <span className="chatbot__tren-precio">{euros.format(tren.precioDesde)}</span>
+                              <span className="chatbot__tren-precio">{euros(tren.precioDesde)}</span>
                             </Link>
                           </li>
                         );

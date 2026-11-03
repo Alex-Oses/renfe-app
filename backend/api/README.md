@@ -60,7 +60,7 @@ src/
   common/auth/        SupabaseJwtGuard, RolesGuard y decorador @Roles
   common/bd/          BdService: pool de Postgres opcional (+ transacciones)
   common/gtfs/        tiempo (horas GTFS → ISO con offset), feeds y el SQL de calendarios
-  common/qr/          firma y verificación de los QR RNF1/RNA1 (HMAC-SHA256)
+  common/qr/          firma y verificación de los QR RNF1/RNA1 (Ed25519)
   common/simulado/    precio simulado y determinista
   modules/
     abonos/           GET/POST /abonos y GET /abonos/:id (QR RNA1)
@@ -124,9 +124,10 @@ Código en `src/modules/auth/`. El contrato está en `obsidian/02-contratos-api/
 
 ### QR de billetes y abonos
 
-`common/qr/firma.ts` firma `RNF1.<datos>.<firma>` y `RNA1.<datos>.<firma>` con **HMAC-SHA256** y
-`QR_SIGNING_SECRET` (32+ caracteres; sin él, emitir un billete o abono responde `503`). El contrato
-prevé Ed25519 con `QR_SIGNING_PRIVATE_KEY`; cambiar la firma no toca los servicios ni el formato.
+`common/qr/firma.ts` firma `RNF1.<datos>.<firma>` y `RNA1.<datos>.<firma>` con **Ed25519** y
+`QR_SIGNING_PRIVATE_KEY` (la clave en PKCS8/DER base64; sin ella, emitir o validar un billete responde
+`503`). La clave pública se deriva de la privada, así que solo hay una variable. El formato del token no
+cambia; los QR emitidos antes del cambio (HMAC) dejan de validar y hay que volver a comprar.
 
 ## Módulos
 

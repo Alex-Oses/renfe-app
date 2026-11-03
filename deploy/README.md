@@ -20,7 +20,7 @@ Auditoría del servidor: [[infraestructura-servidor]](../../obsidian/05-areas/in
   |---|---|
   | `POSTGRES_PASSWORD` | Contraseña de la BD del compose. Obligatoria |
   | `CORS_ORIGINS` | Origen del navegador. **Obligatoria en producción**: si falta, la API no arranca |
-  | `SUPABASE_JWT_SECRET` | Verificar los tokens. Sin él, `/auth/cara/*` no funciona |
+  | `JWT_SECRET` | Firma y verifica los tokens de sesión. Obligatoria, 32+ caracteres |
   | `DATABASE_URL_DOCKER` | Solo si la BD **no** es la del compose (ver § Con una BD que ya existe) |
   | `API_PUBLICO` | Puerto del host donde escucha la API. Por defecto `3010` |
 

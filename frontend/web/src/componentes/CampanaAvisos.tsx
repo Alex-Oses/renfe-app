@@ -1,4 +1,5 @@
 // Campana de la cabecera: contador de no leídos y panel con el historial de avisos.
+import { horaLocal } from "@renfe/shared/formato/formato";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAvisos } from "../estado/avisos";
@@ -6,7 +7,6 @@ import { IconoAviso } from "./AvisosIconos";
 import "./Avisos.css";
 
 const frase = (n: number) => (n === 0 ? "No tienes avisos sin leer" : n === 1 ? "Tienes 1 aviso sin leer" : `Tienes ${n} avisos sin leer`);
-const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
 export function CampanaAvisos() {
   const { avisos, marcarLeido, marcarTodosLeidos, borrarHistorial, permiso, pedirPermiso } = useAvisos();
@@ -78,7 +78,7 @@ export function CampanaAvisos() {
                         {a.titulo} {!a.leido && <span className="solo-lectores">(sin leer)</span>}
                       </p>
                       <p className="emergente__texto">{a.texto}</p>
-                      <p className="campana__hora">{hora(a.creado)}</p>
+                      <p className="campana__hora">{horaLocal(a.creado)}</p>
                       {a.enlace && (
                         <Link to={a.enlace} className="emergente__accion" onClick={() => (marcarLeido(a.id), setAbierto(false))}>
                           Ver

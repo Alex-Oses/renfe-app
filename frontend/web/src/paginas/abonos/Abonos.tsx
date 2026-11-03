@@ -5,7 +5,7 @@ import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { TIPOS_ABONO, finAbono, hoyIso, infoAbono, sumarDias } from "@renfe/shared/api/simulado-abonos";
 import type { Abono, TipoAbono } from "@renfe/shared/api/tipos";
 import { useSesion } from "../../estado/sesion";
-import { euros, fecha } from "../reserva/formato";
+import { euros, fecha } from "@renfe/shared/formato/formato";
 import { TornosFaciales } from "./TornosFaciales";
 import "./abonos.css";
 
@@ -69,7 +69,7 @@ export default function Abonos() {
                 <input type="radio" name="tipo" value={t.tipo} checked={tipo === t.tipo} onChange={() => setTipo(t.tipo)} />
                 <span className="abonos__tipo-nombre">{t.nombre}</span>
                 <span className="abonos__tipo-desc">{t.descripcion}</span>
-                <span className="abonos__tipo-precio">{euros.format(t.precio)}</span>
+                <span className="abonos__tipo-precio">{euros(t.precio)}</span>
               </label>
             ))}
           </fieldset>
@@ -127,7 +127,7 @@ export default function Abonos() {
                   <span className="girador" aria-hidden="true" /> Procesando el pago…
                 </>
               ) : (
-                `Pagar ${euros.format(info.precio)} (simulado)`
+                `Pagar ${euros(info.precio)} (simulado)`
               )}
             </button>
           </fieldset>

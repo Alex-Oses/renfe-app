@@ -9,7 +9,7 @@ import { Boton } from "@/components/Boton";
 import { Campo } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
 import { Pantalla } from "@/components/Pantalla";
-import { aFecha, fecha, hora } from "@/formato";
+import { aFecha, fechaCorta, horaLocal } from "@renfe/shared/formato/formato";
 import { leerSesion } from "@/sesion";
 import { colores, espaciado, estilos, fuentes } from "@/tema";
 
@@ -79,7 +79,7 @@ export default function Revisor() {
             <Text style={styles.titulo}>{b.pasajero}</Text>
             <Text style={styles.dato}>Documento {b.documento} · Localizador {b.localizador}</Text>
             <Text style={styles.dato}>{b.tipo} {b.numero} · {b.origen} – {b.destino}</Text>
-            <Text style={styles.dato}>{fecha(b.salida)}, {hora(b.salida)} – {hora(b.llegada)}</Text>
+            <Text style={styles.dato}>{fechaCorta(b.salida)}, {horaLocal(b.salida)} – {horaLocal(b.llegada)}</Text>
             <Text style={styles.dato}>Coche {b.coche} · Asiento {b.asiento} · {b.clase}</Text>
           </Cristal>
         ) : null}
@@ -93,7 +93,7 @@ export default function Revisor() {
           </Cristal>
         ) : null}
         {resultado.primeraValidacion ? (
-          <Text style={estilos.suave}>Primera validación: {fecha(resultado.primeraValidacion)}, {hora(resultado.primeraValidacion)}</Text>
+          <Text style={estilos.suave}>Primera validación: {fechaCorta(resultado.primeraValidacion)}, {horaLocal(resultado.primeraValidacion)}</Text>
         ) : null}
         {!resultado.comprobadoEnServidor ? <Text style={estilos.suave}>Comprobado solo con la firma (sin API).</Text> : null}
         <Boton texto="Escanear otro" icono="refrescar" onPress={otro} />

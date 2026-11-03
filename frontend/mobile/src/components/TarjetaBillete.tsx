@@ -4,9 +4,9 @@ import QRCode from "react-native-qrcode-svg";
 import { ciudadDe, type Billete } from "@renfe/shared/api/tipos";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
 import type { Viaje } from "@renfe/shared/billetes/agrupar";
-import { slug } from "@/billetes";
+import { slug } from "@renfe/shared/formato/texto";
 import { RetrasoVivo } from "@/components/RetrasoVivo";
-import { euros, fecha, hora } from "@/formato";
+import { euros, fechaCorta, horaLocal } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos, fuentes, gradientes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
 
 const t = tipografia.tamanos;
@@ -73,15 +73,15 @@ export function TarjetaBillete({
             <Text style={styles.transbordoTexto}>
               <Text style={styles.transbordoFuerte}>Con transbordo en {tren.destino.nombre}</Text>:{" "}
               {Math.round((Date.parse(ultimo.salida) - Date.parse(tren.llegada)) / 60_000)} min de espera. Sigue en{" "}
-              {ultimo.tipo} {ultimo.numero}, sale a las {hora(ultimo.salida)}.
+              {ultimo.tipo} {ultimo.numero}, sale a las {horaLocal(ultimo.salida)}.
             </Text>
           </View>
         ) : null}
         <View style={styles.rejillaDatos}>
-          {dato("Fecha", fecha(tren.salida))}
+          {dato("Fecha", fechaCorta(tren.salida))}
           {dato("Tren", `${tren.tipo} ${tren.numero}`)}
-          {dato("Salida", hora(tren.salida))}
-          {dato("Llegada", hora(ultimo.llegada))}
+          {dato("Salida", horaLocal(tren.salida))}
+          {dato("Llegada", horaLocal(ultimo.llegada))}
         </View>
 
         <View style={styles.pie}>

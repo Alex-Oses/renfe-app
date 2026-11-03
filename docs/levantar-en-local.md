@@ -31,7 +31,8 @@ con `EXPO_PUBLIC_API_URL=http://<IP-del-PC>:3000 pnpm dev:mobile` (en el móvil,
    - `SUPABASE_URL=http://127.0.0.1:54321`
    - `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`: los de `pnpm db:status`
    - `JWT_SECRET`: cualquier secreto aleatorio de al menos 32 caracteres; es el JWT propio de la API
-   - `QR_SIGNING_SECRET`: cualquier cadena aleatoria larga si se prueban billetes o abonos
+   - `QR_SIGNING_PRIVATE_KEY`: solo si se prueban billetes o abonos; genérala con
+     `node -e "const{generateKeyPairSync}=require('crypto');console.log(generateKeyPairSync('ed25519').privateKey.export({format:'der',type:'pkcs8'}).toString('base64'))"`
 3. **Catálogo real de Renfe** (AV/LD, ~1 min):
    ```bash
    pnpm gtfs:importar && pnpm gtfs:verificar

@@ -246,13 +246,13 @@ export class BilletesService {
   }
 
   async validar(revisorId: string, { qr }: ValidarBilleteDto): Promise<ResultadoValidacion> {
-    const secreto = this.config.get<string>('QR_SIGNING_SECRET');
-    if (!secreto) {
-      throw new ServiceUnavailableException('La API no tiene configurado QR_SIGNING_SECRET');
+    const clave = this.config.get<string>('QR_SIGNING_PRIVATE_KEY');
+    if (!clave) {
+      throw new ServiceUnavailableException('La API no tiene configurada QR_SIGNING_PRIVATE_KEY');
     }
 
     const validadoEn = instanteAIso(new Date());
-    const verificado = verificar(qr, secreto);
+    const verificado = verificar(qr, clave);
 
     if (!verificado) {
       await this.apuntar(revisorId, 'falso', { motivo: 'Firma o prefijo incorrectos' });
@@ -443,9 +443,9 @@ export class BilletesService {
 
   /** El nombre y el documento viajan en el QR firmado; no hay columna para ellos. */
   private pasajeroDelQr(qr: string, clave: 'p' | 'doc'): string {
-    const secreto = this.config.get<string>('QR_SIGNING_SECRET');
-    if (!secreto) return '';
-    const datos = verificar(qr, secreto)?.datos;
+    const claveQr = this.config.get<string>('QR_SIGNING_PRIVATE_KEY');
+    if (!claveQr) return '';
+    const datos = verificar(qr, claveQr)?.datos;
     const valor = datos?.[clave];
     return typeof valor === 'string' ? valor : '';
   }

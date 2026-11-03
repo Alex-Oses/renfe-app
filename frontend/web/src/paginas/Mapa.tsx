@@ -1,3 +1,5 @@
+import { sinTildes } from "@renfe/shared/formato/texto";
+import { horaLocal } from "@renfe/shared/formato/formato";
 import "leaflet/dist/leaflet.css";
 import "./mapa/mapa.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -49,7 +51,7 @@ function Paradas({ tren, ahora }: { tren: PosicionTren; ahora: number }) {
             <span className="mapa-parada__info">
               <strong>{p.nombre}</strong>
               <span>
-                {new Date(llegada).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })} ·{" "}
+                {horaLocal(llegada)} ·{" "}
                 {p.pasada ? "pasada" : min === 0 ? "llegando" : `en ${min} min`}
               </span>
             </span>
@@ -69,7 +71,6 @@ function Paradas({ tren, ahora }: { tren: PosicionTren; ahora: number }) {
   );
 }
 
-const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 const reducidoInicial = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
@@ -78,7 +79,6 @@ function Retraso({ seg }: { seg: number | null | undefined }) {
 }
 
 // "2026-10-27T12:41:00+01:00" → "12:41" (mismo formato que la lista de paradas).
-const horaCorta = (iso: string) => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
 export default function Mapa() {
   const [params, setParams] = useSearchParams();
@@ -299,7 +299,7 @@ export default function Mapa() {
                       <dt>Sale de</dt>
                       <dd>
                         {elegido.origen}
-                        {elegido.salida && <> · a las {horaCorta(elegido.salida)}</>}
+                        {elegido.salida && <> · a las {horaLocal(elegido.salida)}</>}
                       </dd>
                     </div>
                   )}
@@ -308,7 +308,7 @@ export default function Mapa() {
                       <dt>Va a</dt>
                       <dd>
                         {elegido.destino}
-                        {elegido.llegadaDestino && <> · llega a las {horaCorta(elegido.llegadaDestino)}</>}
+                        {elegido.llegadaDestino && <> · llega a las {horaLocal(elegido.llegadaDestino)}</>}
                       </dd>
                     </div>
                   )}
@@ -317,7 +317,7 @@ export default function Mapa() {
                       <dt>Próxima parada</dt>
                       <dd>
                         {elegido.proximaParada}
-                        {elegido.llegadaProxima && <> · a las {horaCorta(elegido.llegadaProxima)}</>}
+                        {elegido.llegadaProxima && <> · a las {horaLocal(elegido.llegadaProxima)}</>}
                       </dd>
                     </div>
                   )}
@@ -374,7 +374,7 @@ export default function Mapa() {
                   {t.proximaParada && (
                     <span>
                       Próxima: {t.proximaParada}
-                      {t.llegadaProxima && ` · ${horaCorta(t.llegadaProxima)}`}
+                      {t.llegadaProxima && ` · ${horaLocal(t.llegadaProxima)}`}
                     </span>
                   )}
                 </span>

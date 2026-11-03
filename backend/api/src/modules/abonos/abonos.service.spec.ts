@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'node:crypto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { BdService } from '../../common/bd/bd.service.js';
@@ -5,7 +6,10 @@ import { hoyMadrid, sumarDias } from '../../common/gtfs/tiempo.js';
 import { verificar } from '../../common/qr/firma.js';
 import { AbonosService } from './abonos.service.js';
 
-const SECRETO = 'secreto-de-pruebas-con-mas-de-32-caracteres';
+// La API firma los QR con Ed25519: la clave de pruebas se genera en cada ejecución.
+const CLAVE = generateKeyPairSync('ed25519')
+  .privateKey.export({ format: 'der', type: 'pkcs8' })
+  .toString('base64');
 const HOY = hoyMadrid();
 const ORIGEN = { id: '60000', nombre: 'Madrid-Puerta de Atocha' };
 const DESTINO = { id: '04040', nombre: 'Zaragoza-Delicias' };
@@ -74,7 +78,7 @@ const servicioCon = (opciones: Opciones = {}) => {
   return {
     servicio: new AbonosService(
       { consultar } as unknown as BdService,
-      { get: () => SECRETO } as unknown as ConfigService,
+      { get: () => CLAVE } as unknown as ConfigService,
     ),
     escrituras,
   };
@@ -112,7 +116,7 @@ describe('AbonosService.crear', () => {
     expect(valores[8]).toBe(10);
     expect(valores[10]).toBe(22000);
 
-    const qr = verificar(String(valores[11]), SECRETO);
+    const qr = verificar(String(valores[11]), CLAVE);
     expect(qr?.prefijo).toBe('RNA1');
     expect(qr?.datos).toMatchObject({
       v: 1,
@@ -202,7 +206,7 @@ describe('AbonosService.listar y detalle', () => {
 
     const abono = await servicio.detalle('usuario-1', 'AB-7K2M9Q');
 
-    expect(verificar(abono.qr, SECRETO)?.datos).toMatchObject({
+    expect(verificar(abono.qr, CLAVE)?.datos).toMatchObject({
       id: 'AB-7K2M9Q',
       ini: HOY,
       fin: sumarDias(HOY, 59),

@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent } from "react";
 import type { Asiento } from "@renfe/shared/api/tipos";
-import { euros } from "./formato";
+import { euros } from "@renfe/shared/formato/formato";
 
 interface Props {
   asientos: Asiento[];
@@ -99,7 +99,7 @@ export function PasoAsientos({ asientos, n, elegidos, onCambio, onSeguir }: Prop
       <div id="mapa-coche" role="tabpanel" aria-labelledby={`tab-coche-${coche}`} className="coche">
         <p className="coche__clase">
           <span className={`etiqueta-clase etiqueta-clase--${clase === "Prémium" ? "premium" : clase === "Confort" ? "confort" : "estandar"}`}>{clase}</span>{" "}
-          {euros.format(precio)} por asiento
+          {euros(precio)} por asiento
         </p>
         <div className="coche__mapa" onKeyDown={mover} role="group" aria-label={`Asientos del coche ${coche}`}>
           <div className="coche__fila coche__fila--cabeza" aria-hidden="true">
@@ -123,7 +123,7 @@ export function PasoAsientos({ asientos, n, elegidos, onCambio, onSeguir }: Prop
                       className={`asiento${marcado ? " asiento--elegido" : ""}${a.libre ? "" : " asiento--ocupado"}`}
                       aria-pressed={a.libre ? marcado : undefined}
                       aria-disabled={!a.libre || undefined}
-                      aria-label={`Asiento ${f}${a.letra}, ${a.letra === "A" || a.letra === "D" ? "ventana" : "pasillo"}, ${a.libre ? euros.format(a.precio) : "ocupado"}`}
+                      aria-label={`Asiento ${f}${a.letra}, ${a.letra === "A" || a.letra === "D" ? "ventana" : "pasillo"}, ${a.libre ? euros(a.precio) : "ocupado"}`}
                       onClick={() => alternar(a)}
                     >
                       {marcado ? <Check /> : a.libre ? <span aria-hidden="true">{f}</span> : <Cruz />}

@@ -8,7 +8,7 @@ import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
-import { TEXTO_ESTADO, aFecha } from "@/formato";
+import { TEXTO_ESTADO, aFecha } from "@renfe/shared/formato/formato";
 import { leerSesion } from "@/sesion";
 import { colores, espaciado, estilos, fuentes, tonos } from "@/tema";
 

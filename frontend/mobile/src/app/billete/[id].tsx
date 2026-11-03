@@ -10,7 +10,7 @@ import { Boton } from "@/components/Boton";
 import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
-import { fecha, hora } from "@/formato";
+import { euros, fechaCorta, horaLocal } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos, fuentes, radios, sombras, tipografia } from "@/tema";
 
 // "2 h 25 min" entre salida y llegada.
@@ -193,7 +193,7 @@ export default function VerBillete() {
             <Text style={styles.ciudad} numberOfLines={2}>
               {ciudadDe(tren.origen)}
             </Text>
-            <Text style={styles.hora}>{hora(tren.salida)}</Text>
+            <Text style={styles.hora}>{horaLocal(tren.salida)}</Text>
             <Text style={styles.estacion} numberOfLines={2}>
               {tren.origen.nombre}
             </Text>
@@ -206,7 +206,7 @@ export default function VerBillete() {
             <Text style={[styles.ciudad, { textAlign: "right" }]} numberOfLines={2}>
               {ciudadDe(tren.destino)}
             </Text>
-            <Text style={styles.hora}>{hora(tren.llegada)}</Text>
+            <Text style={styles.hora}>{horaLocal(tren.llegada)}</Text>
             <Text style={[styles.estacion, { textAlign: "right" }]} numberOfLines={2}>
               {tren.destino.nombre}
             </Text>
@@ -214,11 +214,11 @@ export default function VerBillete() {
         </View>
 
         <View style={styles.datos}>
-          {dato("Fecha", fecha(tren.salida))}
+          {dato("Fecha", fechaCorta(tren.salida))}
           {dato("Coche", String(asiento.coche))}
           {dato("Asiento", `${asiento.fila}${asiento.letra}`)}
           {dato("Clase", asiento.clase)}
-          {dato("Precio", asiento.precio.toLocaleString("es-ES", { style: "currency", currency: "EUR" }))}
+          {dato("Precio", euros(asiento.precio))}
           {dato("Viajero", `${pasajero.nombre} ${pasajero.apellidos}`, true)}
         </View>
 

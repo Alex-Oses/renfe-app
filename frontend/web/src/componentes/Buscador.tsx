@@ -1,3 +1,4 @@
+import { sinTildes } from "@renfe/shared/formato/texto";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
@@ -10,7 +11,7 @@ import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
 import type { IdDescuento } from "@renfe/shared/api/tipos";
 import "./buscador.css";
 
-const normal = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").trim().toLowerCase();
+const normal = (s: string) => sinTildes(s).trim();
 // Acepta el nombre exacto (sin importar tildes ni mayúsculas), el código o una ciudad con una sola estación.
 export function porNombre(texto: string) {
   const t = normal(texto);

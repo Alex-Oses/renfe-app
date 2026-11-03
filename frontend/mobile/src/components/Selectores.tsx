@@ -1,3 +1,4 @@
+import { sinTildes } from "@renfe/shared/formato/texto";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { buscarEstaciones } from "@renfe/shared/api/cliente";
@@ -9,7 +10,6 @@ import { Cristal } from "./Cristal";
 import { Hoja } from "./Hoja";
 import { Icono } from "./Icono";
 
-const normal = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 // ---------------- Estaciones ----------------
 export function SelectorEstacion({
@@ -43,7 +43,7 @@ export function SelectorEstacion({
       setCargando(true);
       buscarEstaciones(texto)
         .then((l) => vivo && setLista(l))
-        .catch(() => vivo && setLista(ESTACIONES.filter((e) => normal(`${e.nombre} ${e.ciudad}`).includes(normal(texto)))))
+        .catch(() => vivo && setLista(ESTACIONES.filter((e) => sinTildes(`${e.nombre} ${e.ciudad}`).includes(sinTildes(texto)))))
         .finally(() => vivo && setCargando(false));
     }, 220);
     return () => {

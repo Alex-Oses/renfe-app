@@ -9,7 +9,7 @@ import { Aviso } from "@/components/Aviso";
 import { Cristal } from "@/components/Cristal";
 import { Pantalla } from "@/components/Pantalla";
 import { colores, espaciado, estilos, fuentes } from "@/tema";
-import { TEXTO_ESTADO, aFecha } from "@/formato";
+import { TEXTO_ESTADO, aFecha } from "@renfe/shared/formato/formato";
 
 // Detalle de un abono con su QR firmado (GET /abonos/:id lo trae; la lista puede venir sin él).
 export default function VerAbono() {

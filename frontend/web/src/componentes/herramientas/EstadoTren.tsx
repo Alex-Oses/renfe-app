@@ -1,10 +1,10 @@
+import { sinTildes } from "@renfe/shared/formato/texto";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { posicionesTrenes } from "@renfe/shared/api/cliente";
 import type { PosicionTren } from "@renfe/shared/api/tipos";
 import { Campo, Herramienta } from "./comun";
 
-const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 export default function EstadoTren() {
   const [q, setQ] = useState("");
