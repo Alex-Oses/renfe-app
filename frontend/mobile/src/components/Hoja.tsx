@@ -21,7 +21,7 @@ import { Icono } from "./Icono";
 // cierra si se ha bajado más de un tercio de la hoja o si el gesto iba rápido (vy > 0.5).
 // Se comparte con el panel del mapa (directo.tsx), que se maneja igual con el pulgar.
 // Con onAbrir, deslizar hacia arriba (más de 40 px o rápido) lo llama: sirve para subir un panel escondido.
-export function useArrastreCierre(onCerrar: () => void, onAbrir?: () => void) {
+export function useArrastreCierre(onCerrar?: () => void, onAbrir?: () => void) {
   const altura = useRef(0);
   const avance = useRef(new Animated.Value(0)).current;
   const cerrar = useRef(onCerrar);
@@ -47,14 +47,16 @@ export function useArrastreCierre(onCerrar: () => void, onAbrir?: () => void) {
       onPanResponderRelease: (_, gesto) => {
         // Sin onLayout (por ejemplo, en el primer toque) se usa un alto de referencia.
         const alto = altura.current || 480;
-        if (gesto.dy > alto / 3 || gesto.vy > 0.5) {
+        // Sin onCerrar (el panel ya está escondido) deslizar abajo no hace nada: antes animaba el
+        // cierre, lo devolvía a su sitio y el panel parecía volver a subir solo.
+        if (cerrar.current && (gesto.dy > alto / 3 || gesto.vy > 0.5)) {
           Animated.timing(avance, {
             toValue: Math.max(alto, gesto.dy),
             duration: 170,
             useNativeDriver: true,
           }).start(() => {
             avance.setValue(0);
-            cerrar.current();
+            cerrar.current?.();
           });
           return;
         }
@@ -72,6 +74,67 @@ export function useArrastreCierre(onCerrar: () => void, onAbrir?: () => void) {
       altura.current = e.nativeEvent.layout.height;
     },
   };
+}
+
+/**
+ * Arrastre de una hoja que crece y encoge: el borde de arriba sigue al dedo y al soltar se avisa
+ * del alto al que ha quedado para que encaje en un nivel. Solo se anima `height` y con driver JS:
+ * no hay translateY nativo en la misma vista, que es justo lo que rompía RN al mezclar los dos.
+ */
+export function useHojaArrastrable({
+  alto,
+  minimo,
+  maximo,
+  alSoltar,
+}: {
+  alto: number;
+  minimo: number;
+  maximo: number;
+  alSoltar: (altura: number, velocidad: number) => void;
+}) {
+  const altura = useRef(new Animated.Value(alto)).current;
+  const desde = useRef(alto);
+  const ultima = useRef(alto);
+  const soltar = useRef(alSoltar);
+
+  useEffect(() => {
+    soltar.current = alSoltar;
+  }, [alSoltar]);
+
+  // Cambio de nivel pedido por la app (botón, arrastre o tren elegido): se anima al objetivo.
+  useEffect(() => {
+    Animated.timing(altura, { toValue: alto, duration: 220, useNativeDriver: false }).start();
+  }, [alto, altura]);
+
+  const responder = useMemo(() => {
+    const acotar = (v: number) => Math.min(maximo, Math.max(minimo, v));
+    const vertical = (_: unknown, gesto: PanResponderGestureState) =>
+      Math.abs(gesto.dy) > 5 && Math.abs(gesto.dy) > Math.abs(gesto.dx);
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: vertical,
+      onMoveShouldSetPanResponderCapture: vertical,
+      // Al agarrar se parte del alto que hay ahora mismo, aunque estuviera animándose.
+      onPanResponderGrant: () =>
+        altura.stopAnimation((v) => {
+          desde.current = v;
+          ultima.current = v;
+        }),
+      onPanResponderMove: (_, gesto) => {
+        ultima.current = acotar(desde.current - gesto.dy);
+        altura.setValue(ultima.current);
+      },
+      onPanResponderRelease: (_, gesto) => {
+        // Se usa el último alto real (no se recalcula con dy): en un gesto rápido los eventos se
+        // agrupan y dy puede saltar, mientras que el valor aplicado ya viene acotado.
+        const final = ultima.current;
+        soltar.current(final, gesto.vy);
+        Animated.timing(altura, { toValue: final, duration: 160, useNativeDriver: false }).start();
+      },
+      onPanResponderTerminate: () => soltar.current(ultima.current, 0),
+    });
+  }, [altura, maximo, minimo]);
+
+  return { altura, panHandlers: responder.panHandlers };
 }
 
 // Hoja inferior para elegir estaciones, fechas, viajeros o descuentos. En la web el buscador

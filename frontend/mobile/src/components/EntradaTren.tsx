@@ -48,6 +48,17 @@ function altoEscenaFija(altoVentana: number) {
   return Math.round(Math.min(Math.max(altoVentana * 0.42, 250), 360));
 }
 
+// La escena no puede medir la ventana entera: la cabecera va en flujo normal y la barra de
+// pestañas flota encima, así que el andén acababa detrás de la barra y el tren salía muy abajo.
+// Por debajo de este alto la escena no deja ver el lema y el tren a la vez.
+const ESCENA_MINIMA = 320;
+// Solo se usan hasta que la pantalla mide su hueco real (primer fotograma): cabecera de cristal
+// (~96 px) y barra de pestañas (~70 px) más el área segura del móvil.
+const ALTO_CABECERA_ESTIMADA = 96;
+const ALTO_BARRA_ESTIMADO = 70;
+
+const escenaDisponible = (hueco: number) => Math.max(ESCENA_MINIMA, Math.round(hueco));
+
 /**
  * Medidas del tramo. La escena ocupa justo la ventana del ScrollView (por eso el tramo
  * sticky la tapa entera) y el tramo mide 2,2 escenas, como los 220vh de la web.
@@ -56,10 +67,17 @@ function altoEscenaFija(altoVentana: number) {
 // contenido) y agrandar la escena con esa medida entra en bucle y cuelga la página.
 // Móvil: la escena es la primera página de un carrusel horizontal y el tren avanza al deslizar a la
 // izquierda (contentOffset.x), en vez del tramo sticky vertical de la web.
-export function useEntradaTren() {
+export function useEntradaTren(altoDisponible?: number) {
   const { height: altoVentana } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const reducir = useReducirMovimiento();
-  const escena = reducir ? altoEscenaFija(altoVentana) : Math.round(altoVentana);
+  // Con el alto medido por la pantalla se descuenta solo la barra flotante; sin medir todavía,
+  // se estiman cabecera y barra a partir de la ventana.
+  const hueco =
+    altoDisponible && altoDisponible > 0
+      ? altoDisponible - (ALTO_BARRA_ESTIMADO + Math.max(insets.bottom, 8))
+      : altoVentana - ALTO_CABECERA_ESTIMADA - ALTO_BARRA_ESTIMADO - Math.max(insets.bottom, 8);
+  const escena = reducir ? altoEscenaFija(escenaDisponible(hueco)) : escenaDisponible(hueco);
   const tramo = reducir ? escena : Math.round(escena * FACTOR_TRAMO);
 
   const desplazamiento = useSharedValue(0);
@@ -114,7 +132,9 @@ export function EntradaTren({
   const recorrido = Math.max(1, ancho);
   const anchoTren = Math.max(Math.round(ancho * 1.15), ANCHO_TREN_MINIMO);
   const anchoEstela = Math.round(ancho * 0.7);
-  const altoAnden = Math.round(escena * 0.3);
+  // Andén más alto que en la web (30 %): en el móvil la escena es más baja, así que el tren
+  // quedaba pegado abajo. Con 40 % sube y la composición queda centrada.
+  const altoAnden = Math.round(escena * 0.4);
   const altoCatenaria = Math.round(escena * 0.34);
   const altoPaisaje = Math.round(escena * 0.22);
   const tamanoLema = Math.round(Math.min(96, Math.max(40, ancho * 0.09)));
@@ -181,7 +201,7 @@ export function EntradaTren({
 
         {/* Paisaje: tres lomas suaves, como los radial-gradient de la web. */}
         <Animated.View
-          style={[styles.paisaje, { bottom: Math.round(escena * 0.38), height: altoPaisaje }, estatico ? null : estiloPaisaje]}
+          style={[styles.paisaje, { bottom: altoAnden + Math.round(escena * 0.03), height: altoPaisaje }, estatico ? null : estiloPaisaje]}
           pointerEvents="none"
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"

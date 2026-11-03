@@ -1,6 +1,6 @@
 import { sinTildes } from "@renfe/shared/formato/texto";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
 import { buscarEstaciones } from "@renfe/shared/api/cliente";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
@@ -91,16 +91,14 @@ export function SelectorEstacion({
             No encontramos esa estación. Prueba con la ciudad.
           </Text>
         ) : (
-          <FlatList
-            data={lista}
-            keyExtractor={(e) => e.id}
-            keyboardShouldPersistTaps="handled"
-            style={{ maxHeight: 420 }}
-            ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
-            renderItem={({ item }) => {
+          // Sin FlatList: la hoja ya trae su propio ScrollView y anidar las dos rompe el
+          // windowing (aviso de VirtualizedList en el log). Son 15 estaciones: se pintan tal cual.
+          <View style={{ gap: 6 }}>
+            {lista.map((item) => {
               const activa = seleccion?.id === item.id;
               return (
                 <Pressable
+                  key={item.id}
                   accessibilityRole="button"
                   accessibilityState={{ selected: activa }}
                   onPress={() => {
@@ -140,8 +138,8 @@ export function SelectorEstacion({
                   {activa ? <Icono nombre="check" tamano={20} color={colores.marca} /> : null}
                 </Pressable>
               );
-            }}
-          />
+            })}
+          </View>
         )}
       </View>
     </Hoja>

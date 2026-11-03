@@ -57,8 +57,10 @@ export function TrenAnimado({ tren: t, activo, reducir, onPress }: Props) {
       coordinate={posicion}
       onPress={onPress}
       anchor={{ x: 0.5, y: 0.55 }}
+      // Por encima de las ~1.000 estaciones (zIndex 2): si no, el toque se lo quedaba la estación
+      // y el tren no se podía seleccionar desde el mapa.
       tracksViewChanges={activo}
-      zIndex={activo ? 1000 : 1}
+      zIndex={activo ? 1000 : 20}
       accessibilityLabel={`${t.tipo} ${t.numero}, ${t.origen || "sin origen"} a ${t.destino || "sin destino"}`}
     >
       <View style={styles.marcador}>

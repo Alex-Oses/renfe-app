@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ParadaRuta, PosicionTren } from "@renfe/shared/api/tipos";
 import { extremos } from "@renfe/shared/estado/estado-tren";
 import { partirRuta, type PuntoRuta } from "@renfe/shared/estado/partir-ruta";
@@ -29,34 +28,16 @@ function puntosDe(t: PosicionTren): PuntoRuta[] {
   return puntos.length ? puntos : [[t.lat, t.lon]];
 }
 
-// fitToCoordinates encuadra la caja de lo que se le pasa: con la envolvente basta y se evita
-// mandar al mapa nativo los miles de puntos de un trazado real de GTFS.
-function envolvente(puntos: PuntoRuta[]): { latitude: number; longitude: number }[] {
-  let arriba = -Infinity;
-  let abajo = Infinity;
-  let izquierda = Infinity;
-  let derecha = -Infinity;
-  for (const [lat, lon] of puntos) {
-    arriba = Math.max(arriba, lat);
-    abajo = Math.min(abajo, lat);
-    izquierda = Math.min(izquierda, lon);
-    derecha = Math.max(derecha, lon);
-  }
-  return [
-    { latitude: abajo, longitude: izquierda },
-    { latitude: arriba, longitude: derecha },
-  ];
-}
-
 // Mapa nativo: OpenStreetMap/Apple Maps con un tren dibujado por cada posición real.
 // El marcador del tren elegido lleva un anillo y, como en la web, su recorrido se pinta encima:
 // lo ya recorrido en trazo discontinuo y lo que queda con un halo blanco y el color del tipo.
 export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300, siguiendo = false, onSoltar }: PropsMapa) {
   const mapa = useRef<MapView>(null);
-  const insets = useSafeAreaInsets();
-  const { height: altoPantalla } = useWindowDimensions();
+  const { height: altoPantalla, width: anchoPantalla } = useWindowDimensions();
+  // Región visible: sirve para pasar de grados a píxeles (buscar el tren tocado y centrar sin que
+  // la hoja lo tape). En un ref para no repintar el mapa en cada movimiento.
+  const regionActual = useRef(ESPANA);
   const elegido = trenes.find((t) => t.trenId === seleccion);
-  const encuadrado = useRef("");
   const reducir = useReducirMovimiento();
   const [cerca, setCerca] = useState(false);
 
@@ -71,29 +52,33 @@ export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300,
     );
   }, [siguiendo, seguidoLat, seguidoLon, reducir]);
 
-  // Encuadra el recorrido al elegir el tren y otra vez cuando llega el trazado completo: el
-  // snapshot solo trae la posición y el recorrido se pide después a la API.
+  // Al elegir un tren se centra la cámara en él, sin tocar el zoom (antes se encuadraba el recorrido
+  // entero y el mapa saltaba de escala). El centro se sube medio hueco de la hoja para que el tren
+  // quede en la mitad de lo que se ve, no en la mitad de la pantalla, donde lo taparía el panel.
+  const centrado = useRef("");
   useEffect(() => {
-    if (!elegido) return;
-    const puntos = puntosDe(elegido);
-    const clave = `${elegido.trenId}:${puntos.length}`;
-    if (encuadrado.current === clave) return;
-    encuadrado.current = clave;
-    // El panel inferior tapa parte del mapa: se le deja su hueco para que la ruta se vea entera.
-    const margenInferior = Math.max(0, Math.min(espacioInferior, altoPantalla * 0.6));
-    if (puntos.length > 1) {
-      mapa.current?.fitToCoordinates(envolvente(puntos), {
-        edgePadding: { top: insets.top + 88, right: 44, bottom: margenInferior, left: 44 },
-        animated: true,
-      });
-    } else {
-      const [latitude, longitude] = puntos[0]!;
-      mapa.current?.animateToRegion({ latitude, longitude, latitudeDelta: 1.4, longitudeDelta: 1.4 }, 600);
+    if (!elegido) {
+      centrado.current = "";
+      return;
     }
-  }, [elegido, espacioInferior, insets.top, altoPantalla]);
+    if (centrado.current === elegido.trenId) return;
+    centrado.current = elegido.trenId;
+    const tapado = Math.min(Math.max(espacioInferior, 0), altoPantalla * 0.55);
+    const gradosPorPx = Math.abs(regionActual.current.latitudeDelta) / Math.max(1, altoPantalla);
+    mapa.current?.animateCamera(
+      { center: { latitude: elegido.lat - (tapado / 2) * gradosPorPx, longitude: elegido.lon } },
+      { duration: 450 },
+    );
+  }, [elegido, espacioInferior, altoPantalla]);
+
+  // Al elegir un tren no se mueve la cámara: el usuario ve el recorrido donde está mirando y no
+  // se le cambia el zoom. Solo se sigue al tren si él lo pide con «Seguir en el mapa».
 
   const color = elegido ? colorTipo[elegido.tipo] : colores.marca;
-  const corte = elegido && elegido.ruta.length > 1 ? partirRuta(elegido.ruta, elegido.lat, elegido.lon) : null;
+  // Con el tiempo real solo llegan paradas con coordenadas: se unen para marcar el recorrido, que
+  // antes no se pintaba porque `ruta` llegaba vacía.
+  const trazado = elegido ? puntosDe(elegido) : [];
+  const corte = elegido && trazado.length > 1 ? partirRuta(trazado, elegido.lat, elegido.lon) : null;
   const paradas = elegido ? elegido.paradas.filter(dibujable) : [];
   const { salida, llegada } = extremos(paradas);
   const esExtremo = (p: ParadaRuta) => p.estacionId === salida?.estacionId || p.estacionId === llegada?.estacionId;
@@ -108,6 +93,24 @@ export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300,
   const aCoordenadas = (puntos: PuntoRuta[]) =>
     puntos.map(([latitude, longitude]) => ({ latitude, longitude }));
 
+  // El marcador nativo no siempre recibe el toque (va dentro de un mapa con cientos de pines), así
+  // que el toque se resuelve en el propio mapa: se elige el tren más cercano al punto pulsado.
+  const alTocarMapa = (e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
+    if (!onElegir || !trenes.length) return;
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    const latPorPx = Math.abs(regionActual.current.latitudeDelta) / Math.max(1, altoPantalla);
+    const lonPorPx = Math.abs(regionActual.current.longitudeDelta) / Math.max(1, anchoPantalla);
+    let mejor: { tren: PosicionTren; distancia: number } | null = null;
+    for (const t of trenes) {
+      const distancia = Math.hypot((t.lat - latitude) / latPorPx, (t.lon - longitude) / lonPorPx);
+      if (!mejor || distancia < mejor.distancia) mejor = { tren: t, distancia };
+    }
+    // Radio de 26 px (el icono mide 62×66 y la distancia está en píxeles de pantalla): con 44 px,
+    // con el mapa alejado, cualquier toque en el mapa pillaba un tren a decenas de km y abría su
+    // detalle. Ahora hay que tocar de verdad encima del tren.
+    if (mejor && mejor.distancia <= 26) onElegir(mejor.tren);
+  };
+
   return (
     <MapView
       ref={mapa}
@@ -121,7 +124,11 @@ export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300,
       loadingIndicatorColor={colores.marca}
       // Solo el gesto del usuario suelta el seguimiento; las animaciones propias no lo disparan.
       onPanDrag={siguiendo ? onSoltar : undefined}
-      onRegionChangeComplete={(r) => setCerca(r.longitudeDelta < DELTA_CERCA)}
+      onPress={alTocarMapa}
+      onRegionChangeComplete={(r) => {
+        regionActual.current = r;
+        setCerca(r.longitudeDelta < DELTA_CERCA);
+      }}
     >
       {ESTACIONES.map((e, i) => {
         // Etiqueta de ciudad una sola vez por ciudad, y solo con el mapa cerca (como la web).

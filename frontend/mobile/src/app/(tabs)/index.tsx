@@ -80,7 +80,10 @@ export default function Comprar() {
   // Carrusel de dos páginas: el tren (avanza al deslizar a la izquierda) y la portada con el buscador.
   const desplazable = useRef<ComponentRef<typeof ScrollView>>(null);
   const { width: anchoPagina } = useWindowDimensions();
-  const entrada = useEntradaTren();
+  // Hueco real entre la cabecera y la barra de pestañas: la escena del tren se mide con él para
+  // que el andén no quede detrás de la barra (ver useEntradaTren).
+  const [altoCaja, setAltoCaja] = useState(0);
+  const entrada = useEntradaTren(altoCaja);
 
   const [abierta, setAbierta] = useState<string | null>(null);
 
@@ -123,6 +126,7 @@ export default function Comprar() {
 
   return (
     <Pantalla scroll={false} contenido={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
+      <View style={{ flex: 1 }} onLayout={(e) => setAltoCaja(e.nativeEvent.layout.height)}>
       <Animated.ScrollView
         ref={desplazable}
         horizontal
@@ -386,6 +390,7 @@ export default function Comprar() {
         <Text style={styles.pieTexto}>Renfe · Andén 0 · Proyecto de clase. Precios y reservas simulados.</Text>
         </ScrollView>
       </Animated.ScrollView>
+      </View>
     </Pantalla>
   );
 }

@@ -21,7 +21,7 @@ import type { PosicionTren } from "@renfe/shared/api/tipos";
 import { ciudadCorta, etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas } from "@renfe/shared/estado/estado-tren";
 import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
-import { useArrastreCierre } from "@/components/Hoja";
+import { useHojaArrastrable } from "@/components/Hoja";
 import { MapaTrenes } from "@/components/MapaTrenes";
 import { Leyenda } from "@/components/mapa/Leyenda";
 import { useAvisoLlegada } from "@/components/mapa/avisoLlegada";
@@ -201,7 +201,8 @@ export default function Directo() {
   const elegir = (t: PosicionTren) => {
     if (t.trenId !== seleccion) setSiguiendo(false);
     setSeleccion(t.trenId);
-    setAbierto(true);
+    // Elegir un tren no sube el panel: antes pasaba a abierto (64 %) y se comía casi todo el mapa.
+    // Con el tren elegido se queda en su nivel de detalle, y se sube arrastrando el asa.
     setEscondido(false);
   };
 
@@ -211,16 +212,59 @@ export default function Directo() {
     setAbierto(false);
   };
 
-  const ALTO_ESCONDIDO = 104;
-  const fraccion = seleccion ? 0.61 : abierto ? 0.64 : 0.43;
-  const alto: number | `${number}%` = !seleccion && escondido ? ALTO_ESCONDIDO : `${Math.round(fraccion * 100)}%`;
-  // Lo que la hoja tapa del mapa: el encuadre del recorrido deja libre ese hueco.
-  const espacioInferior =
-    (!seleccion && escondido ? ALTO_ESCONDIDO : Math.round(altoPantalla * fraccion)) + Math.max(insets.bottom, 8) + 86;
+  // Escondida queda el asa y el título, con un poco de aire para que no parezca cortada.
+  const ALTO_ESCONDIDO = 112;
+  // Cuándo se tocó la hoja por última vez: sirve para ignorar el toque fantasma en el mapa que
+  // deja un desliz muy rápido al soltar.
+  const ultimoToque = useRef(0);
+  const escondida = !seleccion && escondido;
+  const altoDetalle = Math.round(altoPantalla * 0.46);
+  const altoMedio = Math.round(altoPantalla * 0.43);
+  const altoGrande = Math.round(altoPantalla * 0.64);
+  // Con un tren elegido la hoja no se esconde: va del detalle (46 %) al grande (64 %) y, al
+  // arrastrarla hacia abajo, cierra el detalle.
+  const alto = seleccion ? (abierto ? altoGrande : altoDetalle) : escondido ? ALTO_ESCONDIDO : abierto ? altoGrande : altoMedio;
+  // Lo que la hoja tapa del mapa (el encuadre del recorrido ya no lo usa, pero el mapa lo recibe).
+  const espacioInferior = alto + Math.max(insets.bottom, 8) + 86;
+
+  // Al soltar el arrastre se encaja en el nivel más cercano: el gesto se siente predecible y no
+  // hay saltos de caja, porque lo que se ha movido es la altura, no la posición.
+  const alSoltar = (h: number, vy: number) => {
+    ultimoToque.current = Date.now();
+    // Un gesto rápido manda sobre la posición: se mueve un nivel en su dirección aunque el dedo
+    // se haya quedado a medio camino. Es lo que hace que un desliz rápido no quede a medias.
+    const rapido = Math.abs(vy) > 0.6;
+    if (seleccion) {
+      if (h < altoDetalle - 40 || (rapido && vy > 0)) {
+        cerrarDetalle();
+        return;
+      }
+      setAbierto(rapido && vy < 0 ? true : h > (altoDetalle + altoGrande) / 2);
+      return;
+    }
+    const niveles = [ALTO_ESCONDIDO, altoMedio, altoGrande];
+    let i = 0;
+    niveles.forEach((n, k) => {
+      if (Math.abs(n - h) < Math.abs(niveles[i]! - h)) i = k;
+    });
+    if (rapido && vy > 0 && i > 0) i -= 1;
+    if (rapido && vy < 0 && i < niveles.length - 1) i += 1;
+    setEscondido(niveles[i] === ALTO_ESCONDIDO);
+    setAbierto(niveles[i] === altoGrande);
+  };
+  const arrastre = useHojaArrastrable({ alto, minimo: seleccion ? altoDetalle : ALTO_ESCONDIDO, maximo: altoGrande, alSoltar });
+
   // Abajo: cierra el detalle, o baja de alto a medio y de medio a escondido. Arriba: sube un nivel.
-  const bajar = () => (abierto ? setAbierto(false) : setEscondido(true));
-  const subir = () => (escondido ? setEscondido(false) : setAbierto(true));
-  const arrastre = useArrastreCierre(seleccion ? cerrarDetalle : bajar, seleccion ? undefined : subir);
+  const bajar = () => {
+    ultimoToque.current = Date.now();
+    if (abierto) setAbierto(false);
+    else setEscondido(true);
+  };
+  const subir = () => {
+    ultimoToque.current = Date.now();
+    if (escondido) setEscondido(false);
+    else setAbierto(true);
+  };
 
   const colorFuente = fuente === "real" ? tonos.exito : fuente === "simulado" ? tonos.aviso : colores.textoSuave;
   const textoFuente = fuente === "real" ? "Tiempo real" : fuente === "simulado" ? "Simulados" : "Conectando";
@@ -231,7 +275,11 @@ export default function Directo() {
       <MapaTrenes
         trenes={elegido ? trenes.map((t) => (t.trenId === elegido.trenId ? elegido : t)) : trenes}
         seleccion={seleccion}
-        onElegir={elegir}
+        onElegir={(t) => {
+          // Justo después de mover la hoja se ignora el toque: un desliz rápido puede acabar
+          // registrándose como toque en el mapa y abrir el detalle solo.
+          if (Date.now() - ultimoToque.current > 450) elegir(t);
+        }}
         espacioInferior={espacioInferior}
         siguiendo={siguiendo}
         onSoltar={() => setSiguiendo(false)}
@@ -256,10 +304,7 @@ export default function Directo() {
         </View>
       </View>
 
-      <Animated.View
-        style={[styles.hoja, { bottom: Math.max(insets.bottom, 8) + 82, height: alto }, arrastre.estilo]}
-        onLayout={arrastre.alMedir}
-      >
+      <Animated.View style={[styles.hoja, { bottom: Math.max(insets.bottom, 8) + 82, height: arrastre.altura }]}>
         <View {...arrastre.panHandlers}>
           <Pressable
             accessibilityRole="button"
@@ -275,6 +320,7 @@ export default function Directo() {
               <Text style={styles.hojaTitulo} accessibilityRole="header">
                 {elegido ? `${elegido.tipo} ${elegido.numero}` : "Trenes en circulación"}
               </Text>
+              {escondida ? null : (
               <Text style={estilos.suave} numberOfLines={1}>
                 {elegido
                   ? elegido.linea
@@ -284,14 +330,21 @@ export default function Directo() {
                       : "Renfe aún no publica el recorrido de este tren"
                   : `${visibles.length} de ${trenes.length} trenes · ${hace === null ? "conectando…" : `actualizado hace ${hace} s`}`}
               </Text>
+              )}
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={seleccion ? "Cerrar detalle" : abierto ? "Bajar el panel" : "Subir el panel"}
+              accessibilityLabel={seleccion ? "Cerrar detalle" : escondida || !abierto ? "Subir el panel" : "Bajar el panel"}
               onPress={seleccion ? cerrarDetalle : () => (escondido || !abierto ? subir() : bajar())}
               style={({ pressed }) => [styles.botonRedondo, pressed && { backgroundColor: tonos.rosaFuerte }]}
             >
-              <Icono nombre={seleccion ? "cerrar" : abierto ? "chevron" : "atras"} tamano={19} color={colores.marca} />
+              {seleccion ? (
+                <Icono nombre="cerrar" tamano={19} color={colores.marca} />
+              ) : (
+                <View style={escondida ? { transform: [{ rotate: "180deg" }] } : undefined}>
+                  <Icono nombre="chevron" tamano={19} color={colores.marca} />
+                </View>
+              )}
             </Pressable>
           </View>
         </View>
