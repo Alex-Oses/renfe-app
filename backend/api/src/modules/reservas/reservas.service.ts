@@ -21,7 +21,12 @@ import {
 } from '../../common/formato.js';
 import { PREFIJO_BILLETE, firmar } from '../../common/qr/firma.js';
 import { BdService } from '../../common/bd/bd.service.js';
-import { centimosExtras, centimosViajero, kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
+import { kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
+import {
+  calcularDesglose,
+  precioViajero,
+  type Desglose,
+} from '../../common/simulado/precios.js';
 import { CorreoService, htmlDeCorreo } from '../../common/correo/correo.service.js';
 import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import type { CrearReservaDto } from './dto/crear-reserva.dto.js';
@@ -72,6 +77,7 @@ export interface ReservaCreada {
   localizador: string;
   estado: 'pagada';
   total: number;
+  desglose: Desglose;
   creada: string;
   billetes: BilleteEmitido[];
 }
@@ -365,17 +371,21 @@ export class ReservasService {
     ]);
 
     const plazas = dto.pasajeros.length;
-    const precioCentimos = Math.round(
-      precioSimulado(
-        viaje.tipo_servicio,
-        kmTrayecto(viaje.lat_o, viaje.lon_o, viaje.lat_d, viaje.lon_d),
-        `${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`,
-      ) * 100,
+    const precioAsiento = precioSimulado(
+      viaje.tipo_servicio,
+      kmTrayecto(viaje.lat_o, viaje.lon_o, viaje.lat_d, viaje.lon_d),
+      `${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`,
     );
-    const centimos = dto.pasajeros.map((p) => centimosViajero(precioCentimos, p.tipo, dto.tarifa, dto.descuento));
+    const desglose = calcularDesglose({
+      precioAsiento,
+      tipos: dto.pasajeros.map((p) => p.tipo ?? 'adulto'),
+      tarifa: dto.tarifa,
+      descuento: dto.descuento,
+      extras: dto.extras,
+    });
+    const totalCentimos = Math.round(desglose.total * 100);
     const extras = [...new Set(dto.extras ?? [])];
-    const extrasCentimos = centimosExtras(extras, plazas, dto.tarifa);
-    const totalCentimos = centimos.reduce((s, c) => s + c, 0) + extrasCentimos;
+    const extrasCentimos = Math.round(desglose.extras * 100);
 
     const { rows: reservas } = await cliente.query<FilaReserva>(SQL_RESERVA, [
       usuarioId,
@@ -422,6 +432,9 @@ export class ReservasService {
     const billetes: BilleteEmitido[] = [];
     for (const [indice, asiento] of asientos.entries()) {
       const pasajero = dto.pasajeros[indice]!;
+      const precioBillete = Math.round(
+        precioViajero(precioAsiento, dto.tarifa, pasajero.tipo ?? 'adulto', dto.descuento) * 100,
+      );
       const id = randomUUID();
       const asientoEtiqueta = etiquetaAsiento(asiento.numero);
       const qr = firmar(
@@ -459,7 +472,7 @@ export class ReservasService {
         asiento.coche,
         asientoEtiqueta,
         asiento.clase,
-        centimos[indice]!,
+        precioBillete,
         qr,
         expira,
       ]);
@@ -470,7 +483,7 @@ export class ReservasService {
         coche: asiento.coche,
         asiento: asientoEtiqueta,
         clase: claseVisible(asiento.clase),
-        precio: centimos[indice]! / 100,
+        precio: precioBillete / 100,
       });
     }
 
@@ -479,6 +492,7 @@ export class ReservasService {
       localizador: reserva.referencia,
       estado: 'pagada',
       total: totalCentimos / 100,
+      desglose,
       creada: instanteAIso(reserva.creada_en),
       billetes,
     };

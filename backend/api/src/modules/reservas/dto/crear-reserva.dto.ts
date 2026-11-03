@@ -11,8 +11,17 @@ import {
   Matches,
   ValidateNested,
 } from 'class-validator';
-import { EXTRAS, FACTOR_TARIFA, PCT_DESCUENTO, TIPOS_VIAJERO, type TipoViajero } from '../../../common/simulado/precio.js';
 import { FEEDS, type Feed } from '../../estaciones/dto/buscar-estaciones.dto.js';
+import {
+  IDS_DESCUENTO,
+  IDS_EXTRA,
+  IDS_TARIFA,
+  IDS_TIPO_VIAJERO,
+  type IdDescuento,
+  type IdExtra,
+  type IdTarifa,
+  type TipoViajero,
+} from '../../../common/simulado/precios.js';
 
 export class PasajeroDto {
   @ApiProperty({ description: 'Nombre completo del viajero (va en el QR)', example: 'Lucía Pérez Gómez' })
@@ -28,9 +37,13 @@ export class PasajeroDto {
   @Length(4, 20)
   documento!: string;
 
-  @ApiProperty({ required: false, enum: TIPOS_VIAJERO, description: 'Niño (4-13): 40 % de descuento' })
+  @ApiProperty({
+    enum: IDS_TIPO_VIAJERO,
+    description: 'Sin tipo = adulto',
+    required: false,
+  })
   @IsOptional()
-  @IsIn(TIPOS_VIAJERO)
+  @IsIn(IDS_TIPO_VIAJERO)
   tipo?: TipoViajero;
 }
 
@@ -80,20 +93,20 @@ export class CrearReservaDto {
   @Matches(/^\d-\d{1,2}[A-D]$/, { each: true })
   asientos?: string[];
 
-  @ApiProperty({ required: false, enum: Object.keys(FACTOR_TARIFA) })
+  @ApiProperty({ enum: IDS_TARIFA, description: 'Por defecto, básico', required: false })
   @IsOptional()
-  @IsIn(Object.keys(FACTOR_TARIFA))
-  tarifa?: string;
+  @IsIn(IDS_TARIFA)
+  tarifa?: IdTarifa;
 
-  @ApiProperty({ required: false, enum: Object.keys(PCT_DESCUENTO) })
+  @ApiProperty({ enum: IDS_DESCUENTO, description: 'Por defecto, sin descuento', required: false })
   @IsOptional()
-  @IsIn(Object.keys(PCT_DESCUENTO))
-  descuento?: string;
+  @IsIn(IDS_DESCUENTO)
+  descuento?: IdDescuento;
 
-  @ApiProperty({ required: false, isArray: true, enum: Object.keys(EXTRAS) })
+  @ApiProperty({ enum: IDS_EXTRA, isArray: true, required: false })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(5)
-  @IsIn(Object.keys(EXTRAS), { each: true })
-  extras?: string[];
+  @IsIn(IDS_EXTRA, { each: true })
+  extras?: IdExtra[];
 }

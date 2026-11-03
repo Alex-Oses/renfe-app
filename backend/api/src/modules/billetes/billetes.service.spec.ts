@@ -140,13 +140,18 @@ describe('BilletesService.listar', () => {
         },
       ],
       total: 1,
+      transbordos: [],
     });
   });
 
   it('sin billetes devuelve la colección vacía', async () => {
     const { servicio } = servicioCon();
 
-    await expect(servicio.listar('usuario-1')).resolves.toEqual({ datos: [], total: 0 });
+    await expect(servicio.listar('usuario-1')).resolves.toEqual({
+      datos: [],
+      total: 0,
+      transbordos: [],
+    });
   });
 });
 

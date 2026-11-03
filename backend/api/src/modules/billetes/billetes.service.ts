@@ -20,6 +20,7 @@ import {
   verificar,
 } from '../../common/qr/firma.js';
 import type { ValidarBilleteDto } from './dto/validar-billete.dto.js';
+import { transbordosDe, type EnlaceTransbordo } from './transbordos.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -237,9 +238,12 @@ export class BilletesService {
     private readonly config: ConfigService,
   ) {}
 
-  async listar(usuarioId: string): Promise<{ datos: Billete[]; total: number }> {
+  async listar(
+    usuarioId: string,
+  ): Promise<{ datos: Billete[]; total: number; transbordos: EnlaceTransbordo[] }> {
     const filas = await this.consultar<FilaBillete>(SQL_BILLETES, [usuarioId]);
-    return { datos: filas.map((fila) => this.aBillete(fila)), total: filas.length };
+    const datos = filas.map((fila) => this.aBillete(fila));
+    return { datos, total: filas.length, transbordos: transbordosDe(datos) };
   }
 
   async qr(usuarioId: string, id: string): Promise<{ id: string; qr: string }> {
