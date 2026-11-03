@@ -1,27 +1,9 @@
 // Cálculos de los widgets. Todo simulado salvo la tabla de puntualidad (renfe.com/es/es/ayuda/compromiso-puntualidad).
-import type { Reserva, TipoTren } from "@renfe/shared/api/tipos";
+import type { Reserva } from "@renfe/shared/api/tipos";
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
-// Compromiso de puntualidad de Renfe: [minutos, %]; se aplica el tramo más alto superado.
-const COMERCIAL: [number, number, boolean][] = [[90, 100, false], [60, 50, true]]; // [umbral, %, incluye el umbral]
-const MEDIA_DISTANCIA: [number, number, boolean][] = [[60, 100, false], [30, 50, false], [15, 25, false]];
-const TABLA: Partial<Record<TipoTren, [number, number, boolean][]>> = {
-  AVE: COMERCIAL,
-  Avlo: COMERCIAL,
-  Alvia: COMERCIAL,
-  Intercity: COMERCIAL,
-  "Media Distancia": MEDIA_DISTANCIA,
-};
-
-/** % del billete que se devuelve. Cercanías no está en este compromiso: 0. */
-export function porcentajeIndemnizacion(tipo: TipoTren, minutos: number): number {
-  for (const [umbral, pct, incluye] of TABLA[tipo] ?? []) if (incluye ? minutos >= umbral : minutos > umbral) return pct;
-  return 0;
-}
-
-export const indemnizacion = (tipo: TipoTren, minutos: number, precio: number) =>
-  redondear((precio * porcentajeIndemnizacion(tipo, minutos)) / 100);
+export { indemnizacion, porcentajeIndemnizacion } from "@renfe/shared/billetes/indemnizacion";
 
 // La reserva simulada no guarda tarifa: se deduce de la clase del asiento.
 export type Tarifa = "Básico" | "Elige" | "Prémium";
