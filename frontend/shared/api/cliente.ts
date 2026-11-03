@@ -474,6 +474,15 @@ export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
     ? Promise.reject(new Error("Con la API real el pago lo confirma Stripe: falta conectar Stripe Elements."))
     : simular(() => reservas.confirmarPago(reservaId), 1200);
 
+// Reserva y pago en un paso: con la API real POST /reservas ya devuelve la reserva pagada;
+// en el simulado hay que pasar por el intento de pago y la confirmación.
+export async function comprarReserva(tren: Tren, r: NuevaReserva): Promise<Reserva> {
+  const creada = await crearReserva(tren, r);
+  if (BASE) return creada;
+  await crearIntentoPago(creada.id);
+  return confirmarPagoSimulado(creada.id);
+}
+
 // GET /billetes
 export const misBilletes = async (): Promise<Billete[]> => {
   if (!BASE) return simular(() => reservas.misBilletes());

@@ -40,6 +40,9 @@ export interface Billete {
   asiento: string;
   clase: string;
   precio: number;
+  /** Extras de la reserva y su importe; se repiten en cada billete de la misma reserva. */
+  extras: string[];
+  extrasReserva: number;
   emitido: string;
   expira: string;
   qr: string;
@@ -98,6 +101,8 @@ interface FilaBillete {
   asiento: string;
   clase: string;
   precio_centimos: number;
+  extras: string[];
+  extras_centimos: number;
   qr: string;
   emitido_en: Date;
   expira_en: Date;
@@ -141,6 +146,8 @@ const SELECT_BILLETE = `
          b.asiento,
          b.clase,
          b.precio_centimos,
+         r.extras,
+         r.extras_centimos,
          b.qr,
          b.emitido_en,
          b.expira_en,
@@ -417,6 +424,8 @@ export class BilletesService {
       asiento: fila.asiento,
       clase: claseVisible(fila.clase),
       precio: fila.precio_centimos / 100,
+      extras: fila.extras ?? [],
+      extrasReserva: (fila.extras_centimos ?? 0) / 100,
       emitido: instanteAIso(fila.emitido_en),
       expira: instanteAIso(fila.expira_en),
       qr: fila.qr,

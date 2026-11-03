@@ -1,3 +1,4 @@
+import { claveTramo } from "@renfe/shared/api/comprar-transbordo";
 import { FRANJAS, duracionMin, minutosDelDia } from "@renfe/shared/billetes/viaje";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -476,6 +477,7 @@ export default function Resultados() {
                   </Text>
                   <Text style={[styles.tipo, { fontFamily: fuentes.seminegrita, color: colores.marca }]}>
                     Transbordo en {o.transbordo.nombre}: {textoDuracion(o.esperaMin)} de espera
+                    {o.cambioEstacion && o.transbordoSalida ? ` (cambias a ${o.transbordoSalida.nombre})` : ""}
                   </Text>
                   <Text style={styles.tipo}>
                     <Text style={{ fontFamily: fuentes.negrita }}>{b.tipo}</Text> {b.numero || b.linea} sale a las {horaLocal(b.salida)}
@@ -489,7 +491,17 @@ export default function Resultados() {
                       onPress={() =>
                         router.push({
                           pathname: "/transbordo",
-                          params: { origen, destino, fecha, a: a.id, b: b.id, pasajeros: String(pasajeros), ninos: String(ninos) },
+                          params: {
+                            origen,
+                            destino,
+                            fecha,
+                            a: claveTramo(a),
+                            b: claveTramo(b),
+                            pasajeros: String(pasajeros),
+                            ninos: String(ninos),
+                            ...(bebes ? { bebes: String(bebes) } : {}),
+                            ...(descuento !== "ninguno" ? { descuento } : {}),
+                          },
                         })
                       }
                       style={({ pressed }) => [styles.elegir, pressed && { transform: [{ scale: 0.96 }] }]}

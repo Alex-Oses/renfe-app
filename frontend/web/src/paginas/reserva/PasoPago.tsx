@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  confirmarPagoSimulado,
-  crearIntentoPago,
-  crearReserva,
-  usaDatosSimulados,
-} from "@renfe/shared/api/cliente";
+import { comprarReserva } from "@renfe/shared/api/cliente";
 import type { IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva, Tren } from "@renfe/shared/api/tipos";
 import { EXTRAS, precioExtra } from "@renfe/shared/api/simulado-precios";
 import { euros } from "@renfe/shared/formato/formato";
@@ -33,15 +28,10 @@ export function PasoPago({ tren, asientos, pasajeros, total, importeCargando, ta
     setCargando(true);
     setError("");
     try {
-      const r = await crearReserva(tren, { trenId: tren.id, asientos, pasajeros, tarifa, descuento, extras, bebes });
+      const r = await comprarReserva(tren, { trenId: tren.id, asientos, pasajeros, tarifa, descuento, extras, bebes });
       // Con la API real POST /reservas ya crea la reserva pagada y sus billetes; sin API hay que
       // pasar por el intento de pago y la confirmación simulados.
-      if (usaDatosSimulados) {
-        await crearIntentoPago(r.id);
-        onPagada(await confirmarPagoSimulado(r.id));
-      } else {
-        onPagada(r);
-      }
+      onPagada(r);
     } catch (e) {
       const m = (e as Error).message;
       setOcupado(/butaca|ocupad/i.test(m));

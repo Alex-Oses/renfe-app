@@ -110,7 +110,7 @@ describe("reservaDeApi", () => {
     const r = reservaDeApi(creada, tren, nueva);
     expect(r.localizador).toBe("R-7K3M9Q");
     expect(r.estado).toBe("pagada");
-    expect(r.total).toBe(90);
+    expect(r.total).toBe(90); // la API ya cobra con tarifa y descuento; sin extras no se suma nada
     expect(r.asientos.map((a) => `${a.coche}-${a.fila}${a.letra}`)).toEqual(["1-1A", "1-1D"]);
     expect(r.asientos[0].clase).toBe("Confort");
     expect(r.pasajeros[0].documento).toBe("••••678Z");
@@ -191,5 +191,25 @@ describe("validacionDeApi", () => {
     expect(validacionDeApi({ ...base, primeraValidacion: null }).primeraValidacion).toBeUndefined();
     expect(validacionDeApi(base).primeraValidacion).toBe("2026-11-02T07:20:11+01:00");
     expect(validacionDeApi(base).estado).toBe("ya_validado");
+  });
+});
+
+describe("precio por viajero en la API", () => {
+  const tren = { id: "avld:T1:2026-11-04", origen: { id: "1", nombre: "A" }, destino: { id: "2", nombre: "B" } } as never;
+  const datos = { trenId: "x", asientos: [], tarifa: "elige" as const, descuento: "joven" as const, extras: ["mascota" as const], pasajeros: [
+    { nombre: "A", apellidos: "B", documento: "12345678Z", email: "" },
+    { nombre: "C", apellidos: "D", documento: "12345678Z", email: "", tipo: "nino" as const },
+  ] };
+
+  it("manda el tipo de cada viajero, la tarifa y el descuento", () => {
+    const cuerpo = cuerpoReserva(tren, datos);
+    expect(cuerpo.pasajeros.map((p) => p.tipo)).toEqual(["adulto", "nino"]);
+    expect(cuerpo).toMatchObject({ tarifa: "elige", descuento: "joven" });
+  });
+
+  it("manda los extras y usa el total que cobra la API", () => {
+    expect(cuerpoReserva(tren, datos).extras).toEqual(["mascota"]);
+    const creada = { id: "r", localizador: "R-1", total: 105, estado: "pagada", creada: "", billetes: [] } as never;
+    expect(reservaDeApi(creada, tren, datos).total).toBe(105);
   });
 });

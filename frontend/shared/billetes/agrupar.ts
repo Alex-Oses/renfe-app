@@ -35,12 +35,26 @@ function sonTransbordo(a: Viaje, b: Viaje): boolean {
   return espera >= 15 && espera <= 180 && Math.abs(Date.parse(y.emitido) - Date.parse(x.emitido)) <= 15 * MINUTO;
 }
 
+const emision = (v: Viaje) => Date.parse(v.billetes[0]!.emitido ?? "");
+
+// Si el mismo viaje se compra dos veces seguidas, cada segundo tren va con el primero que se emitió más cerca.
 export function unirTransbordos(viajes: Viaje[]): Viaje[] {
   const salida: Viaje[] = [];
   for (const viaje of viajes) {
-    const previo = salida.at(-1);
-    if (previo && !previo.enlace && sonTransbordo(previo, viaje)) previo.enlace = viaje;
+    const previo = salida
+      .filter((p) => !p.enlace && sonTransbordo(p, viaje))
+      .sort((p, q) => Math.abs(emision(p) - emision(viaje)) - Math.abs(emision(q) - emision(viaje)))[0];
+    if (previo) previo.enlace = viaje;
     else salida.push(viaje);
   }
   return salida;
 }
+
+// Lo pagado por un viaje (con su transbordo): billetes más los extras de cada reserva, una vez.
+export const totalViaje = (v: Viaje): number =>
+  Math.round(
+    [v, ...(v.enlace ? [v.enlace] : [])].reduce(
+      (suma, r) => suma + r.billetes.reduce((s, b) => s + b.asiento.precio, 0) + (r.billetes[0]?.extrasReserva ?? 0),
+      0,
+    ) * 100,
+  ) / 100;

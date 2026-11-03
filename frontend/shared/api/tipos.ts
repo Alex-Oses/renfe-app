@@ -180,6 +180,8 @@ export interface Billete {
   pasajero: Pasajero;
   usuarioId?: string; // dueño del billete; sin sesión, undefined
   emitido?: string; // con API: permite reconocer los tramos de un mismo transbordo
+  extras?: IdExtra[]; // de su reserva
+  extrasReserva?: number; // euros de esos extras, una vez por reserva
   qr: string; // contenido firmado (Ed25519 en la API real); el frontend solo lo pinta
   transbordos?: TransbordoApi[];
 }
@@ -461,6 +463,8 @@ export interface BilleteApi {
   emitido: string;
   expira: string;
   qr: string; // RNF1.…
+  extras?: IdExtra[]; // de la reserva: se repiten en cada billete
+  extrasReserva?: number; // euros de la reserva, una vez por reserva
 }
 
 export interface TransbordoApi {

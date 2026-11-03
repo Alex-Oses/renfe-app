@@ -4,13 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { alSesionInvalida, iniciarSesion, misBilletes, registrarse, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { CUENTAS_DEMO } from "@renfe/shared/api/simulado-cuenta";
+import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
 import type { Sesion } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
-import { Campo, CampoClave } from "@/components/Campo";
+import { Campo, CampoBoton, CampoClave } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
 import { Icono, type NombreIcono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
+import { SelectorDescuento } from "@/components/Selectores";
+import { descuentoGuardado, guardarDescuento } from "@/components/Buscador";
 import { guardarSesion, leerSesion } from "@/sesion";
 import { colores, espaciado, estilos, fuentes, gradientes, radios, sombras, tipografia, tonos } from "@/tema";
 
@@ -25,7 +28,10 @@ function repartir(mensaje: string): Errores {
   return { general: mensaje };
 }
 
-const DEMO = { email: "revisor@renfe-app.demo", ...CUENTAS_DEMO["revisor@renfe-app.demo"] };
+// Cuentas de demostración (las mismas que la web): revisión y administración.
+const DEMOS = ["revisor@renfe-app.demo", "admin@renfe-app.demo"];
+
+const nombreDescuento = (id: string) => DESCUENTOS.find((d) => d.id === id)?.nombre ?? "Sin descuento";
 
 const ROL: Record<string, string> = { viajero: "Viajero", revisor: "Revisor", admin: "Administración" };
 
@@ -38,6 +44,12 @@ const OPCIONES: { titulo: string; detalle: string; icono: NombreIcono; ruta: str
 ];
 
 const REVISOR = { titulo: "Modo revisor", detalle: "Escanea y valida billetes y abonos", icono: "check" as NombreIcono, ruta: "/revisor" };
+const ADMIN = {
+  titulo: "Administración",
+  detalle: "Resumen de ventas, reservas y usuarios",
+  icono: "cuenta" as NombreIcono,
+  ruta: "/admin",
+};
 const CARA = {
   titulo: "Registrar mi cara",
   detalle: "Entra sin contraseña mirando a la cámara",
@@ -54,6 +66,8 @@ export default function Cuenta() {
   const [errores, setErrores] = useState<Errores>({});
   const [enviando, setEnviando] = useState(false);
   const [puntos, setPuntos] = useState<number | null>(null);
+  const [descuento, setDescuento] = useState(descuentoGuardado);
+  const [hojaDescuento, setHojaDescuento] = useState(false);
 
   // La sesión se guarda en sessionStorage (en la app, SQLite): sobrevive a recargar sin cerrar.
   // Se relee al volver de /cara, que es donde se escribe la sesión del facial.
@@ -115,11 +129,11 @@ export default function Cuenta() {
     }
   };
 
-  const entrarDemo = async () => {
+  const entrarDemo = async (email: string) => {
     setErrores({});
     setEnviando(true);
     try {
-      entrar(await iniciarSesion({ email: DEMO.email, contrasena: DEMO.contrasena }));
+      entrar(await iniciarSesion({ email, contrasena: CUENTAS_DEMO[email].contrasena }));
     } catch (e) {
       setErrores(repartir((e as Error).message));
     } finally {
@@ -177,6 +191,19 @@ export default function Cuenta() {
         </Cristal>
 
         <Cristal gap={espaciado[2]}>
+          <Text style={styles.estadoTitulo}>Tarjetas y descuentos</Text>
+          <Text style={styles.estadoTexto}>
+            El buscador usará este descuento por defecto. Llévalo encima al viajar: el interventor puede pedírtelo.
+          </Text>
+          <CampoBoton
+            etiqueta="Tu tarjeta o descuento"
+            valor={nombreDescuento(descuento)}
+            placeholder="Sin descuento"
+            onPress={() => setHojaDescuento(true)}
+          />
+        </Cristal>
+
+        <Cristal gap={espaciado[2]}>
           <Text style={styles.estadoTitulo}>Acceso con tu cara</Text>
           <Text style={styles.estadoTexto}>
             {usuario.caraRegistrada
@@ -192,7 +219,12 @@ export default function Cuenta() {
         </Cristal>
 
         <View style={styles.opciones}>
-          {[CARA, ...OPCIONES, ...(rol === "revisor" || rol === "admin" ? [REVISOR] : [])].map((o) => (
+          {[
+            CARA,
+            ...OPCIONES,
+            ...(rol === "revisor" || rol === "admin" ? [REVISOR] : []),
+            ...(rol === "admin" ? [ADMIN] : []),
+          ].map((o) => (
             <Pressable
               key={o.ruta}
               accessibilityRole="button"
@@ -229,6 +261,16 @@ export default function Cuenta() {
         </Cristal>
 
         <Boton texto="Cerrar sesión" variante="secundario" icono="cerrar" onPress={cerrarSesion} />
+
+        <SelectorDescuento
+          visible={hojaDescuento}
+          valor={descuento}
+          onCerrar={() => setHojaDescuento(false)}
+          onElegir={(id) => {
+            setDescuento(id);
+            guardarDescuento(id);
+          }}
+        />
       </Pantalla>
     );
   }
@@ -322,19 +364,26 @@ export default function Cuenta() {
           <View style={styles.demoIcono}>
             <Icono nombre="info" tamano={20} color={colores.marca} />
           </View>
-          <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+          <View style={{ flex: 1, minWidth: 0, gap: espaciado[1] }}>
             <Text style={styles.demoTitulo}>¿Solo quieres probar?</Text>
-            <Text style={styles.demoTexto}>Entra con la cuenta de revisión de la demo.</Text>
+            <Text style={styles.demoTexto}>Entra con una cuenta de la demo: revisión o administración.</Text>
+            <View style={styles.demoBotones}>
+              {DEMOS.map((d) => (
+                <Pressable
+                  key={d}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Entrar con la cuenta de prueba ${CUENTAS_DEMO[d].rol}`}
+                  disabled={enviando}
+                  onPress={() => entrarDemo(d)}
+                  style={({ pressed }) => [styles.demoBoton, pressed && { opacity: 0.65 }]}
+                >
+                  <Text style={styles.demoBotonTexto}>
+                    {CUENTAS_DEMO[d].rol === "admin" ? "Administración" : "Revisión"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Entrar con la cuenta de prueba"
-            disabled={enviando}
-            onPress={entrarDemo}
-            style={({ pressed }) => [styles.demoBoton, pressed && { opacity: 0.65 }]}
-          >
-            <Text style={styles.demoBotonTexto}>Usar</Text>
-          </Pressable>
         </View>
       ) : null}
 
@@ -387,6 +436,7 @@ const styles = StyleSheet.create({
   },
   demoTitulo: { fontFamily: fuentes.seminegrita, fontSize: 14, color: colores.titulo },
   demoTexto: { fontFamily: fuentes.normal, fontSize: 12.2, color: colores.textoSuave },
+  demoBotones: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
   demoBoton: {
     minHeight: 36,
     borderRadius: radios.pildora,

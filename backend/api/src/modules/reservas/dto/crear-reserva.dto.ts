@@ -11,6 +11,7 @@ import {
   Matches,
   ValidateNested,
 } from 'class-validator';
+import { EXTRAS, FACTOR_TARIFA, PCT_DESCUENTO, TIPOS_VIAJERO, type TipoViajero } from '../../../common/simulado/precio.js';
 import { FEEDS, type Feed } from '../../estaciones/dto/buscar-estaciones.dto.js';
 
 export class PasajeroDto {
@@ -26,6 +27,11 @@ export class PasajeroDto {
   @IsString()
   @Length(4, 20)
   documento!: string;
+
+  @ApiProperty({ required: false, enum: TIPOS_VIAJERO, description: 'Niño (4-13): 40 % de descuento' })
+  @IsOptional()
+  @IsIn(TIPOS_VIAJERO)
+  tipo?: TipoViajero;
 }
 
 export class CrearReservaDto {
@@ -73,4 +79,21 @@ export class CrearReservaDto {
   @ArrayMaxSize(6)
   @Matches(/^\d-\d{1,2}[A-D]$/, { each: true })
   asientos?: string[];
+
+  @ApiProperty({ required: false, enum: Object.keys(FACTOR_TARIFA) })
+  @IsOptional()
+  @IsIn(Object.keys(FACTOR_TARIFA))
+  tarifa?: string;
+
+  @ApiProperty({ required: false, enum: Object.keys(PCT_DESCUENTO) })
+  @IsOptional()
+  @IsIn(Object.keys(PCT_DESCUENTO))
+  descuento?: string;
+
+  @ApiProperty({ required: false, isArray: true, enum: Object.keys(EXTRAS) })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsIn(Object.keys(EXTRAS), { each: true })
+  extras?: string[];
 }
