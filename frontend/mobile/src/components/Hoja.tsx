@@ -11,12 +11,15 @@ export function Hoja({
   titulo,
   children,
   maximo = 0.82,
+  scroll = true,
 }: {
   visible: boolean;
   onCerrar: () => void;
   titulo: string;
   children: React.ReactNode;
   maximo?: number;
+  // Una lista virtualizada dentro se desplaza sola: con scroll={false} no se anida en un ScrollView.
+  scroll?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   return (
@@ -47,13 +50,17 @@ export function Hoja({
               <Icono nombre="cerrar" tamano={20} color={colores.marca} />
             </Pressable>
           </View>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: espaciado[4] }}
-            showsVerticalScrollIndicator={false}
-          >
-            {children}
-          </ScrollView>
+          {scroll ? (
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: espaciado[4] }}
+              showsVerticalScrollIndicator={false}
+            >
+              {children}
+            </ScrollView>
+          ) : (
+            <View style={styles.sinScroll}>{children}</View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -79,6 +86,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(129,0,94,0.22)",
     marginBottom: espaciado[3],
   },
+  // Deja que la lista virtualizada mida y encoja su alto dentro del maxHeight de la hoja.
+  sinScroll: { flexShrink: 1, minHeight: 0, paddingBottom: espaciado[4] },
   cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: espaciado[3] },
   titulo: {
     fontFamily: fuentes.negrita,

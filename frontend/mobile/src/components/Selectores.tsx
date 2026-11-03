@@ -53,8 +53,8 @@ export function SelectorEstacion({
   }, [texto, visible]);
 
   return (
-    <Hoja visible={visible} onCerrar={onCerrar} titulo={titulo} maximo={0.88}>
-      <View style={{ gap: espaciado[3] }}>
+    <Hoja visible={visible} onCerrar={onCerrar} titulo={titulo} maximo={0.88} scroll={false}>
+      <View style={{ gap: espaciado[3], flexShrink: 1, minHeight: 0 }}>
         <View
           style={{
             flexDirection: "row",
@@ -95,7 +95,7 @@ export function SelectorEstacion({
             data={lista}
             keyExtractor={(e) => e.id}
             keyboardShouldPersistTaps="handled"
-            style={{ maxHeight: 420 }}
+            style={{ flexShrink: 1, maxHeight: 420 }}
             ItemSeparatorComponent={() => <View style={{ height: 6 }} />}
             renderItem={({ item }) => {
               const activa = seleccion?.id === item.id;
