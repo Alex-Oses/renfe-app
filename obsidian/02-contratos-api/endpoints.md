@@ -583,6 +583,48 @@ seis campos van a `null` como antes. Detalles:
 todavía los mapea (`rumbo: p.rumbo ?? 0`) y quitarlos no arregla nada. Quedan como obsoletos; se
 pueden borrar cuando la web deje de leerlos.
 
+## POST /precios/calcular — añadido (Rubén, 2026-11-03)
+
+Descripción: importe de una selección **antes** de reservar, para que web y app no lo calculen en
+el cliente. Es el mismo cálculo que hace `POST /reservas`, así que el total que se enseña y el que se
+cobra coinciden.
+Auth: **no**
+
+Request:
+
+```json
+{
+  "feed": "avld",
+  "viajeId": "3097L23537C1",
+  "fecha": "2026-11-02",
+  "origenId": "60000",
+  "destinoId": "04040",
+  "pasajeros": [{ "tipo": "adulto" }, { "tipo": "nino" }],
+  "tarifa": "elige",
+  "descuento": "joven",
+  "extras": ["equipaje", "seguro"]
+}
+```
+
+`pasajeros` va de 1 a 6 y solo cuenta el `tipo` (`adulto` \| `nino` \| `bebe`; sin tipo = `adulto`).
+`tarifa`, `descuento` y `extras` son opcionales; sin ellas, básico, sin descuento y sin extras.
+
+Response 200:
+
+```json
+{
+  "precioAsiento": 45.0,
+  "desglose": { "billetes": 84.38, "extras": 20.0, "total": 104.38 }
+}
+```
+
+`precioAsiento` es el precio base de una butaca (el mismo `precioDesde` de la búsqueda).
+`billetes` ya lleva tarifa, descuento y tipo de viajero; `extras` se cobra una vez por reserva o por
+viajero según el extra.
+
+Errores: `400` pasajeros fuera de rango o tarifa/descuento/extra desconocidos · `404` el viaje no
+circula ese día o el trayecto no existe · `503` BD caída.
+
 ## POST /reservas
 
 Descripción: crea una reserva **pagada** (el pago es simulado: no hay Stripe) y emite **un billete con
@@ -600,13 +642,20 @@ Request:
   "origenId": "60000",
   "destinoId": "04040",
   "pasajeros": [
-    { "nombre": "Lucía Pérez Gómez", "documento": "12345678Z" }
-  ]
+    { "nombre": "Lucía Pérez Gómez", "documento": "12345678Z", "tipo": "adulto" }
+  ],
+  "tarifa": "elige",
+  "descuento": "joven",
+  "extras": ["equipaje", "seguro"]
 }
 ```
 
 `pasajeros` va de 1 a 6: **una butaca por pasajero**. La butaca la elige la API (primeras libres por
 coche y número); el `documento` solo se enmascara en el QR (`••••678Z`).
+
+`tipo`, `tarifa`, `descuento` y `extras` son **opcionales** (`adulto`, `basico`, `ninguno` y sin
+extras por defecto); los importes los aplica la API con las mismas tablas que
+`POST /precios/calcular`. El `precio` de cada billete ya lleva tarifa, descuento y tipo.
 
 Response 201:
 
@@ -616,6 +665,7 @@ Response 201:
   "localizador": "R-7K3M9Q",
   "estado": "pagada",
   "total": 45.0,
+  "desglose": { "billetes": 45.0, "extras": 0, "total": 45.0 },
   "creada": "2026-10-29T10:00:00+01:00",
   "billetes": [
     {
