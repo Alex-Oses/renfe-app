@@ -388,7 +388,7 @@ export default function Cuenta() {
       ) : null}
 
       <Text style={styles.pie}>
-        Al entrar aceptas que esta es una demo de clase: los pagos, asientos y cuentas son simulados.
+        Al entrar aceptas que Andén 0 es una demostración: los pagos, asientos y cuentas son simulados.
       </Text>
     </Pantalla>
   );

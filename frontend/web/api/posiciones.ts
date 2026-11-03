@@ -83,7 +83,7 @@ const ESPERA_MS = 8000;
 async function leer(feed: Feed) {
   const r = await fetch(URLS_GTFS_RT[feed], {
     signal: AbortSignal.timeout(ESPERA_MS),
-    headers: { Accept: "application/json", "User-Agent": "renfe-app (proyecto academico)" },
+    headers: { Accept: "application/json", "User-Agent": "anden-0 (demo)" },
   });
   if (!r.ok) throw new Error(`Renfe respondió ${r.status} en ${feed}`);
   return convertirFeed(await r.json(), feed);

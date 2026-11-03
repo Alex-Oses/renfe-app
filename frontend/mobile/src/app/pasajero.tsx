@@ -649,7 +649,7 @@ export default function Pasajero() {
             cargando={pagando}
             desactivado={!elegidos.length || !desgloseApi}
           />
-          <Text style={styles.pie}>Renfe · Andén 0 · proyecto de clase</Text>
+          <Text style={styles.pie}>Renfe · Andén 0</Text>
         </Cristal>
       </ScrollView>
     </Pantalla>

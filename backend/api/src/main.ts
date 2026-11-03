@@ -19,7 +19,7 @@ app.enableShutdownHooks();
 const documento = new DocumentBuilder()
   .setTitle('API renfe-app')
   .setDescription(
-    'API REST del proyecto académico tipo Renfe. ' +
+    'API REST de Andén 0, una demostración tipo Renfe. ' +
       'Horarios y posiciones: datos abiertos de Renfe (CC BY 4.0). ' +
       'Precios, asientos y pagos: simulados.',
   )

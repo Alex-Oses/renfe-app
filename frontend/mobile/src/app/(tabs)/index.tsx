@@ -389,7 +389,7 @@ export default function Comprar() {
       </Revela>
 
       <Pie />
-      <Text style={styles.pieTexto}>Renfe · Andén 0 · Proyecto de clase. Precios y reservas simulados.</Text>
+      <Text style={styles.pieTexto}>Renfe · Andén 0. Precios y reservas simulados.</Text>
     </Pantalla>
   );
 }

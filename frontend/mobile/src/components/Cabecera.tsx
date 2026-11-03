@@ -151,7 +151,7 @@ export function Cabecera({ volver, sinAviso }: { volver?: () => void; sinAviso?:
             </Pressable>
           ))}
           <View style={styles.separador} />
-          <Text style={styles.sello}>Renfe · Andén 0 · demo de clase</Text>
+          <Text style={styles.sello}>Renfe · Andén 0</Text>
         </View>
       </Hoja>
 

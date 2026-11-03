@@ -57,7 +57,7 @@ export function Pie() {
             ))}
           </ul>
           <p className="pie__aviso">
-            Proyecto académico (ASIX 2), sin relación con Renfe. Horarios basados en datos abiertos GTFS de Renfe (CC BY 4.0).
+            Andén 0, sin relación con Renfe. Horarios basados en datos abiertos GTFS de Renfe (CC BY 4.0).
             {usaDatosSimulados && " Ahora mismo los trenes, precios, pagos y posiciones son simulados."}
           </p>
         </div>

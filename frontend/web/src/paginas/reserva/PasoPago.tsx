@@ -71,7 +71,7 @@ export function PasoPago({ tren, asientos, pasajeros, total, importeCargando, ta
         <div>
           <h2>Pago en modo prueba</h2>
           <p>
-            Esta web es un proyecto académico. El pago se conectará con Stripe en modo test, así que aquí no se pide ninguna
+            Esta web es una demostración. El pago se conectará con Stripe en modo test, así que aquí no se pide ninguna
             tarjeta y no se cobra nada. Al pulsar el botón se confirma la reserva como si el pago hubiera ido bien.
           </p>
           <p className="pago__importe">
