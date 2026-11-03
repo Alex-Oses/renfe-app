@@ -84,7 +84,7 @@ Eventos, en orden:
 
 ## Autenticación
 
-- Dos formas de entrar, **un solo formato de token** (HS256 con `SUPABASE_JWT_SECRET`):
+- Dos formas de entrar, **un solo formato de token** (HS256 con `JWT_SECRET`, 12 h):
   - **Contraseña**: el token lo emite **Supabase Auth**; la API solo lo verifica. Trae
     `access_token` + `refresh_token`.
   - **Cara**: la API firma el token cuando `verificar_cara` dice que coincide. Ver

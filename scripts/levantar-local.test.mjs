@@ -11,7 +11,7 @@ test("rellena las claves de Supabase local y respeta lo que ya tenía el usuario
   assert.match(env, /^DATABASE_URL=postgresql:\/\/postgres:postgres@127\.0\.0\.1:54322\/postgres$/m);
   assert.match(env, /^STRIPE_SECRET_KEY=sk_test_mia$/m);
   assert.match(env, /^QR_SIGNING_PRIVATE_KEY=.{40,}$/m);
-  assert.match(env, /^SUPABASE_JWT_SECRET=jwt$/m);
+  assert.match(env, /^SUPABASE_SERVICE_ROLE_KEY=service$/m);
   assert.match(env, /^CORS_ORIGINS=.*localhost:8081,https:\/\/renfe-app-beta\.vercel\.app$/m);
 });
 

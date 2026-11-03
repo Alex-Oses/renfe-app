@@ -31,7 +31,6 @@ export function fusionarEnv(actual, supabase, aleatorio = () => randomBytes(32).
     SUPABASE_URL: "http://127.0.0.1:54321",
     SUPABASE_ANON_KEY: supabase.ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: supabase.SERVICE_ROLE_KEY,
-    SUPABASE_JWT_SECRET: supabase.JWT_SECRET,
   };
   const porDefecto = {
     NODE_ENV: "development",
