@@ -137,7 +137,7 @@ export class AbonosService {
         vr: producto.viajes,
         p: titular,
       },
-      'QR_SIGNING_SECRET',
+      'QR_SIGNING_PRIVATE_KEY',
     );
 
     const [fila] = await this.consultar<FilaAbono>(SQL_CREAR, [
@@ -189,7 +189,7 @@ export class AbonosService {
           vr: fila.viajes_restantes,
           p: await this.titular(usuarioId),
         },
-        'QR_SIGNING_SECRET',
+        'QR_SIGNING_PRIVATE_KEY',
       );
       await this.bd
         .consultar(SQL_GUARDAR_QR, [qr, fila.referencia, usuarioId])
@@ -237,12 +237,12 @@ export class AbonosService {
     return fila?.nombre ?? 'Titular';
   }
 
-  private firmarQr(datos: object, variable: 'QR_SIGNING_SECRET'): string {
-    const secreto = this.config.get<string>(variable);
-    if (!secreto) {
-      throw new ServiceUnavailableException(`La API no tiene configurado ${variable}`);
+  private firmarQr(datos: object, variable: 'QR_SIGNING_PRIVATE_KEY'): string {
+    const clave = this.config.get<string>(variable);
+    if (!clave) {
+      throw new ServiceUnavailableException(`La API no tiene configurada ${variable}`);
     }
-    return firmar(PREFIJO_ABONO, datos, secreto);
+    return firmar(PREFIJO_ABONO, datos, clave);
   }
 
   private aAbono(fila: FilaAbono): Abono {

@@ -7,7 +7,7 @@
 //   --solo-api       no levanta la web ni la app (lo que usa arrancar.cmd para la web de Vercel)
 
 import { execSync, spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { generateKeyPairSync, randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,10 @@ const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 // La web de Vercel llama a esta API por Funnel: sin su origen en CORS, el navegador la rechaza.
 const ORIGEN_VERCEL = "https://renfe-app-beta.vercel.app";
+
+/** Ed25519 en PKCS8/DER base64: el formato que espera `common/qr/firma.ts`. */
+const claveQr = () =>
+  generateKeyPairSync("ed25519").privateKey.export({ format: "der", type: "pkcs8" }).toString("base64");
 
 /**
  * Mezcla el `.env` existente con los valores de Supabase local. Los que ya tenga el usuario no se
@@ -32,7 +36,7 @@ export function fusionarEnv(actual, supabase, aleatorio = () => randomBytes(32).
   const porDefecto = {
     NODE_ENV: "development",
     API_PORT: "3000",
-    QR_SIGNING_SECRET: aleatorio(),
+    QR_SIGNING_PRIVATE_KEY: claveQr(),
     JWT_SECRET: aleatorio(),
     CORS_ORIGINS: `http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,${ORIGEN_VERCEL}`,
   };

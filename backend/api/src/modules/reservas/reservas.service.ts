@@ -215,15 +215,15 @@ export class ReservasService {
       throw new BadRequestException('La fecha del viaje ya ha pasado');
     }
 
-    // Se lee antes de abrir la transacción: sin secreto no hay QR que emitir.
-    const secreto = this.config.get<string>('QR_SIGNING_SECRET');
-    if (!secreto) {
-      throw new ServiceUnavailableException('La API no tiene configurado QR_SIGNING_SECRET');
+    // Se lee antes de abrir la transacción: sin clave no hay QR que emitir.
+    const clave = this.config.get<string>('QR_SIGNING_PRIVATE_KEY');
+    if (!clave) {
+      throw new ServiceUnavailableException('La API no tiene configurada QR_SIGNING_PRIVATE_KEY');
     }
 
     try {
       const creada = await this.bd.transaccion((cliente) =>
-        this.crearEn(cliente, usuarioId, dto, secreto),
+        this.crearEn(cliente, usuarioId, dto, clave),
       );
       void this.avisarCompra(usuarioId, creada, dto);
       return creada;
@@ -342,7 +342,7 @@ export class ReservasService {
     cliente: PoolClient,
     usuarioId: string,
     dto: CrearReservaDto,
-    secreto: string,
+    clave: string,
   ): Promise<ReservaCreada> {
     const { rows: viajes } = await cliente.query<FilaViaje>(SQL_VIAJE, [
       dto.feed,
@@ -437,7 +437,7 @@ export class ReservasService {
           p: pasajero.nombre,
           doc: enmascararDocumento(pasajero.documento),
         },
-        secreto,
+        clave,
       );
 
       await cliente.query(SQL_BILLETE, [
