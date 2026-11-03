@@ -4,11 +4,11 @@ import { TrenSvg } from "./TrenSvg";
 
 // Tramo sticky: el progreso de scroll (0..1) se escribe en --p y el CSS mueve todo con transform/opacity.
 
-// En pantallas donde el panel no cabe en la ventana el tramo se sirve en flujo normal
+// En vertical el tramo se queda pegado de cualquier ancho, así que solo se sirve en
+// flujo normal cuando no hay movimiento o la ventana es tan baja que el buscador no cabe
 // (ver el @media de inicio.css): sin JS no se escribe --p ni se marca `data-listo`.
 const esEntradaEstatica = () =>
-  matchMedia("(prefers-reduced-motion: reduce)").matches ||
-  matchMedia("(max-width: 40rem), (max-height: 560px)").matches;
+  matchMedia("(prefers-reduced-motion: reduce)").matches || matchMedia("(max-height: 660px)").matches;
 
 export function EntradaTren() {
   const ref = useRef<HTMLElement>(null);

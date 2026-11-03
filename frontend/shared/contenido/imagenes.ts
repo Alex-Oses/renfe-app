@@ -102,6 +102,22 @@ export const fotos: Record<string, Foto> = {
   "zaragoza": { archivo: "Panorama_of_Zaragoza_from_the_top_of_the_cathedral_(3847901093).jpg", autor: "caccamo from Milan, Italy, CC BY-SA 2.0" },
 };
 
+// Fotos por sección de Cercanías: dentro de un núcleo, las tarjetas de líneas, estaciones o
+// tarifas compartían la foto de la ciudad y parecían la misma tarjeta repetida. La sección manda
+// sobre el núcleo; si no hay foto de la sección, se sigue usando la de la ciudad.
+export const fotosSeccion: Record<string, Foto> = {
+  lineas: { archivo: "Civia+Aranjuez.jpg", autor: "Juan Enrique Gilardi, CC BY-SA 2.0" },
+  estaciones: { archivo: "Gijón train station platforms Renfe Cercanías Civia .jpg", autor: "Stationsoverpad, CC BY-SA 4.0" },
+  accesibilidad: {
+    archivo: "Passenger lift, Platform 2 and Overbridge, Dutton Park Railway Station P1130612.jpg",
+    autor: "John Robert McPherson, CC0",
+  },
+  planos: { archivo: "Reconstruccion Cercanias 2024.jpg", autor: "GiorgioTrains, CC BY 4.0" },
+  tarifas: { archivo: "Renfe ticket machines at Principe Pio station in Madrid in December, 2016.jpg", autor: "Tim Adams, CC BY 3.0" },
+  "informacion-de-viaje": { archivo: "Anden de Cercanias.jpg", autor: "Carel3DS, CC BY-SA 4.0" },
+  avisos: { archivo: "Estacion de Sol - 08 - IngolfBLN.jpg", autor: "IngolfBLN, CC BY-SA 2.0" },
+};
+
 /** URL a 800 px de un archivo de Commons (o la propia URL si ya lo es). */
 export function urlFoto(archivo: string, ancho = 800): string {
   if (/^https?:/.test(archivo)) return archivo;
@@ -114,6 +130,11 @@ const claves = Object.keys(fotos).sort((a, b) => b.length - a.length);
 /** Foto asociada a una ruta de contenido por su slug (destino, ruta, estación, núcleo...). */
 export function fotoDeRuta(ruta: string): Foto | undefined {
   const tramos = ruta.split("/").filter(Boolean);
+  if (tramos[0] === "cercanias") {
+    // Líneas, estaciones, tarifas... de un mismo núcleo comparten foto de ciudad: manda la sección.
+    const seccion = fotosSeccion[tramos[2] ?? ""];
+    if (seccion) return seccion;
+  }
   // En Cercanías manda el núcleo (segundo tramo); en el resto, el último.
   const slug = (tramos[0] === "cercanias" ? tramos[1] : tramos[tramos.length - 1]) ?? "";
   const alias: Record<string, string> = { "rodalies-catalunya": "barcelona", "murcia-alicante": "murcia" };
@@ -121,4 +142,9 @@ export function fotoDeRuta(ruta: string): Foto | undefined {
   if (fotos[s]) return fotos[s];
   const k = claves.find((c) => s.endsWith("-" + c) || s.startsWith(c + "-") || s.includes("-" + c + "-"));
   return k ? fotos[k] : undefined;
+}
+
+/** Foto de la ciudad de un núcleo de Cercanías (`/cercanias/madrid`), no de sus subpáginas. */
+export function fotoDeNucleo(ruta: string): Foto | undefined {
+  return /^\/cercanias\/[^/]+\/?$/.test(ruta) ? fotoDeRuta(ruta) : undefined;
 }
