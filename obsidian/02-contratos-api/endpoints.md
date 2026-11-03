@@ -791,11 +791,8 @@ Response 200:
 
 ```json
 {
-  "id": "9b2f…",
   "localizador": "R-7K3M9Q",
-  "estado": "pagada",
   "total": 45.0,
-  "creada": "2026-11-03T10:00:00+01:00",
   "billetes": [
     {
       "id": "1c4a…", "estado": "valido", "feed": "avld", "viajeId": "0207012026-11-02",
@@ -811,8 +808,10 @@ Response 200:
 }
 ```
 
-Los billetes llevan **los mismos campos que una entrada de `GET /billetes`**. No hay `desglose`: no se
-guarda por reserva (se puede reconstruir sumando `precio`).
+Los billetes llevan **los mismos campos que una entrada de `GET /billetes`**. `total` es la suma de
+sus `precio`. No hay `desglose` (no se guarda por reserva) ni `id` de reserva: la reserva se
+identifica por el localizador. El estado de la reserva se lee en el `estado` de sus billetes
+(`anulado` si se canceló).
 
 Errores: `400` localizador con formato inválido · `401` sin token · `404` no existe o es de otro
 usuario · `503` BD caída.
