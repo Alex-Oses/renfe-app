@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, ImageBackground, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
 import { menuPrincipal, nucleosCercanias } from "@renfe/shared/contenido/navegacion";
 import { colores, espaciado, estilos, fuentes, gradientes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
@@ -74,6 +74,12 @@ const PREGUNTAS = [
 ];
 
 export default function Comprar() {
+  const { width } = useWindowDimensions();
+  // La maqueta mide 760 px; en pantallas estrechas se reduce para que el morro no quede
+  // recortado y el tren no fuerce desbordamiento. En tablet se mantiene el tamaño máximo.
+  const anchoTren = Math.min(760, Math.max(500, width * 1.6));
+  const izquierdaTren = Math.min(-12, width - anchoTren - width * 0.06);
+
   // Entrada del tren en la portada, como el tramo animado de la web (aquí con Animated).
   const llegada = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -130,13 +136,15 @@ export default function Comprar() {
           style={[
             styles.tren,
             {
+              width: anchoTren,
+              left: izquierdaTren,
               opacity: llegada,
               transform: [{ translateX: llegada.interpolate({ inputRange: [0, 1], outputRange: [-70, 0] }) }],
             },
           ]}
           pointerEvents="none"
         >
-          <TrenSvg ancho={760} />
+          <TrenSvg ancho={anchoTren} />
         </Animated.View>
         <View style={styles.anden} pointerEvents="none">
           {[0, 1, 2, 3, 4, 5, 6].map((i) => (
@@ -477,9 +485,7 @@ const styles = StyleSheet.create({
   },
   tren: {
     position: "absolute",
-    left: -330,
     bottom: 22,
-    width: 760,
     shadowColor: "#460032",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,

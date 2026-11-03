@@ -111,7 +111,9 @@
 .entrada__tren {
   right: 3vw;
   bottom: calc(30% - 0.5vh);
-  width: max(115vw, 820px);
+  /* El mínimo de 820 px dejaba el morro fuera en teléfonos: a 390 px solo se veían
+     ~11 px del tren. Con el ancho relativo entra completo y sigue saliendo al hacer scroll. */
+  width: clamp(360px, 115vw, 1200px);
   transform: translateX(calc(var(--avance) * -103vw));
 }
 
@@ -261,9 +263,28 @@
     height: auto;
     min-height: 70vh;
     padding-block: 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.75rem;
   }
-  .entrada__tren,
-  .entrada__lema,
+  /* Sin movimiento se conserva la escena como cartel estático: tren y lema
+     visibles, sin transformaciones ni aviso de gesto. */
+  .entrada__tren {
+    position: relative;
+    inset: auto;
+    width: min(100%, 640px);
+    margin-inline: auto;
+    transform: none;
+  }
+  /* La estela comunica velocidad: sin animación solo añadiría un saliente fuera del ancho. */
+  .entrada__estela {
+    display: none;
+  }
+  .entrada__lema {
+    position: relative;
+    inset: auto;
+  }
   .entrada__aviso {
     display: none;
   }
@@ -381,9 +402,22 @@
   .entrada__paisaje,
   .entrada__catenaria,
   .entrada__anden,
-  .entrada__tren,
   .entrada__lema,
   .entrada__aviso {
+    display: none;
+  }
+
+  /* En horizontal bajo el tramo pasa a flujo normal, pero el tren sigue siendo
+     el cartel de la portada en vez de desaparecer. */
+  .entrada__tren {
+    position: relative;
+    inset: auto;
+    width: min(100%, 620px);
+    margin: 0 auto var(--esp-4);
+    transform: none;
+  }
+
+  .entrada__estela {
     display: none;
   }
 
