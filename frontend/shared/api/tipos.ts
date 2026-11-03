@@ -180,6 +180,8 @@ export interface Billete {
   pasajero: Pasajero;
   usuarioId?: string; // dueño del billete; sin sesión, undefined
   emitido?: string; // con API: permite reconocer los tramos de un mismo transbordo
+  extras?: IdExtra[]; // de su reserva
+  extrasReserva?: number; // euros de esos extras, una vez por reserva
   qr: string; // contenido firmado (Ed25519 en la API real); el frontend solo lo pinta
 }
 
@@ -393,6 +395,7 @@ export interface RespuestaChatbot {
 export interface PasajeroApi {
   nombre: string; // nombre completo ("Lucía Pérez Gómez")
   documento: string; // se guarda entero; el QR solo lleva los 4 últimos
+  tipo?: "adulto" | "nino"; // el bebé no ocupa butaca y no se manda
 }
 
 export interface NuevaReservaApi {
@@ -403,6 +406,9 @@ export interface NuevaReservaApi {
   destinoId: string;
   pasajeros: PasajeroApi[]; // de 1 a 6: una butaca por pasajero
   asientos?: string[]; // butacas elegidas: "coche-asiento"
+  tarifa?: IdTarifa; // la API cobra cada billete con tarifa, tipo y descuento
+  descuento?: IdDescuento;
+  extras?: IdExtra[]; // la API los cobra y los suma al total
 }
 
 export interface BilleteEmitidoApi {
@@ -441,6 +447,8 @@ export interface BilleteApi {
   asiento: string; // "12A"
   clase: string; // "Turista" | "Confort"
   precio: number;
+  extras?: IdExtra[]; // de la reserva: se repiten en cada billete
+  extrasReserva?: number; // euros de esos extras, una vez por reserva
   emitido: string;
   expira: string;
   qr: string; // RNF1.…

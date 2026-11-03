@@ -2,6 +2,7 @@ import { FRANJAS, duracionMin, minutosDelDia } from "@renfe/shared/billetes/viaj
 import { euros, hora } from "@renfe/shared/formato/formato";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { claveTramo } from "@renfe/shared/api/comprar-transbordo";
 import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { OpcionTransbordo, TipoTren, Tren } from "@renfe/shared/api/tipos";
 import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
@@ -243,7 +244,7 @@ export function Resultados() {
           <ol className="transbordos">
             {transbordos.map((o) => {
               const [a, b] = o.tramos;
-              const q = new URLSearchParams({ origen, destino, fecha, a: a.id, b: b.id, pasajeros: String(pasajeros) });
+              const q = new URLSearchParams({ origen, destino, fecha, a: claveTramo(a), b: claveTramo(b), pasajeros: String(pasajeros), ...Object.fromEntries(extra) });
               return (
                 <li key={`${a.id}|${b.id}`} className="transbordo tarjeta">
                   <div className="transbordo__horas">
@@ -255,6 +256,7 @@ export function Resultados() {
                     <span className="tren__tipo">{a.tipo}</span> {a.numero || a.linea} hasta {a.destino.nombre} ({hora(a.llegada)})
                     <br />
                     <strong>Transbordo en {o.transbordo.nombre}: {textoDuracion(o.esperaMin)} de espera</strong>
+                    {o.cambioEstacion && o.transbordoSalida && <> (cambias a {o.transbordoSalida.nombre})</>}
                     <br />
                     <span className="tren__tipo">{b.tipo}</span> {b.numero || b.linea} sale a las {hora(b.salida)}
                   </p>

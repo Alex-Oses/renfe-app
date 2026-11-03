@@ -1,5 +1,6 @@
 import { sinTildes } from "@renfe/shared/formato/texto";
 import { horaLocal } from "@renfe/shared/formato/formato";
+import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -59,6 +60,8 @@ function Retraso({ seg, compacto }: { seg: number | null; compacto?: boolean }) 
 
 export default function Directo() {
   const insets = useSafeAreaInsets();
+  // El estado de un tren (herramienta del contenido) enlaza aquí con su trenId ya elegido.
+  const { tren: trenPedido } = useLocalSearchParams<{ tren?: string }>();
   const [trenes, setTrenes] = useState<PosicionTren[]>([]);
   const [fuente, setFuente] = useState<Fuente>("cargando");
   const [avisoApi, setAvisoApi] = useState("");
@@ -131,6 +134,21 @@ export default function Directo() {
     if (!q) return trenes;
     return trenes.filter((t) => sinTildes(`${t.numero} ${t.tipo} ${t.origen} ${t.destino} ${t.proximaParada} ${t.linea ?? ""}`).includes(q));
   }, [trenes, filtro]);
+
+  // Si se llega con ?tren=<id> (desde «Estado de tu tren»), se abre ese tren en cuanto haya posiciones.
+  const pedidoAplicado = useRef(false);
+  useEffect(() => {
+    if (pedidoAplicado.current || !trenPedido || !trenes.length) return;
+    pedidoAplicado.current = true;
+    const t = trenes.find((x) => x.trenId === trenPedido);
+    if (t) {
+      setSeleccion(t.trenId);
+      setAbierto(true);
+    } else {
+      // Ya no circula: al menos se deja la lista filtrada por lo que se pidió.
+      setFiltro(trenPedido);
+    }
+  }, [trenPedido, trenes]);
 
   const base = trenes.find((t) => t.trenId === seleccion);
 
