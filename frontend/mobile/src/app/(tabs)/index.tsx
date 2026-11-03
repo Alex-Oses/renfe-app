@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRef, useState, type ComponentRef } from "react";
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
 import { menuPrincipal, nucleosCercanias } from "@renfe/shared/contenido/navegacion";
@@ -15,7 +15,6 @@ import { Pie } from "@/components/Pie";
 import { Aparece, Revela } from "@/components/Revela";
 
 // El panel de cristal se monta 26 px sobre la escena del tren, como en la web.
-const SOLAPE_PANEL = 26;
 
 const manana = () => {
   const d = new Date(Date.now() + 86_400_000);
@@ -78,14 +77,15 @@ const PREGUNTAS = [
 ];
 
 export default function Comprar() {
-  // Entrada del tren ligada al scroll, como el tramo sticky de la web (EntradaTren.tsx).
+  // Carrusel de dos páginas: el tren (avanza al deslizar a la izquierda) y la portada con el buscador.
   const desplazable = useRef<ComponentRef<typeof ScrollView>>(null);
+  const { width: anchoPagina } = useWindowDimensions();
   const entrada = useEntradaTren();
 
   const [abierta, setAbierta] = useState<string | null>(null);
 
   // «Ir al buscador»: salta al final del tramo, donde ya está el panel (como en la web).
-  const irAlBuscador = () => desplazable.current?.scrollTo({ y: Math.max(0, entrada.tramo - SOLAPE_PANEL), animated: true });
+  const irAlBuscador = () => desplazable.current?.scrollTo({ x: anchoPagina, animated: true });
 
   const buscar = (c: Criterios) => {
     router.push({
@@ -125,12 +125,13 @@ export default function Comprar() {
     <Pantalla scroll={false} contenido={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
       <Animated.ScrollView
         ref={desplazable}
+        horizontal
+        pagingEnabled
         style={styles.desplazable}
-        contentContainerStyle={styles.desplazableContenido}
         onScroll={entrada.alScroll}
         scrollEventThrottle={16}
+        showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
       >
         <EntradaTren
           escena={entrada.escena}
@@ -140,7 +141,14 @@ export default function Comprar() {
           onIrAlBuscador={irAlBuscador}
         />
 
-        <Cristal style={{ marginHorizontal: 12, marginTop: -SOLAPE_PANEL }} padding={espaciado[4]} gap={espaciado[3]}>
+        <ScrollView
+          style={{ width: anchoPagina }}
+          contentContainerStyle={styles.desplazableContenido}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+        >
+        <Cristal style={{ marginHorizontal: 12, marginTop: espaciado[3] }} padding={espaciado[4]} gap={espaciado[3]}>
           <View style={{ gap: espaciado[1] }}>
             <Text style={estilos.h1}>Busca tu próximo viaje</Text>
             <Text style={[estilos.suave, { fontSize: 15, lineHeight: 21 }]}>
@@ -376,6 +384,7 @@ export default function Comprar() {
 
         <Pie />
         <Text style={styles.pieTexto}>Renfe · Andén 0 · Proyecto de clase. Precios y reservas simulados.</Text>
+        </ScrollView>
       </Animated.ScrollView>
     </Pantalla>
   );

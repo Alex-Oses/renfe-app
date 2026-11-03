@@ -77,6 +77,8 @@ export default function Directo() {
   const [filtro, setFiltro] = useState("");
   const [seleccion, setSeleccion] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
+  // Tres alturas: alto (abierto), medio y escondido (solo el asa y el título, para ver el mapa entero).
+  const [escondido, setEscondido] = useState(false);
   const [rutas, setRutas] = useState<Record<string, PosicionTren>>({});
   const [siguiendo, setSiguiendo] = useState(false);
   const aviso = useAvisoLlegada();
@@ -200,6 +202,7 @@ export default function Directo() {
     if (t.trenId !== seleccion) setSiguiendo(false);
     setSeleccion(t.trenId);
     setAbierto(true);
+    setEscondido(false);
   };
 
   const cerrarDetalle = () => {
@@ -208,12 +211,16 @@ export default function Directo() {
     setAbierto(false);
   };
 
-  const alto: `${number}%` = seleccion ? "61%" : abierto ? "64%" : "43%";
+  const ALTO_ESCONDIDO = 104;
+  const fraccion = seleccion ? 0.61 : abierto ? 0.64 : 0.43;
+  const alto: number | `${number}%` = !seleccion && escondido ? ALTO_ESCONDIDO : `${Math.round(fraccion * 100)}%`;
   // Lo que la hoja tapa del mapa: el encuadre del recorrido deja libre ese hueco.
   const espacioInferior =
-    Math.round(altoPantalla * (seleccion ? 0.61 : abierto ? 0.64 : 0.43)) + Math.max(insets.bottom, 8) + 86;
-  // Deslizar el asa hacia abajo hace lo mismo que su botón: cierra el detalle o baja el panel.
-  const arrastre = useArrastreCierre(seleccion ? cerrarDetalle : () => setAbierto(false));
+    (!seleccion && escondido ? ALTO_ESCONDIDO : Math.round(altoPantalla * fraccion)) + Math.max(insets.bottom, 8) + 86;
+  // Abajo: cierra el detalle, o baja de alto a medio y de medio a escondido. Arriba: sube un nivel.
+  const bajar = () => (abierto ? setAbierto(false) : setEscondido(true));
+  const subir = () => (escondido ? setEscondido(false) : setAbierto(true));
+  const arrastre = useArrastreCierre(seleccion ? cerrarDetalle : bajar, seleccion ? undefined : subir);
 
   const colorFuente = fuente === "real" ? tonos.exito : fuente === "simulado" ? tonos.aviso : colores.textoSuave;
   const textoFuente = fuente === "real" ? "Tiempo real" : fuente === "simulado" ? "Simulados" : "Conectando";
@@ -256,8 +263,8 @@ export default function Directo() {
         <View {...arrastre.panHandlers}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={abierto ? "Bajar el panel" : "Subir el panel"}
-            onPress={() => setAbierto((a) => !a)}
+            accessibilityLabel={escondido || !abierto ? "Subir el panel" : "Bajar el panel"}
+            onPress={() => (escondido || !abierto ? subir() : bajar())}
             style={styles.zonaAsa}
           >
             <View style={styles.asa} />
@@ -281,7 +288,7 @@ export default function Directo() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={seleccion ? "Cerrar detalle" : abierto ? "Bajar el panel" : "Subir el panel"}
-              onPress={seleccion ? cerrarDetalle : () => setAbierto((a) => !a)}
+              onPress={seleccion ? cerrarDetalle : () => (escondido || !abierto ? subir() : bajar())}
               style={({ pressed }) => [styles.botonRedondo, pressed && { backgroundColor: tonos.rosaFuerte }]}
             >
               <Icono nombre={seleccion ? "cerrar" : abierto ? "chevron" : "atras"} tamano={19} color={colores.marca} />

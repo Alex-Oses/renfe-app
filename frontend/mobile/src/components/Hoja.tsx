@@ -20,14 +20,17 @@ import { Icono } from "./Icono";
 // Arrastre para cerrar una hoja por el asa/cabecera: sigue al dedo con Animated y, al soltar,
 // cierra si se ha bajado más de un tercio de la hoja o si el gesto iba rápido (vy > 0.5).
 // Se comparte con el panel del mapa (directo.tsx), que se maneja igual con el pulgar.
-export function useArrastreCierre(onCerrar: () => void) {
+// Con onAbrir, deslizar hacia arriba (más de 40 px o rápido) lo llama: sirve para subir un panel escondido.
+export function useArrastreCierre(onCerrar: () => void, onAbrir?: () => void) {
   const altura = useRef(0);
   const avance = useRef(new Animated.Value(0)).current;
   const cerrar = useRef(onCerrar);
+  const abrir = useRef(onAbrir);
 
   useEffect(() => {
     cerrar.current = onCerrar;
-  }, [onCerrar]);
+    abrir.current = onAbrir;
+  }, [onCerrar, onAbrir]);
 
   const responder = useMemo(() => {
     const volverArriba = () =>
@@ -55,6 +58,7 @@ export function useArrastreCierre(onCerrar: () => void) {
           });
           return;
         }
+        if (abrir.current && (gesto.dy < -40 || gesto.vy < -0.5)) abrir.current();
         volverArriba();
       },
       onPanResponderTerminate: volverArriba,

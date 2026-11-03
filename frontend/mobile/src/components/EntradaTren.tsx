@@ -54,16 +54,18 @@ function altoEscenaFija(altoVentana: number) {
  */
 // La escena sale del alto de la ventana, no del ScrollView: medir el ScrollView (que en web crece con su
 // contenido) y agrandar la escena con esa medida entra en bucle y cuelga la página.
+// Móvil: la escena es la primera página de un carrusel horizontal y el tren avanza al deslizar a la
+// izquierda (contentOffset.x), en vez del tramo sticky vertical de la web.
 export function useEntradaTren() {
   const { height: altoVentana } = useWindowDimensions();
   const reducir = useReducirMovimiento();
-  const escena = reducir ? altoEscenaFija(altoVentana) : Math.round(altoVentana * 0.82);
+  const escena = reducir ? altoEscenaFija(altoVentana) : Math.round(altoVentana);
   const tramo = reducir ? escena : Math.round(escena * FACTOR_TRAMO);
 
   const desplazamiento = useSharedValue(0);
   const alScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
-      desplazamiento.value = e.contentOffset.y;
+      desplazamiento.value = e.contentOffset.x;
     },
   });
 
@@ -108,7 +110,8 @@ export function EntradaTren({
   const insets = useSafeAreaInsets();
   const [empezado, setEmpezado] = useState(false);
 
-  const recorrido = Math.max(1, tramo - escena);
+  // El recorrido es el ancho de la página: con la página pasada, el tren ha terminado su entrada.
+  const recorrido = Math.max(1, ancho);
   const anchoTren = Math.max(Math.round(ancho * 1.15), ANCHO_TREN_MINIMO);
   const anchoEstela = Math.round(ancho * 0.7);
   const altoAnden = Math.round(escena * 0.3);
@@ -130,9 +133,11 @@ export function EntradaTren({
   );
 
   // El tramo sticky: la escena baja lo mismo que sube la lista y se suelta al agotarse.
+  // La escena se queda quieta mientras el carrusel la arrastra: se compensa el desplazamiento horizontal
+  // para que solo se mueva el tren y su decorado, como el tramo sticky de la web.
   const estiloTramo = useAnimatedStyle(() => ({
     transform: [
-      { translateY: interpolate(desplazamiento.value, [0, recorrido], [0, recorrido], Extrapolation.CLAMP) },
+      { translateX: interpolate(desplazamiento.value, [0, recorrido], [0, recorrido * 0.6], Extrapolation.CLAMP) },
     ],
   }));
 
@@ -170,7 +175,7 @@ export function EntradaTren({
   }));
 
   return (
-    <View style={{ height: tramo }}>
+    <View style={{ height: escena, width: ancho, overflow: "hidden" }}>
       <Animated.View style={[styles.escena, { height: escena }, estatico ? null : estiloTramo]}>
         <LinearGradient colors={gradientes.heroe} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFill} />
 
@@ -241,8 +246,8 @@ export function EntradaTren({
             pointerEvents={empezado ? "none" : "box-none"}
           >
             <View style={styles.avisoGesto} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <Icono nombre="chevron" tamano={18} color={paleta.moradoOscuro} grosor={2.2} />
-              <Text style={styles.avisoTexto}>Desliza hacia abajo</Text>
+              <Text style={styles.avisoTexto}>Desliza a la izquierda</Text>
+              <Icono nombre="delante" tamano={18} color={paleta.moradoOscuro} grosor={2.2} />
             </View>
             <Pressable
               accessibilityRole="button"
