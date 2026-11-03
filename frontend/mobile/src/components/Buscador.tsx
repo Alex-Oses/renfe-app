@@ -43,6 +43,26 @@ export interface CriteriosIniciales {
   vuelta?: string;
 }
 
+// La tarjeta o descuento elegido se recuerda como en la web: se guarda en la cuenta y el buscador
+// lo usa por defecto. En la app localStorage es SQLite (ver polyfills.ts).
+export const CLAVE_DESCUENTO = "anden-descuento";
+
+export function descuentoGuardado(): string {
+  try {
+    return localStorage.getItem(CLAVE_DESCUENTO) ?? "ninguno";
+  } catch {
+    return "ninguno";
+  }
+}
+
+export function guardarDescuento(id: string) {
+  try {
+    localStorage.setItem(CLAVE_DESCUENTO, id);
+  } catch {
+    /* sin almacenamiento: vale solo para esta visita */
+  }
+}
+
 const hoyIso = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -71,7 +91,7 @@ export function Buscador({ onBuscar, inicial }: { onBuscar: (c: Criterios) => vo
   );
   const [ninos, setNinos] = useState(ninosInicial);
   const [bebes, setBebes] = useState(inicial?.bebes ?? 0);
-  const [descuento, setDescuento] = useState<string>(inicial?.descuento ?? "ninguno");
+  const [descuento, setDescuento] = useState<string>(() => inicial?.descuento ?? descuentoGuardado());
   const [error, setError] = useState("");
   const [hoja, setHoja] = useState<null | "origen" | "destino" | "fecha" | "vuelta" | "viajeros" | "descuento">(null);
 
@@ -265,7 +285,10 @@ export function Buscador({ onBuscar, inicial }: { onBuscar: (c: Criterios) => vo
         visible={hoja === "descuento"}
         valor={descuento}
         onCerrar={() => setHoja(null)}
-        onElegir={setDescuento}
+        onElegir={(id) => {
+          setDescuento(id);
+          guardarDescuento(id);
+        }}
       />
     </View>
   );
