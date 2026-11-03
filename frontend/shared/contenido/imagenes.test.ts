@@ -18,6 +18,14 @@ describe("fotoDeRuta", () => {
     expect(fotoDeRuta("/cercanias/bilbao/informacion-de-viaje/horarios")).toBe(fotosSeccion["informacion-de-viaje"]);
   });
 
+  it("asigna fotos aprobadas a Experiencias y a sus categorías", () => {
+    expect(fotoDeRuta("/inspirate/experiencias")).toBe(fotos.madrid);
+    expect(fotoDeRuta("/inspirate/experiencias/carreras-y-maratones")).toBe(fotos.valencia);
+    expect(fotoDeRuta("/inspirate/experiencias/fiestas-populares/fallas")).toBe(fotos.valencia);
+    expect(fotoDeRuta("/inspirate/experiencias/planes-de-fin-de-semana/48-horas-en-alicante")).toBe(fotos.alicante);
+    expect(fotoDeRuta("/inspirate/experiencias/no-existe")).toBe(fotos.madrid);
+  });
+
   it("devuelve undefined si no hay foto", () => {
     expect(fotoDeRuta("/ayuda/contacto")).toBeUndefined();
   });
