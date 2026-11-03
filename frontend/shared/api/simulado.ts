@@ -1,4 +1,5 @@
 // Datos simulados mientras la API no existe. Mismas firmas que cliente.ts.
+import { sinTildes } from "../formato/texto";
 import type { BusquedaTrenes, Estacion, TipoTren, Tren } from "./tipos";
 
 export const ESTACIONES: Estacion[] = [
@@ -19,7 +20,6 @@ export const ESTACIONES: Estacion[] = [
   { id: "37606", nombre: "León", ciudad: "León", lat: 42.593, lon: -5.58 },
 ];
 
-const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 export function buscarEstaciones(q: string): Estacion[] {
   const t = sinTildes(q.trim());

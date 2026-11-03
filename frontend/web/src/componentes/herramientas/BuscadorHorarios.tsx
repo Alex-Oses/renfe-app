@@ -3,11 +3,10 @@ import { Link } from "react-router-dom";
 import { buscarTrenes } from "@renfe/shared/api/cliente";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import type { Tren } from "@renfe/shared/api/tipos";
-import { euros } from "./logica";
+import { euros, hora } from "@renfe/shared/formato/formato";
 import { Campo, Herramienta, Selector } from "./comun";
 
 export const hoy = () => new Date().toISOString().slice(0, 10);
-export const hora = (iso: string) => iso.slice(11, 16);
 
 export function OpcionesEstaciones() {
   return (

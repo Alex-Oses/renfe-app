@@ -1,3 +1,4 @@
+import { slug } from "@renfe/shared/formato/texto";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Link, Navigate, useLocation } from "react-router-dom";
@@ -5,7 +6,7 @@ import { misAbonos, misBilletes, usaDatosSimulados } from "@renfe/shared/api/cli
 import type { Abono, Billete } from "@renfe/shared/api/tipos";
 import { agrupar, unirTransbordos, type Viaje } from "@renfe/shared/billetes/agrupar";
 import { TarjetaAbono } from "./billetes/TarjetaAbono";
-import { fecha, hora } from "./reserva/formato";
+import { fecha, hora, euros } from "@renfe/shared/formato/formato";
 import RetrasoVivo from "./billetes/RetrasoVivo";
 import "./billetes.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
@@ -92,9 +93,6 @@ function Lista({ titulo, viajes, vacio, pasado }: { titulo: string; viajes: Viaj
   );
 }
 
-// Slug de la ciudad para buscar su foto ("Málaga" -> "malaga", "A Coruña" -> "a-coruna").
-const slug = (t: string) =>
-  t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // Barras decorativas del talón sacadas del localizador: siempre las mismas para el mismo billete.
 const barras = (codigo: string) => [...codigo.repeat(3)].map((c, i) => ({ x: i * 4, w: 1 + (c.charCodeAt(0) % 3) }));
@@ -192,7 +190,7 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
         <span className="ticket__loc">{localizador}</span>
         {viaje.enlace && <span className="ticket__loc">{viaje.enlace.billetes[0].localizador}</span>}
         <span className="ticket__etiqueta">
-          Total {[...viaje.billetes, ...(viaje.enlace?.billetes ?? [])].reduce((suma, b) => suma + b.asiento.precio, 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+          Total {euros([...viaje.billetes, ...(viaje.enlace?.billetes ?? [])].reduce((suma, b) => suma + b.asiento.precio, 0))}
         </span>
         <svg className="ticket__barras" viewBox={`0 0 ${localizador.length * 12} 40`} preserveAspectRatio="none" aria-hidden="true">
           {barras(localizador).map((b) => (

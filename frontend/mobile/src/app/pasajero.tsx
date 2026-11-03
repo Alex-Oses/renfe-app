@@ -1,3 +1,4 @@
+import { documentoValido, emailValido } from "@renfe/shared/billetes/viaje";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
@@ -18,7 +19,7 @@ import { Campo } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
-import { euros, fecha, hora } from "@/formato";
+import { euros, fechaCorta, horaLocal } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos, fuentes, gradientes, sombras, tonos } from "@/tema";
 
 // Clase de asiento que encaja con cada tarifa: así el precio que se enseña es el que se cobra.
@@ -37,8 +38,6 @@ interface DatosViajero {
 
 const vacio = (): DatosViajero => ({ nombre: "", apellidos: "", documento: "" });
 
-const validarDocumento = (v: string) => /^[A-Za-z0-9]{6,12}$/.test(v.trim());
-const validarEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v.trim());
 
 const duracion = (t: Tren) => {
   const min = Math.max(0, Math.round((Date.parse(t.llegada) - Date.parse(t.salida)) / 60_000));
@@ -133,10 +132,10 @@ export default function Pasajero() {
       if (!p.nombre.trim()) nuevos[`${i}-nombre`] = "Escribe el nombre.";
       if (!p.apellidos.trim()) nuevos[`${i}-apellidos`] = "Escribe los apellidos.";
       if (!p.documento.trim()) nuevos[`${i}-documento`] = "Escribe el documento.";
-      else if (!validarDocumento(p.documento)) nuevos[`${i}-documento`] = "Entre 6 y 12 letras o números, sin espacios.";
+      else if (!documentoValido(p.documento)) nuevos[`${i}-documento`] = "Entre 6 y 12 letras o números, sin espacios.";
     });
     if (!email.trim()) nuevos.email = "Escribe un correo de contacto.";
-    else if (!validarEmail(email)) nuevos.email = "Ese correo no parece válido.";
+    else if (!emailValido(email)) nuevos.email = "Ese correo no parece válido.";
     if (!elegidos.length || elegidos.length < n) nuevos.asientos = "No quedan asientos libres suficientes en este tren.";
     setErrores(nuevos);
     return Object.keys(nuevos).length === 0;
@@ -236,7 +235,7 @@ export default function Pasajero() {
               {ciudadDe(reserva.tren.origen)} → {ciudadDe(reserva.tren.destino)}
             </Text>
             <Text style={estilos.suave}>
-              {fecha(reserva.tren.salida)} · {hora(reserva.tren.salida)}–{hora(reserva.tren.llegada)} · {reserva.tren.tipo}{" "}
+              {fechaCorta(reserva.tren.salida)} · {horaLocal(reserva.tren.salida)}–{horaLocal(reserva.tren.llegada)} · {reserva.tren.tipo}{" "}
               {reserva.tren.numero}
             </Text>
           </View>
@@ -273,7 +272,7 @@ export default function Pasajero() {
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={estilos.subtitulo}>Te falta la vuelta</Text>
-                <Text style={estilos.suave}>Has comprado la ida. Elige el tren de vuelta del {fecha(`${vuelta}T12:00:00`)}.</Text>
+                <Text style={estilos.suave}>Has comprado la ida. Elige el tren de vuelta del {fechaCorta(`${vuelta}T12:00:00`)}.</Text>
               </View>
             </View>
             <Boton
@@ -338,14 +337,14 @@ export default function Pasajero() {
               </View>
               <Text style={styles.numeroTren}>{tren.numero}</Text>
             </View>
-            <Text style={estilos.suaveMedio}>{fecha(tren.salida)}</Text>
+            <Text style={estilos.suaveMedio}>{fechaCorta(tren.salida)}</Text>
           </View>
           <View style={styles.ruta}>
             <View style={{ flex: 1, gap: 1 }}>
               <Text style={styles.ciudad} numberOfLines={1}>
                 {ciudadDe(tren.origen)}
               </Text>
-              <Text style={styles.hora}>{hora(tren.salida)}</Text>
+              <Text style={styles.hora}>{horaLocal(tren.salida)}</Text>
               <Text style={estilos.suave} numberOfLines={1}>
                 {tren.origen.nombre}
               </Text>
@@ -363,7 +362,7 @@ export default function Pasajero() {
               <Text style={[styles.ciudad, { textAlign: "right" }]} numberOfLines={1}>
                 {ciudadDe(tren.destino)}
               </Text>
-              <Text style={styles.hora}>{hora(tren.llegada)}</Text>
+              <Text style={styles.hora}>{horaLocal(tren.llegada)}</Text>
               <Text style={[estilos.suave, { textAlign: "right" }]} numberOfLines={1}>
                 {tren.destino.nombre}
               </Text>

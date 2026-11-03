@@ -1,3 +1,4 @@
+import { horaLocal } from "@renfe/shared/formato/formato";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { buscarTrenes, posicionesTrenes } from "@renfe/shared/api/cliente";
@@ -8,7 +9,6 @@ import { hoyISO } from "../../estado/vigilante";
 import { retrasoDe } from "@renfe/shared/estado/vigilante-reglas";
 
 const nombre = (id: string) => ESTACIONES.find((e) => e.id === id)?.nombre ?? id;
-const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
 function cuenta(ms: number) {
   const min = Math.floor(ms / 60_000);
@@ -76,10 +76,10 @@ export function TarjetaLinea({ linea, primera, ultima }: { linea: LineaFavorita;
             return (
               <li key={t.id} className="linea__tren">
                 <span className="linea__cuenta">{cuenta(Date.parse(t.salida) - ahora)}</span>
-                <span className="linea__hora">{hora(t.salida)}</span>
+                <span className="linea__hora">{horaLocal(t.salida)}</span>
                 <span className="linea__tipo">{t.tipo}</span>
                 {retraso > 0 && <span className="linea__retraso">+{retraso} min de retraso</span>}
-                <Link className="linea__reservar" to={`/reserva/${encodeURIComponent(t.id)}`} aria-label={`Reservar ${t.tipo} de las ${hora(t.salida)}`}>
+                <Link className="linea__reservar" to={`/reserva/${encodeURIComponent(t.id)}`} aria-label={`Reservar ${t.tipo} de las ${horaLocal(t.salida)}`}>
                   Reservar
                 </Link>
               </li>

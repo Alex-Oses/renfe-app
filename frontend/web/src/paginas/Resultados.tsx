@@ -1,3 +1,5 @@
+import { FRANJAS, duracionMin, minutosDelDia } from "@renfe/shared/billetes/viaje";
+import { euros, hora } from "@renfe/shared/formato/formato";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
@@ -9,23 +11,12 @@ import "./resultados.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 
-const minutos = (iso: string) => {
-  const [h, m] = iso.slice(11, 16).split(":").map(Number);
-  return h * 60 + m;
-};
-const duracion = (t: Tren) => (new Date(t.llegada).getTime() - new Date(t.salida).getTime()) / 60_000;
 const textoDuracion = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")}`;
-const euros = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 
-const FRANJAS = [
-  { id: "manana", texto: "Mañana", desde: 0, hasta: 12 * 60 },
-  { id: "tarde", texto: "Tarde", desde: 12 * 60, hasta: 18 * 60 },
-  { id: "noche", texto: "Noche", desde: 18 * 60, hasta: 24 * 60 },
-] as const;
 const ORDENES = {
   hora: { texto: "Hora", f: (a: Tren, b: Tren) => a.salida.localeCompare(b.salida) },
   precio: { texto: "Precio", f: (a: Tren, b: Tren) => a.precioDesde - b.precioDesde },
-  duracion: { texto: "Duración", f: (a: Tren, b: Tren) => duracion(a) - duracion(b) },
+  duracion: { texto: "Duración", f: (a: Tren, b: Tren) => duracionMin(a) - duracionMin(b) },
 };
 type Orden = keyof typeof ORDENES;
 
@@ -116,14 +107,14 @@ export function Resultados() {
     () =>
       (trenes ?? [])
         .filter((t) => !tipos.size || tipos.has(t.tipo))
-        .filter((t) => !franjas.size || FRANJAS.some((f) => franjas.has(f.id) && minutos(t.salida) >= f.desde && minutos(t.salida) < f.hasta))
+        .filter((t) => !franjas.size || FRANJAS.some((f) => franjas.has(f.id) && minutosDelDia(t.salida) >= f.desde && minutosDelDia(t.salida) < f.hasta))
         .sort(ORDENES[orden].f),
     [trenes, tipos, franjas, orden],
   );
 
   // Escala común: la barra de cada tren ocupa su franja real dentro del día.
-  const inicio = trenes?.length ? Math.min(...trenes.map((t) => minutos(t.salida))) : 0;
-  const fin = trenes?.length ? Math.max(...trenes.map((t) => minutos(t.salida) + duracion(t))) : 1;
+  const inicio = trenes?.length ? Math.min(...trenes.map((t) => minutosDelDia(t.salida))) : 0;
+  const fin = trenes?.length ? Math.max(...trenes.map((t) => minutosDelDia(t.salida) + duracionMin(t))) : 1;
   const fechaLarga = fecha
     ? new Date(`${fecha}T12:00:00`).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })
     : "";
@@ -189,7 +180,7 @@ export function Resultados() {
                 <li key={f}>
                   <Link to={enlaceFecha(f)} aria-current={d === 0 ? "date" : undefined}>
                     <span>{texto}</span>
-                    <strong>{p === undefined ? "…" : p === null ? "Sin directos" : `desde ${euros.format(p)}`}</strong>
+                    <strong>{p === undefined ? "…" : p === null ? "Sin directos" : `desde ${euros(p)}`}</strong>
                   </Link>
                 </li>
               );
@@ -256,19 +247,19 @@ export function Resultados() {
               return (
                 <li key={`${a.id}|${b.id}`} className="transbordo tarjeta">
                   <div className="transbordo__horas">
-                    <time dateTime={a.salida}>{a.salida.slice(11, 16)}</time>
+                    <time dateTime={a.salida}>{hora(a.salida)}</time>
                     <span>{textoDuracion(o.duracionMin)}</span>
-                    <time dateTime={b.llegada}>{b.llegada.slice(11, 16)}</time>
+                    <time dateTime={b.llegada}>{hora(b.llegada)}</time>
                   </div>
                   <p className="transbordo__ruta">
-                    <span className="tren__tipo">{a.tipo}</span> {a.numero || a.linea} hasta {a.destino.nombre} ({a.llegada.slice(11, 16)})
+                    <span className="tren__tipo">{a.tipo}</span> {a.numero || a.linea} hasta {a.destino.nombre} ({hora(a.llegada)})
                     <br />
                     <strong>Transbordo en {o.transbordo.nombre}: {textoDuracion(o.esperaMin)} de espera</strong>
                     <br />
-                    <span className="tren__tipo">{b.tipo}</span> {b.numero || b.linea} sale a las {b.salida.slice(11, 16)}
+                    <span className="tren__tipo">{b.tipo}</span> {b.numero || b.linea} sale a las {hora(b.salida)}
                   </p>
                   <div className="tren__compra">
-                    <span className="tren__precio">{euros.format(o.precio)}</span>
+                    <span className="tren__precio">{euros(o.precio)}</span>
                     <Link className="boton" to={`/transbordo?${q}`}>
                       Elegir
                     </Link>
@@ -299,16 +290,16 @@ export function Resultados() {
       {visibles.length > 0 && (
         <ol className="trenes" aria-live="polite">
           {visibles.map((t, i) => {
-            const dur = duracion(t);
-            const izquierda = ((minutos(t.salida) - inicio) / (fin - inicio)) * 100;
+            const dur = duracionMin(t);
+            const izquierda = ((minutosDelDia(t.salida) - inicio) / (fin - inicio)) * 100;
             const ancho = (dur / (fin - inicio)) * 100;
             const completo = t.plazasLibres < pasajeros;
             return (
               <li key={t.id} className={`tren aparece-escalonado${completo ? " tren--completo" : ""}`} style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
                 <div className="tren__horas">
-                  <time dateTime={t.salida}>{t.salida.slice(11, 16)}</time>
+                  <time dateTime={t.salida}>{hora(t.salida)}</time>
                   <span className="tren__duracion">{textoDuracion(dur)}</span>
-                  <time dateTime={t.llegada}>{t.llegada.slice(11, 16)}</time>
+                  <time dateTime={t.llegada}>{hora(t.llegada)}</time>
                 </div>
                 <div className="tren__linea" aria-hidden="true">
                   <span style={{ left: `${izquierda}%`, width: `${ancho}%` }} />
@@ -321,14 +312,14 @@ export function Resultados() {
                     <span className="tren__agotado">{t.plazasLibres === 0 ? "Completo" : `Solo ${t.plazasLibres} plazas`}</span>
                   ) : (
                     <>
-                      <span className="tren__precio">{euros.format(t.precioDesde)}</span>
+                      <span className="tren__precio">{euros(t.precioDesde)}</span>
                       <button
                         type="button"
                         className="boton boton--secundario"
                         aria-expanded={abierto === t.id}
                         aria-controls={`tarifas-${i}`}
                         onClick={() => setAbierto((a) => (a === t.id ? null : t.id))}
-                        aria-label={`Ver tarifas del ${nombreDeTren(t)} de las ${t.salida.slice(11, 16)}`}
+                        aria-label={`Ver tarifas del ${nombreDeTren(t)} de las ${hora(t.salida)}`}
                       >
                         {abierto === t.id ? "Cerrar" : "Elegir"}
                       </button>
@@ -343,7 +334,7 @@ export function Resultados() {
                         <li key={ta.id} className={`tarifa cristal tarifa--${ta.id}`}>
                           <h3>{ta.nombre}</h3>
                           <p className="tarifa__precio">
-                            <span>desde</span> {euros.format(precioViajero(t.precioDesde, ta.id))}
+                            <span>desde</span> {euros(precioViajero(t.precioDesde, ta.id))}
                           </p>
                           <ul className="tarifa__incluye">
                             {ta.incluye.map((x) => (

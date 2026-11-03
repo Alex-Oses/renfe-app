@@ -1,3 +1,4 @@
+import { euros } from "@renfe/shared/formato/formato";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { resumenAdmin } from "@renfe/shared/api/cliente";
@@ -5,7 +6,6 @@ import type { ResumenAdmin } from "@renfe/shared/api/tipos";
 import { useSesion } from "../estado/sesion";
 import "./revisor/revisor.css";
 
-const euros = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 
 // Panel de administración: preparado para el próximo sprint.
 // Hoy enseña un resumen (GET /admin/resumen, propuesto); las secciones de abajo están por hacer.
@@ -45,7 +45,7 @@ export default function Admin() {
             <Cifra etiqueta="Billetes vendidos" valor={datos.billetesVendidos} />
             <Cifra etiqueta="Reservas" valor={datos.reservas} />
             <Cifra etiqueta="Canceladas" valor={datos.reservasCanceladas} />
-            <Cifra etiqueta="Ingresos (simulados)" valor={euros.format(datos.ingresos)} />
+            <Cifra etiqueta="Ingresos (simulados)" valor={euros(datos.ingresos)} />
             <Cifra etiqueta="Billetes validados" valor={datos.validaciones} />
             <Cifra etiqueta="Usuarios" valor={datos.usuarios} />
           </ul>
@@ -70,7 +70,7 @@ export default function Admin() {
                       <tr key={r.localizador}>
                         <th scope="row">{r.localizador}</th>
                         <td>{r.trayecto}</td>
-                        <td>{euros.format(r.total)}</td>
+                        <td>{euros(r.total)}</td>
                         <td>{r.estado.replace("_", " ")}</td>
                       </tr>
                     ))}

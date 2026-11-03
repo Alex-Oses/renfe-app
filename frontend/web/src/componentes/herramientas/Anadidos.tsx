@@ -1,7 +1,7 @@
 // Añadir niño o servicios extra a una reserva existente (precios simulados).
 import { useState } from "react";
 import type { Reserva } from "@renfe/shared/api/tipos";
-import { euros } from "./logica";
+import { euros } from "@renfe/shared/formato/formato";
 import { BuscaReserva, Exito, Herramienta, ResumenReserva, useEnvio } from "./comun";
 
 type Opcion = { id: string; texto: string; precio: number };

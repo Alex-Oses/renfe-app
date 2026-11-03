@@ -7,7 +7,7 @@ import type { RespuestaChatbot, TrenApi } from "@renfe/shared/api/tipos";
 import { Boton } from "@/components/Boton";
 import { Cristal } from "@/components/Cristal";
 import { Pantalla } from "@/components/Pantalla";
-import { euros, hora } from "@/formato";
+import { euros, horaLocal } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos, fuentes, radios, sombraSuave, tonos } from "@/tema";
 
 type Mensaje = {
@@ -72,7 +72,7 @@ function TarjetaTren({ tren }: { tren: TrenApi }) {
         {t.origen.nombre} → {t.destino.nombre}
       </Text>
       <Text style={styles.trenHoras}>
-        {hora(t.salida)} → {hora(t.llegada)} · {duracion(t.duracionMin ?? 0)}
+        {horaLocal(t.salida)} → {horaLocal(t.llegada)} · {duracion(t.duracionMin ?? 0)}
       </Text>
       <Text style={styles.verTren}>Ver tren y continuar ›</Text>
     </Pressable>
