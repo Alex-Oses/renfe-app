@@ -15,12 +15,12 @@ const COLUMNAS: { titulo: string; ruta: string; enlaces: Enlace[] }[] = [
   { titulo: "Legal", ruta: "/ayuda/informacion-legal", enlaces: enlacesLegal },
 ];
 
-// Iconos genéricos dibujados a mano: no reproducen logotipos de ninguna red.
-const REDES = [
-  { nombre: "Vídeos", d: "M3 6h18v12H3zM10 9.5v5l4.5-2.5z" },
-  { nombre: "Fotos", d: "M4 7h3l2-2h6l2 2h3v12H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" },
-  { nombre: "Mensajes", d: "M4 5h16v11H9l-5 4z" },
-  { nombre: "Noticias", d: "M5 19a1 1 0 1 0 0-.01M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14" },
+// Atajos a las cuatro secciones principales: no hay cuentas sociales reales que enlazar.
+const ATAJOS = [
+  { nombre: "Viajar", ruta: "/viajar", d: "M4 7h16v10H4zM8 7V5h8v2M4 11h16" },
+  { nombre: "Inspírate", ruta: "/inspirate", d: "M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.4l6.1-.9z" },
+  { nombre: "Gestiona", ruta: "/gestiona", d: "M4 7h16v10H4zM4 10h16" },
+  { nombre: "Ayuda", ruta: "/ayuda", d: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.5 9a2.5 2.5 0 1 1 4 2c-.8.6-1.5 1.2-1.5 2.5M12 17h.01" },
 ];
 
 export function Pie() {
@@ -45,11 +45,10 @@ export function Pie() {
         </nav>
 
         <div className="pie__base">
-          <ul className="pie__redes" aria-label="Síguenos">
-            {REDES.map((r) => (
+          <ul className="pie__redes" aria-label="Secciones destacadas">
+            {ATAJOS.map((r) => (
               <li key={r.nombre}>
-                {/* shortcut: canales simulados, enlazan a contacto hasta tener cuentas reales */}
-                <Link to="/ayuda/contacto" className="pie__red" aria-label={`${r.nombre} (canal simulado)`}>
+                <Link to={r.ruta} className="pie__red" aria-label={r.nombre} title={r.nombre}>
                   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                     <path d={r.d} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>

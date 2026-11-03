@@ -9,12 +9,12 @@ import { Icono, type NombreIcono } from "./Icono";
 
 const ir = (ruta: string) => router.push(`/contenido${ruta}` as never);
 
-// Canales simulados: enlazan a contacto hasta tener cuentas reales, como en la web.
-const REDES: { nombre: string; icono: NombreIcono }[] = [
-  { nombre: "Vídeos", icono: "comprar" },
-  { nombre: "Fotos", icono: "estrella" },
-  { nombre: "Mensajes", icono: "campana" },
-  { nombre: "Noticias", icono: "info" },
+// Atajos a las cuatro secciones principales: no hay cuentas sociales reales que enlazar.
+const ATAJOS: { nombre: string; ruta: string; icono: NombreIcono }[] = [
+  { nombre: "Viajar", ruta: "/viajar", icono: "comprar" },
+  { nombre: "Inspírate", ruta: "/inspirate", icono: "estrella" },
+  { nombre: "Gestiona", ruta: "/gestiona", icono: "billetes" },
+  { nombre: "Ayuda", ruta: "/ayuda", icono: "info" },
 ];
 
 export function Pie() {
@@ -46,12 +46,13 @@ export function Pie() {
       </View>
 
       <View style={styles.redes}>
-        {REDES.map((r) => (
+        {ATAJOS.map((r) => (
           <Pressable
             key={r.nombre}
             accessibilityRole="link"
-            accessibilityLabel={`${r.nombre} (canal simulado)`}
-            onPress={() => ir("/ayuda/contacto")}
+            accessibilityLabel={r.nombre}
+            accessibilityHint={`Ir a ${r.nombre}`}
+            onPress={() => ir(r.ruta)}
             style={({ pressed }) => [styles.red, pressed && { backgroundColor: tonos.rosaFuerte }]}
           >
             <Icono nombre={r.icono} tamano={18} color={colores.marca} />
