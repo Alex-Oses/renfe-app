@@ -7,6 +7,7 @@ import {
 import { buscarOpcion, comprarDosTramos, precioOpcion } from "@renfe/shared/api/comprar-transbordo";
 import { haSalido } from "@renfe/shared/api/salidas";
 import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
+import { resolverTarifa } from "@renfe/shared/api/tarifas";
 import type { IdDescuento, NuevaReserva, OpcionTransbordo, Pasajero, Reserva, TipoViajero } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
@@ -33,6 +34,7 @@ export default function Transbordo() {
   const n = Math.min(Math.max(Number(params.pasajeros) || 1, 1), 6);
   const ninos = Math.min(Math.max(Number(params.ninos) || 0, 0), n - 1);
   const descuento = (DESCUENTOS.find((d) => d.id === params.descuento)?.id ?? "ninguno") as IdDescuento;
+  const tarifa = resolverTarifa(params.tarifa);
   const tipos: TipoViajero[] = Array.from({ length: n }, (_, i) => (i >= n - ninos ? "nino" : "adulto"));
   const { origen = "", destino = "", fecha = "", a, b } = params;
 
@@ -79,14 +81,14 @@ export default function Transbordo() {
       tipo: i >= n - ninos ? "nino" : "adulto",
     }));
     try {
-      const reserva: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros, descuento };
+      const reserva: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros, tarifa, descuento };
       setCompradas(await comprarDosTramos(opcion.tramos, reserva));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo completar la compra.");
     } finally {
       setPagando(false);
     }
-  }, [opcion, datos, email, n, ninos, descuento]);
+  }, [opcion, datos, email, n, ninos, descuento, tarifa]);
 
   const pagar = () => {
     if (!opcion) return;
@@ -213,7 +215,7 @@ export default function Transbordo() {
         />
         <View style={estilos.entre}>
           <Text style={estilos.suaveMedio}>Total (pago simulado)</Text>
-          <Text style={estilos.subtitulo}>{euros(precioOpcion(opcion, { tipos, descuento }))}</Text>
+          <Text style={estilos.subtitulo}>{euros(precioOpcion(opcion, { tipos, tarifa, descuento }))}</Text>
         </View>
         {error ? <Aviso texto={error} /> : null}
         <Boton

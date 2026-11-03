@@ -12,6 +12,7 @@ import {
   obtenerTren,
 } from "@renfe/shared/api/cliente";
 import { DESCUENTOS, EXTRAS, TARIFAS, calcularTotal, precioExtra } from "@renfe/shared/api/simulado-precios";
+import { nombreDeTarifa, resolverTarifa } from "@renfe/shared/api/tarifas";
 import { ciudadDe, type Asiento, type IdDescuento, type IdExtra, type IdTarifa, type Pasajero, type Reserva, type Tren } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
@@ -54,11 +55,15 @@ export default function Pasajero() {
   const bebes = Math.max(Number(params.bebes) || 0, 0);
   const adultos = Math.max(n - ninos, 1);
   const descuento = (DESCUENTOS.find((d) => d.id === params.descuento)?.id ?? "ninguno") as IdDescuento;
-  const tarifaInicial = (TARIFAS.find((t) => t.id === params.tarifa)?.id ?? "basico") as IdTarifa;
+  const tarifaInicial = resolverTarifa(params.tarifa);
 
   const [tren, setTren] = useState<Tren | null>(null);
   const [asientos, setAsientos] = useState<Asiento[] | null>(null);
   const [tarifa, setTarifa] = useState<IdTarifa>(tarifaInicial);
+  // Si se llega desde otra búsqueda con otra tarifa, el estado se sincroniza con la URL.
+  useEffect(() => {
+    setTarifa(tarifaInicial);
+  }, [tarifaInicial]);
   const [datos, setDatos] = useState<DatosViajero[]>(() => Array.from({ length: n }, vacio));
   const [email, setEmail] = useState("");
   const [extras, setExtras] = useState<IdExtra[]>([]);
@@ -605,6 +610,10 @@ export default function Pasajero() {
 
         <Cristal padding={espaciado[4]} gap={espaciado[3]}>
           <Text style={estilos.h2}>Resumen</Text>
+          <View style={styles.resumenFila}>
+            <Text style={estilos.texto}>Tarifa</Text>
+            <Text style={styles.resumenValor}>{nombreDeTarifa(tarifa)}</Text>
+          </View>
           <View style={styles.resumenFila}>
             <Text style={estilos.texto}>Billetes ({n})</Text>
             <Text style={styles.resumenValor}>{desgloseApi ? euros(desgloseApi.billetes) : "Calculando…"}</Text>
