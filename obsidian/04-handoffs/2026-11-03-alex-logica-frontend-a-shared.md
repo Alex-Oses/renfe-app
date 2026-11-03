@@ -4,7 +4,7 @@ autor: Alex
 area: frontend
 para: todos
 rama: refactor/mobile-logica-a-shared
-pr: por abrir
+pr: 131
 tags: [handoff, frontend, shared, refactor]
 ---
 
