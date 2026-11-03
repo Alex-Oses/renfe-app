@@ -4,7 +4,7 @@ autor: Alex
 area: frontend
 para: todos
 rama: fix/mobile-descuento-ninos-transbordos
-pr: pendiente
+pr: "#139"
 tags: [handoff]
 ---
 
