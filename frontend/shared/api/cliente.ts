@@ -216,7 +216,9 @@ async function pedir<T>(ruta: string, metodo = "GET", cuerpo?: unknown): Promise
     },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
-  if (r.status === 401 && token) {
+  // Un 401 es siempre «no hay sesión válida». Si la petición salió sin token, la API contesta
+  // «falta el bearer token», que no le dice nada al usuario: se cierra la sesión y se pide entrar.
+  if (r.status === 401) {
     invalidarSesion();
     throw new Error(SESION_CADUCADA);
   }
