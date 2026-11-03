@@ -23,7 +23,7 @@ alcance sustituido; «abierto» conserva una acción verificable antes de la con
 | [[2026-10-26-ruben-arquitectura-api-renfe]] | Rubén | todos | cerrado | Contrato y arquitectura base integrados | — |
 | [[2026-10-26-ruben-esqueleto-api]] | Rubén | todos | cerrado | API base, guard y health integrados | — |
 | [[2026-10-26-ruben-respuestas-modelo-datos]] | Rubén | Marina | cerrado | Respuestas incorporadas al contrato y migraciones | — |
-| [[2026-10-27-alex-billete-revisor-admin]] | Alex | Rubén, Marina | abierto | Decidir si se sustituye el HMAC actual por Ed25519 y cerrar el contrato; el código actual usa HMAC-SHA256 | Rubén y Marina, antes del 04/11 |
+| [[2026-10-27-alex-billete-revisor-admin]] | Alex | Rubén, Marina | cerrado | QR ya firmado con Ed25519 y contrato alineado (03/11) | — |
 | [[2026-10-27-alex-ci-render]] | Alex | todos | abierto | Configurar y comprobar `DATABASE_URL`/JWT en Render mientras sea entorno transitorio | Kevin/Alex |
 | [[2026-10-27-alex-estilo-cristal]] | Alex | todos | abierto | Prueba en dispositivos móviles reales | Alex |
 | [[2026-10-27-alex-mapa-detalle-tren]] | Alex | Rubén | cerrado | Campos opcionales y recorrido ya llegan desde la API integrada | — |
@@ -66,6 +66,7 @@ alcance sustituido; «abierto» conserva una acción verificable antes de la con
 | [[2026-10-30-ruben-pr97-lista-para-merge]] | Rubén | Alex, Kevin | obsoleto | Sustituido por el handoff de PR mergeada | — |
 | [[2026-10-30-ruben-pr97-mergeada]] | Rubén | Alex, Kevin | cerrado | PR #97 fusionada; queda la prueba Expo, registrada en los abiertos | Alex |
 | [[2026-10-30-ruben-triaje-infraestructura]] | Rubén | Alex, Marina, Kevin | abierto | Confirmar red y validar el despliegue final antes de congelar | Administrador, Kevin y Marina |
+| [[2026-11-03-ruben-qr-ed25519]] | Rubén | Kevin, Alex | cerrado | Solo falta cambiar las variables de QR en Render | Kevin |
 
 ## Resumen
 
@@ -82,12 +83,13 @@ alcance sustituido; «abierto» conserva una acción verificable antes de la con
    backups. Dueño: Kevin y Marina. Fecha límite: **04/11**.
 3. **Transición de entornos:** mantener Cloud/Render hasta que el servidor pase la validación y
    retirarlos después. Dueño: Kevin/Alex/Marina. Fecha límite: **04/11**.
-4. **Facial móvil:** probar Expo con embedding ArcFace de 512 y registro/login contra el entorno
-   operativo. Dueño: Alex/Rubén. Fecha límite: **04/11**.
-5. **Latencia del chatbot:** medir Gemini y decidir el mensaje/plan de demo si tarda demasiado.
-   Dueño: Rubén. Fecha límite: **04/11**.
-6. **QR:** el código actual firma con HMAC-SHA256 (`backend/api/src/common/qr/firma.ts`), aunque
-   el contrato histórico menciona Ed25519. Dueño: Rubén; decidir y alinear contrato antes del
-   **04/11**.
+4. **Facial móvil:** ✅ **implementado** de forma nativa (PR #123). Queda **compilarlo y probarlo en
+   un móvil real**: aquí no hay Android SDK ni JDK y la app ya no corre en Expo Go. El liveness y el
+   umbral de `config_cara` ya están validados **en la web**; falta repetirlo en el móvil. Dueño:
+   Rubén/Alex.
+5. ~~**Latencia del chatbot:** medir Gemini.~~ ✅ **cerrado (03/11): la latencia va bien** en las
+   pruebas de la web; queda vigilarla en el ensayo de la demo.
+6. ~~**QR:** decidir HMAC-SHA256 vs. Ed25519.~~ ✅ **cerrado (03/11):** la API firma con **Ed25519** y
+   `QR_SIGNING_PRIVATE_KEY`; contrato alineado ([[2026-11-03-ruben-qr-ed25519]]).
 7. **Cercanías:** decidir si se importa al servidor y cómo se refresca a diario. Dueño: Marina.
    Fecha límite: **04/11**.

@@ -26,7 +26,7 @@ contraseña como para el login facial. Supabase Auth se usa internamente para va
 | auth (Supabase + login facial) | Rubén | ✅ las 3 rutas `/auth/cara/*` implementadas con tests; **sin probar contra Postgres** (faltan migraciones) |
 | reservas | Rubén | ⚪ |
 | pagos (Stripe test) | Kevin | ⚪ |
-| billetes (QR Ed25519) | Rubén | ⚪ |
+| billetes (QR Ed25519) | Rubén | ✅ firmado con Ed25519 y `QR_SIGNING_PRIVATE_KEY` (03/11, [[2026-11-03-ruben-qr-ed25519]]) |
 | chatbot | Rubén | 🟡 | Implementación en curso: agente Gemini `gemini-3.5-flash-lite`, contexto Renfe, guardrails y herramientas de consulta controladas |
 
 ## Datos reales que consume
