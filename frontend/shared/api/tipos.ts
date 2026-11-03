@@ -183,6 +183,7 @@ export interface Billete {
   extras?: IdExtra[]; // de su reserva
   extrasReserva?: number; // euros de esos extras, una vez por reserva
   qr: string; // contenido firmado (Ed25519 en la API real); el frontend solo lo pinta
+  transbordos?: TransbordoApi[];
 }
 
 // --- Cuenta ---
@@ -452,6 +453,11 @@ export interface BilleteApi {
   emitido: string;
   expira: string;
   qr: string; // RNF1.…
+}
+
+export interface TransbordoApi {
+  desde: string;
+  hasta: string;
 }
 
 // GET /billetes/:id/qr (idempotente: devuelve el token ya guardado).

@@ -2,8 +2,6 @@
 
 Estos tickets convierten los problemas reportados en tareas pequeñas y verificables. Los fallos descritos proceden de pruebas del usuario y **no se han reproducido todavía**; cada agente debe empezar confirmando el comportamiento en la rama actual.
 
-Las skills de Burton están en [`.burton/skills/`](../.burton/skills/). Son opcionales y se pueden activar al empezar un ticket con `/skills on <id>` o dejar que `auto-skills` seleccione la skill adecuada.
-
 ## Cómo usarlos
 
 1. Elige un ticket pendiente y trabaja solo en su alcance.

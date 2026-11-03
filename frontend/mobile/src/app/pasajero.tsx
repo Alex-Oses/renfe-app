@@ -618,7 +618,7 @@ export default function Pasajero() {
             />
             {errores.asientos ? <Aviso texto={errores.asientos} /> : null}
             <Boton texto={`Pagar ${euros(desglose.total)} (simulado)`} onPress={pagar} cargando={pagando} desactivado={!elegidos.length} />
-            <Text style={styles.pie}>Renfe · Andén 0 · proyecto de clase</Text>
+            <Text style={styles.pie}>Renfe · Andén 0</Text>
           </Cristal>
         ) : null}
       </ScrollView>

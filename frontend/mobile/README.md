@@ -63,3 +63,22 @@ eas build --profile preview --platform android   # APK interno (ver eas.json)
 
 `eas build --profile preview --platform android` saca un APK interno. Perfiles en `eas.json`:
 `development` (dev client), `preview` (APK interno) y `production`.
+
+## APK de prueba (Android)
+
+El APK de prueba se compila en local, sin EAS, para un dispositivo ARM64:
+
+```bash
+pnpm --filter @renfe/mobile exec expo prebuild --platform android --no-install
+cd frontend/mobile/android
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+```
+
+Queda en `android/app/build/outputs/apk/release/app-release.apk`; en la raíz del repo se guarda
+una copia como `renfe-app-arm64.apk`. Es un build **release firmado con la clave de debug**: sirve
+para probar en un móvil ARM64, no para publicar. Las variables `EXPO_PUBLIC_*` se embeben al
+compilar, así que hay que definirlas antes de lanzar Gradle.
+
+En Windows, si Gradle falla por la longitud de la ruta, compila desde una ruta corta (por ejemplo
+`C:
+`) o usa `eas build --profile preview --platform android`.

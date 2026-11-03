@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentProps, type ComponentType, type ReactNode } from "react";
 import { AccessibilityInfo, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +17,12 @@ import Animated, {
 import { colores, espaciado, fuentes, gradientes, paleta, radios } from "@/tema";
 import { Icono } from "./Icono";
 import { TrenSvg } from "./TrenSvg";
+
+type VistaAnimadaProps = Omit<ComponentProps<typeof View>, "style"> & {
+  style?: unknown;
+  children?: ReactNode;
+};
+const VistaAnimada = Animated.View as unknown as ComponentType<VistaAnimadaProps>;
 
 // Entrada del tren de la portada, copiada del tramo sticky de la web
 // (frontend/web/src/paginas/inicio/EntradaTren.tsx + inicio.css):
@@ -196,11 +202,11 @@ export function EntradaTren({
 
   return (
     <View style={{ height: escena, width: ancho, overflow: "hidden" }}>
-      <Animated.View style={[styles.escena, { height: escena }, estatico ? null : estiloTramo]}>
+      <VistaAnimada style={[styles.escena, { height: escena }, estatico ? null : estiloTramo]}>
         <LinearGradient colors={gradientes.heroe} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={StyleSheet.absoluteFill} />
 
         {/* Paisaje: tres lomas suaves, como los radial-gradient de la web. */}
-        <Animated.View
+        <VistaAnimada
           style={[styles.paisaje, { bottom: altoAnden + Math.round(escena * 0.03), height: altoPaisaje }, estatico ? null : estiloPaisaje]}
           pointerEvents="none"
           accessibilityElementsHidden
@@ -209,10 +215,10 @@ export function EntradaTren({
           <View style={[styles.loma, { left: "2%", width: ancho * 0.5, height: altoPaisaje, backgroundColor: "#d9c6d3" }]} />
           <View style={[styles.loma, { left: "34%", width: ancho * 0.42, height: altoPaisaje * 0.92, backgroundColor: "#e3d3dd" }]} />
           <View style={[styles.loma, { left: "70%", width: ancho * 0.4, height: altoPaisaje * 0.8, backgroundColor: "#d9c6d3" }]} />
-        </Animated.View>
+        </VistaAnimada>
 
         {/* Catenaria: un cable arriba y un poste cada 23vw. */}
-        <Animated.View
+        <VistaAnimada
           style={[styles.catenaria, { bottom: altoAnden, height: altoCatenaria, width: ancho * 3 }, estatico ? null : estiloCatenaria]}
           pointerEvents="none"
           accessibilityElementsHidden
@@ -222,7 +228,7 @@ export function EntradaTren({
           {Array.from({ length: Math.ceil(ancho * 3 / (ancho * 0.23)) }, (_, i) => (
             <View key={i} style={[styles.poste, { left: i * ancho * 0.23 }]} />
           ))}
-        </Animated.View>
+        </VistaAnimada>
 
         <Text
           style={[styles.lema, { top: Math.round(escena * 0.14), fontSize: tamanoLema, lineHeight: Math.round(tamanoLema * 1.05) }]}
@@ -233,19 +239,19 @@ export function EntradaTren({
         </Text>
 
         {/* El tren arranca con el morro en el borde derecho y sale por la izquierda. */}
-        <Animated.View
+        <VistaAnimada
           style={[styles.tren, { width: anchoTren, bottom: altoAnden - 4 }, estatico ? null : estiloTren]}
           pointerEvents="none"
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <Animated.View style={[styles.estela, { width: anchoEstela }, estatico ? null : estiloEstela]}>
+          <VistaAnimada style={[styles.estela, { width: anchoEstela }, estatico ? null : estiloEstela]}>
             {Array.from({ length: 4 }, (_, i) => (
               <View key={i} style={styles.estelaLinea} />
             ))}
-          </Animated.View>
+          </VistaAnimada>
           <TrenSvg ancho={anchoTren} />
-        </Animated.View>
+        </VistaAnimada>
 
         {/* Andén: línea roja, marcas de borde y losas. */}
         <View
@@ -261,7 +267,7 @@ export function EntradaTren({
         </View>
 
         {estatico ? null : (
-          <Animated.View
+          <VistaAnimada
             style={[styles.aviso, { bottom: Math.max(insets.bottom, 8) + 82 }, estiloAviso]}
             pointerEvents={empezado ? "none" : "box-none"}
           >
@@ -277,9 +283,9 @@ export function EntradaTren({
             >
               <Text style={styles.saltarTexto}>Ir al buscador</Text>
             </Pressable>
-          </Animated.View>
+          </VistaAnimada>
         )}
-      </Animated.View>
+      </VistaAnimada>
     </View>
   );
 }

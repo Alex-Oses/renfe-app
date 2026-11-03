@@ -30,6 +30,7 @@ import type {
   TrenApi,
   TrenDetalle,
   TrenDetalleApi,
+  TransbordoApi,
 } from "./tipos";
 import {
   aDetalleTren,
@@ -45,6 +46,7 @@ import { billeteDeApi, claseDeApi, cuerpoReserva, reservaDeApi, reservaDeBillete
 import { cuerpoRegistrarCara, cuerpoVerificarCara, validarEmbedding } from "./cara";
 import { recordarEstaciones } from "./estaciones-memoria";
 import { parsearEventos } from "./flujo-chatbot";
+import { haSalido } from "./salidas";
 import * as trenes from "./simulado";
 import * as reservas from "./simulado-reservas";
 import * as cuenta from "./simulado-cuenta";
@@ -52,6 +54,7 @@ import * as tiempoReal from "./simulado-tiempo-real";
 import * as revisor from "./simulado-revisor";
 import * as admin from "./simulado-admin";
 import * as abonos from "./simulado-abonos";
+import { calcularTotal, type Desglose } from "./simulado-precios";
 // Solo el tipo: la función de Vercel no puede importar nada, así que la forma vive allí.
 import type { PosicionApi } from "../../web/api/posiciones";
 
@@ -117,6 +120,10 @@ export function vigilarApi(cadaMs = 30_000) {
 }
 
 let token: string | null = null;
+
+function exigirSesionParaCompra() {
+  if (!token) throw new Error("Inicia sesión para comprar un billete.");
+}
 export function usarToken(t: string | null) {
   token = t;
 }
@@ -387,6 +394,16 @@ export async function buscarEstaciones(q: string, feed?: "cercanias" | "avld"): 
   return lista;
 }
 
+// GET /estaciones/:id
+export async function obtenerEstacion(id: string): Promise<Estacion> {
+  if (!BASE) {
+    const encontrada = trenes.buscarEstaciones(id)[0];
+    if (!encontrada) throw new Error("No encontramos esa estación.");
+    return encontrada;
+  }
+  return pedir<Estacion>(`/estaciones/${encodeURIComponent(id)}`);
+}
+
 // GET /trenes?origen=&destino=&fecha=
 export async function buscarTrenes(b: BusquedaTrenes): Promise<Tren[]> {
   if (!BASE) return simular(() => trenes.buscarTrenes(b));
@@ -421,8 +438,36 @@ export async function obtenerAsientos(tren: Tren): Promise<Asiento[]> {
 // Crea la reserva ya pagada (el pago es simulado) con las butacas elegidas; sin ellas (transbordo) las asigna la API.
 export async function crearReserva(tren: Tren, r: NuevaReserva): Promise<Reserva> {
   if (!BASE) return simular(() => reservas.crearReserva(r), 600);
+  exigirSesionParaCompra();
   const creada = await pedir<ReservaApi>("/reservas", "POST", cuerpoReserva(tren, r));
   return reservaDeApi(creada, tren, r);
+}
+
+// POST /precios/calcular. Sin API se conserva el cálculo de demostración.
+export async function calcularPrecio(tren: Tren, r: NuevaReserva, preciosAsientos?: number[]): Promise<Desglose> {
+  if (!BASE) {
+    return simular(() => calcularTotal({
+      precios: preciosAsientos ?? r.asientos.map(() => tren.precioDesde),
+      tipos: r.pasajeros.map((p) => p.tipo),
+      tarifa: r.tarifa,
+      descuento: r.descuento,
+      extras: r.extras,
+    }), 250);
+  }
+  const { feed, tripId, fecha } = partirIdTren(tren.id);
+  if (!feed || !tripId || !fecha) throw new Error("El viaje no trae feed, identificador y fecha.");
+  const respuesta = await pedir<{ desglose: Desglose }>("/precios/calcular", "POST", {
+    feed,
+    viajeId: tripId,
+    fecha,
+    origenId: tren.origen.id,
+    destinoId: tren.destino.id,
+    pasajeros: r.pasajeros.map((p) => ({ tipo: p.tipo ?? "adulto" })),
+    ...(r.tarifa && { tarifa: r.tarifa }),
+    ...(r.descuento && { descuento: r.descuento }),
+    ...(r.extras?.length ? { extras: r.extras } : {}),
+  });
+  return respuesta.desglose;
 }
 
 // POST /pagos/intent
@@ -438,6 +483,7 @@ export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
 // Reserva y pago en un paso: con la API real POST /reservas ya devuelve la reserva pagada;
 // en el simulado hay que pasar por el intento de pago y la confirmación.
 export async function comprarReserva(tren: Tren, r: NuevaReserva): Promise<Reserva> {
+  if (haSalido(tren.salida)) throw new Error("Ese tren ya ha salido: elige otro horario.");
   const creada = await crearReserva(tren, r);
   if (BASE) return creada;
   await crearIntentoPago(creada.id);
@@ -445,10 +491,14 @@ export async function comprarReserva(tren: Tren, r: NuevaReserva): Promise<Reser
 }
 
 // GET /billetes
-export const misBilletes = async (): Promise<Billete[]> =>
-  BASE
-    ? (await datos<BilleteApi>("/billetes")).filter((b) => b.estado !== "anulado").map(billeteDeApi)
-    : simular(() => reservas.misBilletes());
+export const misBilletes = async (): Promise<Billete[]> => {
+  if (!BASE) return simular(() => reservas.misBilletes());
+  const respuesta = await pedir<Lista<BilleteApi> & { transbordos?: TransbordoApi[] }>("/billetes");
+  const transbordos = respuesta.transbordos ?? [];
+  return (respuesta.datos ?? [])
+    .filter((b) => b.estado !== "anulado")
+    .map((b) => ({ ...billeteDeApi(b), transbordos }));
+};
 
 // Admite el localizador con o sin el prefijo "R-" de la API. Solo encuentra reservas propias: hace falta sesión.
 export async function buscarReservaPorLocalizador(localizador: string): Promise<Reserva | undefined> {
