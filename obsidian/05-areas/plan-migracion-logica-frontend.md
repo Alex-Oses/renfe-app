@@ -1,6 +1,6 @@
 ---
 responsable: Alex
-estado: propuesta
+estado: hecho
 fecha: 2026-11-03
 tags: [area, frontend, shared, plan]
 para: [Rubén, Marina, Kevin]
@@ -8,7 +8,7 @@ para: [Rubén, Marina, Kevin]
 
 # Plan de migración de la lógica del frontend a `@renfe/shared`
 
-> Propuesta. El objetivo es que la web (`frontend/web`) y la app (`frontend/mobile`) no tengan
+> **Hecho el 03/11** (ver [[2026-11-03-alex-logica-frontend-a-shared]]). El objetivo es que la web (`frontend/web`) y la app (`frontend/mobile`) no tengan
 > lógica repetida: lo que no pinta pantalla va a `frontend/shared`, con sus tests. Detalle del
 > área en [[frontend]].
 
@@ -67,3 +67,13 @@ nada de lo que ve el usuario, salvo la fase 1, que unifica la hora.
   no devuelve nada.
 - Ya no existen `mobile/src/formato.ts`, `mobile/src/billetes.ts` ni `web/src/paginas/reserva/formato.ts`.
 - Los tests de `shared` suben y los de web y móvil siguen en verde.
+
+## Resultado (03/11)
+
+- Fases 1 a 5 hechas en una rama, con un commit por fase. No cambia nada de lo que se ve:
+  el móvil sigue con la hora local (`horaLocal`) y la fecha sin año (`fechaCorta`), y la web con
+  la hora del ISO (`hora`) y la fecha con año (`fecha`). `textoDuracion` y el orden siguen en
+  cada pantalla porque no hacen lo mismo en web y en móvil.
+- Módulos nuevos: `shared/formato/formato.ts`, `shared/formato/texto.ts`, `shared/estado/sesion.ts`,
+  `shared/billetes/indemnizacion.ts` y `shared/billetes/viaje.ts`, todos con tests (129 → 142).
+- La app todavía no enseña la indemnización: sería una funcionalidad nueva y no está en el sprint.
