@@ -92,12 +92,16 @@ interface FilaTren {
 //   exacta (antes: sin resultados).
 // - Misma ciudad: solo las pedidas (buscar Sants → Passeig no debe devolver toda Barcelona).
 // Muchas de Cercanías no traen `ciudad`: toman la de la estación con ciudad más cercana y, al
-// expandir, entran si están a ~3,5 km de la estación pedida.
+// expandir, entran si están a ~3,5 km de la estación pedida. La ciudad inferida también tiene tope
+// (~5,5 km): sin él, una estación sin ciudad heredaba la de otra región (Tarragona → Barcelona) y la
+// búsqueda devolvía trenes de otra ciudad (ticket 007).
 const SQL_SERVICIO = `
   with lugar as (
     select e.id, e.lat, e.lon,
-           coalesce(e.ciudad, (select c.ciudad from estaciones c where c.ciudad is not null
-                                 order by (c.lat - e.lat) ^ 2 + (c.lon - e.lon) ^ 2 limit 1)) as ciudad
+           coalesce(e.ciudad, (select c.ciudad from estaciones c
+                                where c.ciudad is not null
+                                  and abs(c.lat - e.lat) < 0.05 and abs(c.lon - e.lon) < 0.06
+                                order by (c.lat - e.lat) ^ 2 + (c.lon - e.lon) ^ 2 limit 1)) as ciudad
       from estaciones e where e.id in ($1, $2)
   ), par as (
     select (select ciudad from lugar where id = $1) as co,
