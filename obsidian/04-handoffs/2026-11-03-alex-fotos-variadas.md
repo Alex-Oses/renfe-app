@@ -4,7 +4,7 @@ autor: Alex
 area: frontend
 para: todos
 rama: feat/mobile-fotos-variadas-ciudades
-pr: pendiente
+pr: "#140"
 tags: [handoff]
 ---
 
