@@ -1,5 +1,5 @@
 import { generateKeyPairSync } from 'node:crypto';
-import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { BdService } from '../../common/bd/bd.service.js';
 import { hoyMadrid, intervaloAIso } from '../../common/gtfs/tiempo.js';
@@ -292,6 +292,34 @@ describe('BilletesService.validar', () => {
 
     await expect(servicio.validar('revisor-1', { qr: qrBillete() })).rejects.toBeInstanceOf(
       ServiceUnavailableException,
+    );
+  });
+});
+
+describe('BilletesService.reservaPorLocalizador', () => {
+  it('acepta el localizador sin el prefijo R- y suma los precios', async () => {
+    const { servicio } = servicioCon({ lista: [FILA] });
+
+    const reserva = await servicio.reservaPorLocalizador('usuario-1', '7k3m9q');
+
+    expect(reserva.localizador).toBe('R-7K3M9Q');
+    expect(reserva.total).toBe(45);
+    expect(reserva.billetes).toHaveLength(1);
+  });
+
+  it('responde 404 si no hay billetes de ese localizador', async () => {
+    const { servicio } = servicioCon({ lista: [] });
+
+    await expect(servicio.reservaPorLocalizador('usuario-1', 'R-7K3M9Q')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('rechaza un localizador con formato inválido sin tocar la BD', async () => {
+    const { servicio } = servicioCon();
+
+    await expect(servicio.reservaPorLocalizador('usuario-1', 'R-123')).rejects.toBeInstanceOf(
+      BadRequestException,
     );
   });
 });
