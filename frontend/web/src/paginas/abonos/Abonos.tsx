@@ -3,7 +3,14 @@ import { Link, Navigate } from "react-router-dom";
 import { comprarAbono } from "@renfe/shared/api/cliente";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { TIPOS_ABONO, finAbono, hoyIso, infoAbono, sumarDias } from "@renfe/shared/api/simulado-abonos";
-import type { Abono, TipoAbono } from "@renfe/shared/api/tipos";
+import type { TipoAbono } from "@renfe/shared/api/tipos";
+import {
+  compraConfirmada,
+  compraEnviando,
+  compraFallida,
+  compraInicial,
+  type ResultadoCompraAbono,
+} from "@renfe/shared/api/resultado-compra";
 import { useSesion } from "../../estado/sesion";
 import { euros, fecha } from "@renfe/shared/formato/formato";
 import { TornosFaciales } from "./TornosFaciales";
@@ -18,23 +25,22 @@ export default function Abonos() {
   const [origenId, setOrigen] = useState("");
   const [destinoId, setDestino] = useState("");
   const [inicio, setInicio] = useState(hoy);
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState("");
-  const [comprado, setComprado] = useState<Abono | null>(null);
+  const [resultado, setResultado] = useState<ResultadoCompraAbono>(compraInicial);
+  const comprado = resultado.estado === "exito" ? resultado.abono : null;
+  const cargando = resultado.estado === "enviando";
+  const error = resultado.estado === "error" ? resultado.mensaje : "";
 
   if (!sesion) return <Navigate to="/acceder?volver=/abonos" replace />;
   const info = infoAbono(tipo);
 
   const pagar = async (e: FormEvent) => {
     e.preventDefault();
-    setCargando(true);
-    setError("");
+    setResultado(compraEnviando());
     try {
-      setComprado(await comprarAbono(info.trayecto ? { tipo, origenId, destinoId, inicio } : { tipo, inicio }));
+      const abono = await comprarAbono(info.trayecto ? { tipo, origenId, destinoId, inicio } : { tipo, inicio });
+      setResultado(compraConfirmada(abono));
     } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setCargando(false);
+      setResultado(compraFallida((err as Error).message));
     }
   };
 
@@ -44,7 +50,16 @@ export default function Abonos() {
       <p>Compra un abono para viajar a menudo. Es una simulación: no se cobra nada.</p>
 
       {comprado ? (
-        <section className="tarjeta aparece" aria-labelledby="abono-listo" role="status">
+        <section
+          className="tarjeta aparece abonos__exito"
+          aria-labelledby="abono-listo"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <p className="abonos__exito-marca">
+            <span aria-hidden="true">✓</span> Pago confirmado
+          </p>
           <h2 id="abono-listo">Abono comprado</h2>
           <p>
             {comprado.nombre}
@@ -55,7 +70,7 @@ export default function Abonos() {
             <Link className="boton" to="/cuenta#mis-abonos">
               Ver el QR en Mis abonos
             </Link>
-            <button type="button" className="boton boton--secundario" onClick={() => setComprado(null)}>
+            <button type="button" className="boton boton--secundario" onClick={() => setResultado(compraInicial())}>
               Comprar otro
             </button>
           </div>
@@ -117,8 +132,13 @@ export default function Abonos() {
               Pago en modo prueba: no se pide tarjeta ni se cobra nada. Al pulsar el botón el abono queda guardado en tu cuenta.
             </p>
             {error && (
-              <p className="abonos__error" role="alert">
+              <p className="abonos__error" role="alert" aria-live="assertive">
                 {error}
+              </p>
+            )}
+            {cargando && (
+              <p className="abonos__procesando" role="status" aria-live="polite">
+                Procesando el pago…
               </p>
             )}
             <button type="submit" className="boton" disabled={cargando}>

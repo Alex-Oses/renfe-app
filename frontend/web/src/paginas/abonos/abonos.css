@@ -86,6 +86,26 @@
   color: var(--frambuesa, #d62d61);
   font-weight: 600;
 }
+.abonos .abonos__exito {
+  border-color: #b9e3c9;
+  background: #f1fbf4;
+}
+.abonos .abonos__exito h2 {
+  color: #14532d;
+}
+.abonos__exito-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.35rem;
+  color: #14532d;
+  font-weight: 700;
+}
+.abonos__procesando {
+  margin: 0;
+  color: var(--morado-oscuro, #5c0043);
+  font-weight: 600;
+}
 .abonos__acciones {
   display: flex;
   flex-wrap: wrap;
