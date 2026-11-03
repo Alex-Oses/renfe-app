@@ -605,7 +605,13 @@ Request:
 }
 ```
 
-`pasajeros` va de 1 a 6: **una butaca por pasajero**. La butaca la elige la API (primeras libres por
+`pasajeros` va de 1 a 6: **una butaca por pasajero**.
+
+Precio por viajero — añadido (Alex, 2026-11-03). Opcionales: `pasajeros[].tipo` (`adulto` | `nino`, por defecto
+`adulto`), `tarifa` (`basico` | `elige` | `elige-confort` | `premium`, factor 1 / 1,25 / 1,5 / 1,9) y `descuento`
+(`ninguno` | `joven` 30 % | `dorada` 40 % | `fn-general` 20 % | `fn-especial` 50 %). El niño tiene un 40 % y no se
+acumula con la tarjeta: se aplica el mayor. Cada billete guarda su precio ya calculado y `total` es la suma. Los
+extras y los bebés (gratis, sin butaca) no los ve la API. La butaca la elige la API (primeras libres por
 coche y número); el `documento` solo se enmascara en el QR (`••••678Z`).
 
 Response 201:
