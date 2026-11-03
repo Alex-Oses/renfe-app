@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { comprarDosTramos } from "./comprar-transbordo";
+import { buscarOpcion, claveTramo, comprarDosTramos } from "./comprar-transbordo";
 
 describe("comprarDosTramos", () => {
   it("devuelve las dos reservas si los dos tramos salen bien", async () => {
@@ -36,5 +36,15 @@ describe("comprarDosTramos", () => {
     const cancelar = vi.fn(async () => undefined);
     await expect(comprarDosTramos(async () => Promise.reject(new Error("x")), cancelar)).rejects.toThrow("x");
     expect(cancelar).not.toHaveBeenCalled();
+  });
+});
+
+describe("buscarOpcion", () => {
+  const tren = (numero: string, salida: string, id: string) => ({ id, tipo: "AVE", numero, salida });
+  it("encuentra la opción aunque el tripId haya cambiado", () => {
+    const lista = [{ tramos: [tren("03940", "2026-11-04T09:05", "x:1"), tren("13039", "2026-11-04T17:17", "x:2026-10-29")] as const }];
+    const elegida = { tramos: [tren("03940", "2026-11-04T09:05", "x:1"), tren("13039", "2026-11-04T17:17", "x:2026-11-01")] };
+    const o = buscarOpcion(lista as never, claveTramo(elegida.tramos[0]), claveTramo(elegida.tramos[1]));
+    expect(o).toBe(lista[0]);
   });
 });

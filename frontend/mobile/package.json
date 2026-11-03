@@ -6,11 +6,12 @@
   "main": "expo-router/entry",
   "scripts": {
     "dev": "expo start",
+    "tunel": "node scripts/tunel.mjs",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/fotos/matematica.test.mjs"
+    "test": "node --experimental-strip-types --test src/fotos/matematica.test.mjs src/herramientas/logica.test.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/instrument-sans": "^0.4.2",

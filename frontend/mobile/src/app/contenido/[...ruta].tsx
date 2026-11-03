@@ -12,6 +12,7 @@ import { Boton } from "@/components/Boton";
 import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
+import { herramientas } from "@/herramientas/registro";
 
 const WEB = "https://renfe-app-beta.vercel.app";
 
@@ -26,6 +27,7 @@ const PANTALLAS: Record<string, string> = {
   "/mapa": "/directo",
   "/lineas": "/lineas",
   "/revisor": "/revisor",
+  "/admin": "/admin",
 };
 
 function abrirRuta(ruta: string) {
@@ -135,13 +137,17 @@ function Contenido({ b, ruta }: { b: Bloque; ruta: string }) {
           <Boton texto={b.etiqueta} onPress={() => abrirRuta(b.enlace)} />
         </View>
       );
-    case "herramienta":
-      return (
-        <View style={{ gap: espaciado[2] }}>
-          <Text style={estilos.suave}>Esta herramienta interactiva se abre en la web.</Text>
-          <Boton texto="Abrir en la web" icono="delante" variante="secundario" onPress={() => void WebBrowser.openBrowserAsync(WEB + ruta)} />
+    case "herramienta": {
+      const Herramienta = herramientas[b.id];
+      return Herramienta ? (
+        <Herramienta ruta={ruta} />
+      ) : (
+        <View style={{ gap: 4 }}>
+          <Text style={estilos.subtitulo}>Próximamente</Text>
+          <Text style={estilos.suave}>Esta herramienta interactiva todavía no está disponible.</Text>
         </View>
       );
+    }
   }
 }
 

@@ -420,6 +420,8 @@ Es la tabla más grande del catálogo.
 | `referencia` | `text` | no | `UNIQUE`, código corto legible (`R-7K3M9Q`); es el `localizador` de la API |
 | `estado` | `text` | no | `pendiente` \| `pagada` \| `cancelada` \| `caducada`, default `pendiente` |
 | `importe_centimos` | `integer` | no | `CHECK (>= 0)`; precio simulado |
+| `extras` | `text[]` | no | Por defecto `{}`; ids de los extras contratados |
+| `extras_centimos` | `integer` | no | Por defecto 0, `CHECK (>= 0)`; parte del importe que son extras |
 | `creada_en` | `timestamptz` | no | default `now()` |
 | `expira_en` | `timestamptz` | no | `CHECK (expira_en > creada_en)`; retención de butacas **+15 min** (aprobado por Alex, 26/10) |
 | `actualizado_en` | `timestamptz` | no | trigger `set_actualizado_en()` |
