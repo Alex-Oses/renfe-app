@@ -2,7 +2,7 @@
 // Se guarda en sessionStorage: dura lo que la pestaña y no se comparte entre pestañas.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { alSesionInvalida, usarToken } from "@renfe/shared/api/cliente";
-import { CLAVE_SESION } from "@renfe/shared/api/simulado-cuenta";
+import { guardarSesion, leerSesion } from "@renfe/shared/estado/sesion";
 import type { Sesion, Usuario } from "@renfe/shared/api/tipos";
 
 interface ValorSesion {
@@ -15,34 +15,20 @@ interface ValorSesion {
 const Contexto = createContext<ValorSesion | null>(null);
 
 function leerGuardada(): Sesion | null {
-  try {
-    const s = JSON.parse(sessionStorage.getItem(CLAVE_SESION) ?? "null") as Sesion | null;
-    usarToken(s?.token ?? null);
-    return s;
-  } catch {
-    return null;
-  }
-}
-
-function persistir(s: Sesion | null) {
+  const s = leerSesion();
   usarToken(s?.token ?? null);
-  try {
-    if (s) sessionStorage.setItem(CLAVE_SESION, JSON.stringify(s));
-    else sessionStorage.removeItem(CLAVE_SESION);
-  } catch {
-    // Sin almacenamiento la sesión vive solo en memoria.
-  }
+  return s;
 }
 
 export function ProveedorSesion({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(leerGuardada);
 
   const entrar = useCallback((s: Sesion) => {
-    persistir(s);
+    guardarSesion(s);
     setSesion(s);
   }, []);
   const salir = useCallback(() => {
-    persistir(null);
+    guardarSesion(null);
     setSesion(null);
   }, []);
   // Token rechazado o API cambiada: la sesión ya no sirve y hay que volver a entrar.
@@ -51,7 +37,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     setSesion((s) => {
       if (!s) return s;
       const nueva = { ...s, usuario: { ...s.usuario, ...cambios } };
-      persistir(nueva);
+      guardarSesion(nueva);
       return nueva;
     });
   }, []);
