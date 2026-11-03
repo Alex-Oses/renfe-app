@@ -13,6 +13,7 @@ import { Cristal } from "@/components/Cristal";
 import { cargarModelos, detectarCara, fotoDeJpeg, huellaArcFace } from "@/fotos/ficha";
 import { normalizar } from "@/fotos/matematica";
 import { guardarSesion, leerSesion } from "@/sesion";
+import { abrirConfirmacionFacial, cerrarConfirmacionFacial } from "@/compra/confirmacion-facial";
 import { colores, espaciado, estilos, fuentes } from "@/tema";
 
 // shortcut: se promedian 5 capturas y no hay liveness (con los 5 puntos de SCRFD no se mide el
@@ -34,8 +35,10 @@ async function capturar(ref: CameraView | null) {
 }
 
 export default function Cara() {
-  const { modo, email: emailParam } = useLocalSearchParams<{ modo?: string; email?: string }>();
+  const { modo, email: emailParam, intento } = useLocalSearchParams<{ modo?: string; email?: string; intento?: string }>();
   const registrar = modo === "registrar";
+  // Con `intento` la pantalla no es un login: confirma la compra que la abrió (ticket 004).
+  const confirmar = Boolean(intento);
   // La sesión no cambia mientras la pantalla esté abierta: se lee una vez al montar.
   const sesion = useMemo(() => (registrar ? leerSesion() : null), [registrar]);
   const [permiso, pedirPermiso] = useCameraPermissions();
@@ -52,8 +55,19 @@ export default function Cara() {
   const camara = useRef<CameraView>(null);
   const preparado = useRef(false);
   const activo = useRef(false);
+  const respuestaEnviada = useRef(false);
+
+  // El resultado se liga al intento de compra que abrió la pantalla.
+  const cerrar = (resultado: "ok" | "cancelado" | "error", mensaje?: string) => {
+    if (!confirmar || respuestaEnviada.current) return;
+    respuestaEnviada.current = true;
+    cerrarConfirmacionFacial(resultado, mensaje);
+  };
 
   const sinEmail = !registrar && !(EMAIL_OK.test(email.trim()) && confirmado);
+
+  // Salir con el gesto del sistema también cancela: la compra no se confirma sola.
+  useEffect(() => () => cerrar("cancelado"), []);
 
   // Bucle de captura: fotos seguidas, y cuando junta MUESTRAS huellas manda la media a la API.
   // Ojo: `fase` se lee en el guard pero no está en las deps a propósito, para que cambiar de fase
@@ -94,12 +108,20 @@ export default function Cara() {
         const media = normalizar(huellas[0]!.map((_, i) => huellas.reduce((s, h) => s + h[i]!, 0) / huellas.length));
         if (registrar) await registrarCara(media);
         else guardarSesion(await verificarCara({ email: email.trim(), embedding: media }));
-        if (!cancelado) setFase("ok");
+        if (!cancelado) {
+          setFase("ok");
+          if (confirmar) {
+            cerrar("ok");
+            router.back();
+          }
+        }
       } catch (e) {
         activo.current = false;
         if (!cancelado) {
-          setError((e as Error).message);
+          const texto = (e as Error).message;
+          setError(texto);
           setFase("error");
+          cerrar("error", texto);
         }
       }
     })();
@@ -124,8 +146,16 @@ export default function Cara() {
     setListo(true);
   };
 
-  const volver = () => router.back();
+  const volver = () => {
+    cerrar("cancelado");
+    router.back();
+  };
   const reintentar = () => {
+    if (confirmar && intento) {
+      // El resultado fallido anterior ya no vale para esta compra.
+      abrirConfirmacionFacial(intento);
+      respuestaEnviada.current = false;
+    }
     setError("");
     setMensaje("Buscando tu cara…");
     setFase("camara");
@@ -174,7 +204,9 @@ export default function Cara() {
   } else if (!permiso.granted) {
     cuerpo = (
       <Cristal gap={espaciado[2]}>
-        <Text style={styles.dato}>Hace falta la cámara para reconocer tu cara.</Text>
+        <Text style={styles.dato}>
+          {confirmar ? "Hace falta la cámara para confirmar tu compra." : "Hace falta la cámara para reconocer tu cara."}
+        </Text>
         {permiso.canAskAgain ? (
           <Boton texto="Permitir la cámara" onPress={() => void pedirPermiso()} />
         ) : (
@@ -198,6 +230,7 @@ export default function Cara() {
       <>
         <Text style={estilos.h1}>No ha salido bien</Text>
         <Aviso tipo="error" texto={error} />
+        {confirmar ? <Text style={estilos.suave}>No se ha completado ninguna compra.</Text> : null}
         <Boton texto="Reintentar" onPress={reintentar} />
         <Boton texto="Volver" variante="texto" onPress={volver} />
       </>
@@ -220,7 +253,9 @@ export default function Cara() {
           </View>
         </View>
         <Text style={estilos.suave}>
-          La imagen se queda en el teléfono: solo se envía la huella a {registrar ? "tu cuenta" : email.trim()}.
+          {confirmar
+            ? "Confirma tu compra mirando a la cámara. La imagen se queda en el teléfono: solo se envía la huella."
+            : `La imagen se queda en el teléfono: solo se envía la huella a ${email.trim()}.`}
         </Text>
         <Boton texto="Cancelar" variante="texto" onPress={volver} />
       </>
@@ -229,7 +264,9 @@ export default function Cara() {
 
   return (
     <View style={styles.raiz}>
-      <Stack.Screen options={{ title: registrar ? "Registrar mi cara" : "Entrar con tu cara" }} />
+      <Stack.Screen
+        options={{ title: registrar ? "Registrar mi cara" : confirmar ? "Confirmar compra con la cara" : "Entrar con tu cara" }}
+      />
       {cuerpo}
     </View>
   );

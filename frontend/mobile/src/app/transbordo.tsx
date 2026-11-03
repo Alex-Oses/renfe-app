@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import {
   buscarTransbordos,
@@ -12,6 +12,8 @@ import { Campo } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
 import { Pantalla } from "@/components/Pantalla";
 import { euros, horaLocal } from "@renfe/shared/formato/formato";
+import { abrirConfirmacionFacial, consumirConfirmacion, decidirCompra } from "@/compra/confirmacion-facial";
+import { leerSesion } from "@/sesion";
 import { colores, espaciado, estilos } from "@/tema";
 
 interface DatosViajero {
@@ -36,6 +38,7 @@ export default function Transbordo() {
   const [error, setError] = useState("");
   const [pagando, setPagando] = useState(false);
   const [compradas, setCompradas] = useState<[Reserva, Reserva] | null>(null);
+  const intentoFacial = useRef<string | null>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -56,16 +59,9 @@ export default function Transbordo() {
   const cambiar = (i: number, campo: keyof DatosViajero, valor: string) =>
     setDatos((d) => d.map((p, j) => (j === i ? { ...p, [campo]: valor } : p)));
 
-  const pagar = async () => {
+  // Compra ya validada: solo se llama con la confirmación facial de este intento.
+  const comprar = useCallback(async () => {
     if (!opcion) return;
-    if (datos.some((p) => !p.nombre.trim() || !p.apellidos.trim() || !validarDocumento(p.documento))) {
-      setError("Rellena nombre, apellidos y documento (6 a 12 letras o números) de cada viajero.");
-      return;
-    }
-    if (!validarEmail(email)) {
-      setError("Escribe un correo de contacto válido.");
-      return;
-    }
     setError("");
     setPagando(true);
     const pasajeros: Pasajero[] = datos.map((p, i) => ({
@@ -76,14 +72,53 @@ export default function Transbordo() {
       tipo: i >= n - ninos ? "nino" : "adulto",
     }));
     try {
-      const datos: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros };
-      setCompradas(await comprarDosTramos(opcion.tramos, datos));
+      const reserva: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros };
+      setCompradas(await comprarDosTramos(opcion.tramos, reserva));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo completar la compra.");
     } finally {
       setPagando(false);
     }
+  }, [opcion, datos, email, n, ninos]);
+
+  const pagar = () => {
+    if (!opcion) return;
+    if (datos.some((p) => !p.nombre.trim() || !p.apellidos.trim() || !validarDocumento(p.documento))) {
+      setError("Rellena nombre, apellidos y documento (6 a 12 letras o números) de cada viajero.");
+      return;
+    }
+    if (!validarEmail(email)) {
+      setError("Escribe un correo de contacto válido.");
+      return;
+    }
+    const sesion = leerSesion();
+    if (!sesion?.usuario.email) {
+      setError("Inicia sesión para comprar un billete.");
+      return;
+    }
+    // La compra no se envía hasta que la cara coincida con la de la sesión.
+    const intento = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    intentoFacial.current = intento;
+    abrirConfirmacionFacial(intento);
+    router.push({ pathname: "/cara", params: { intento, email: sesion.usuario.email } });
   };
+
+  // Al volver de la cámara se resuelve el intento: sin éxito no se compra.
+  useFocusEffect(
+    useCallback(() => {
+      const intento = intentoFacial.current;
+      if (!intento) return;
+      const resultado = consumirConfirmacion(intento);
+      if (!resultado) return;
+      intentoFacial.current = null;
+      const decision = decidirCompra(resultado);
+      if (!decision.continuar) {
+        setError(decision.mensaje);
+        return;
+      }
+      void comprar();
+    }, [comprar]),
+  );
 
   if (compradas) {
     return (
@@ -171,7 +206,7 @@ export default function Transbordo() {
         </View>
         {error ? <Aviso texto={error} /> : null}
         <Boton
-          texto={pagando ? "Comprando los dos billetes…" : "Comprar los dos billetes"}
+          texto={pagando ? "Comprando los dos billetes…" : "Comprar y confirmar con la cara"}
           onPress={pagar}
           cargando={pagando}
         />

@@ -1,8 +1,8 @@
 import { documentoValido, emailValido } from "@renfe/shared/billetes/viaje";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import {
   calcularPrecio,
@@ -19,6 +19,8 @@ import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
 import { euros, fechaCorta, horaLocal } from "@renfe/shared/formato/formato";
+import { abrirConfirmacionFacial, consumirConfirmacion, decidirCompra } from "@/compra/confirmacion-facial";
+import { leerSesion } from "@/sesion";
 import { colores, espaciado, estilos, fuentes, gradientes, sombras, tonos } from "@/tema";
 
 // Clase de asiento que encaja con cada tarifa: así el precio que se enseña es el que se cobra.
@@ -66,6 +68,7 @@ export default function Pasajero() {
   const [reserva, setReserva] = useState<Reserva | null>(null);
   const [desgloseApi, setDesgloseApi] = useState<{ billetes: number; extras: number; total: number } | null>(null);
   const scroll = useRef<ScrollViewInstance>(null);
+  const intentoFacial = useRef<string | null>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -160,13 +163,9 @@ export default function Pasajero() {
     return Object.keys(nuevos).length === 0;
   };
 
-  const pagar = async () => {
+  // Compra ya validada: solo se llama con la confirmación facial de este intento.
+  const comprar = useCallback(async () => {
     if (!tren) return;
-    if (!validar()) {
-      setError("");
-      scroll.current?.scrollTo({ y: 0, animated: true });
-      return;
-    }
     setError("");
     setPagando(true);
     try {
@@ -194,7 +193,46 @@ export default function Pasajero() {
     } finally {
       setPagando(false);
     }
+  }, [tren, datos, email, tipos, elegidos, trenId, tarifa, descuento, extras, bebes]);
+
+  const pagar = () => {
+    if (!tren) return;
+    if (!validar()) {
+      setError("");
+      scroll.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    const sesion = leerSesion();
+    if (!sesion?.usuario.email) {
+      setError("Inicia sesión para comprar un billete.");
+      scroll.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    // La reserva no se envía hasta que la cara coincida con la de la sesión: el intento liga la
+    // verificación a esta compra concreta.
+    const intento = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    intentoFacial.current = intento;
+    abrirConfirmacionFacial(intento);
+    router.push({ pathname: "/cara", params: { intento, email: sesion.usuario.email } });
   };
+
+  // Al volver de la cámara se resuelve el intento: sin éxito no se compra.
+  useFocusEffect(
+    useCallback(() => {
+      const intento = intentoFacial.current;
+      if (!intento) return;
+      const resultado = consumirConfirmacion(intento);
+      if (!resultado) return;
+      intentoFacial.current = null;
+      const decision = decidirCompra(resultado);
+      if (!decision.continuar) {
+        setError(decision.mensaje);
+        scroll.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+      void comprar();
+    }, [comprar]),
+  );
 
   if (cargando) {
     return (
@@ -576,11 +614,11 @@ export default function Pasajero() {
           <Aviso
             tipo="info"
             icono="info"
-            texto="Pago en modo prueba: no se pide tarjeta y no se cobra nada. La reserva se confirma al instante."
+            texto="Pago en modo prueba: no se pide tarjeta y no se cobra nada. Antes de confirmar te pediremos la cara; la foto no sale del teléfono."
           />
           {errores.asientos ? <Aviso texto={errores.asientos} /> : null}
           <Boton
-            texto={desgloseApi ? `Pagar ${euros(desgloseApi.total)} (simulado)` : "Calculando importe…"}
+            texto={desgloseApi ? `Pagar ${euros(desgloseApi.total)} · confirmar con la cara` : "Calculando importe…"}
             onPress={pagar}
             cargando={pagando}
             desactivado={!elegidos.length || !desgloseApi}
