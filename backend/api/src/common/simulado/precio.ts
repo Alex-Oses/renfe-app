@@ -56,3 +56,20 @@ export function centimosViajero(base: number, tipo = 'adulto', tarifa = 'basico'
   const pct = Math.max(tipo === 'nino' ? PCT_NINO : 0, PCT_DESCUENTO[descuento] ?? 0);
   return Math.round(base * (FACTOR_TARIFA[tarifa] ?? 1) * (1 - pct / 100));
 }
+
+// Extras: los que van por viajero se cobran una vez por butaca; el menú ya va incluido en Prémium.
+export const EXTRAS: Record<string, { centimos: number; porViajero: boolean }> = {
+  equipaje: { centimos: 1500, porViajero: false },
+  mascota: { centimos: 2500, porViajero: false },
+  bici: { centimos: 1000, porViajero: false },
+  comida: { centimos: 1200, porViajero: true },
+  seguro: { centimos: 250, porViajero: true },
+};
+
+export function centimosExtras(ids: readonly string[], viajeros: number, tarifa = 'basico'): number {
+  return [...new Set(ids)].reduce((suma, id) => {
+    const e = EXTRAS[id];
+    if (!e || (id === 'comida' && tarifa === 'premium')) return suma;
+    return suma + (e.porViajero ? e.centimos * viajeros : e.centimos);
+  }, 0);
+}

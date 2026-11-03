@@ -11,7 +11,7 @@ import {
   Matches,
   ValidateNested,
 } from 'class-validator';
-import { FACTOR_TARIFA, PCT_DESCUENTO, TIPOS_VIAJERO, type TipoViajero } from '../../../common/simulado/precio.js';
+import { EXTRAS, FACTOR_TARIFA, PCT_DESCUENTO, TIPOS_VIAJERO, type TipoViajero } from '../../../common/simulado/precio.js';
 import { FEEDS, type Feed } from '../../estaciones/dto/buscar-estaciones.dto.js';
 
 export class PasajeroDto {
@@ -89,4 +89,11 @@ export class CrearReservaDto {
   @IsOptional()
   @IsIn(Object.keys(PCT_DESCUENTO))
   descuento?: string;
+
+  @ApiProperty({ required: false, isArray: true, enum: Object.keys(EXTRAS) })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsIn(Object.keys(EXTRAS), { each: true })
+  extras?: string[];
 }

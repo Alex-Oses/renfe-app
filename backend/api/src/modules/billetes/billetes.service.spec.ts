@@ -132,6 +132,8 @@ describe('BilletesService.listar', () => {
           asiento: '12A',
           clase: 'Turista',
           precio: 45,
+          extras: [],
+          extrasReserva: 0,
           emitido: '2026-10-29T10:00:00+01:00',
           expira: '2099-01-16T02:00:00+01:00',
           qr: FILA.qr,
