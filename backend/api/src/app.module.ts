@@ -10,6 +10,7 @@ import { BilletesModule } from './modules/billetes/billetes.module.js';
 import { EstacionesModule } from './modules/estaciones/estaciones.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PosicionesModule } from './modules/posiciones/posiciones.module.js';
+import { PreciosModule } from './modules/precios/precios.module.js';
 import { ReservasModule } from './modules/reservas/reservas.module.js';
 import { TrenesModule } from './modules/trenes/trenes.module.js';
 import { ChatbotModule } from './modules/chatbot/chatbot.module.js';
@@ -31,6 +32,7 @@ const entornoRaiz = resolve(directorioApi, '../../../.env');
     TrenesModule,
     PosicionesModule,
     ReservasModule,
+    PreciosModule,
     BilletesModule,
     AbonosModule,
     ChatbotModule,
