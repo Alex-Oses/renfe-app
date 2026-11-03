@@ -35,3 +35,5 @@ Android y web). La app móvil es ahora la pieza principal del sprint; la web que
 
 - Único punto de acceso a la API: `src/api/cliente.ts`. El id de tren es `feed:tripId:fecha`.
 - `/posiciones` no trae origen/destino/progreso: el mapa los deja vacíos con la API real.
+
+- Plan para quitar la lógica repetida entre web y móvil: [[plan-migracion-logica-frontend]].
