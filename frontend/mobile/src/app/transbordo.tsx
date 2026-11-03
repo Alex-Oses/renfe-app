@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { buscarTransbordos, cancelarReserva, comprarReserva, obtenerAsientos } from "@renfe/shared/api/cliente";
-import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
 import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import type { IdDescuento, OpcionTransbordo, Pasajero, Reserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
@@ -52,7 +52,7 @@ export default function Transbordo() {
     buscarTransbordos({ origen, destino, fecha }).then(
       (lista) => {
         if (!vivo) return;
-        const elegida = lista.find((o) => o.tramos[0].id === a && o.tramos[1].id === b);
+        const elegida = buscarOpcion(lista, a, b);
         if (elegida) setOpcion(elegida);
         else setError("Esa combinación ya no está disponible. Vuelve a buscar.");
       },

@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { buscarTransbordos, cancelarReserva, comprarReserva } from "@renfe/shared/api/cliente";
 import type { IdDescuento, OpcionTransbordo, Pasajero, TipoViajero, Tren } from "@renfe/shared/api/tipos";
 import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
-import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
 import { useSesion } from "../../estado/sesion";
 import { euros, hora } from "@renfe/shared/formato/formato";
 import "./reserva.css";
@@ -35,7 +35,7 @@ export default function ReservaTransbordo() {
   useEffect(() => {
     buscarTransbordos({ origen, destino, fecha }).then(
       (lista) => {
-        const elegida = lista.find((o) => o.tramos[0].id === a && o.tramos[1].id === b);
+        const elegida = buscarOpcion(lista, a, b);
         if (elegida) setOpcion(elegida);
         else setError("Esa combinación ya no está disponible. Vuelve a buscar.");
       },

@@ -1,3 +1,4 @@
+import { claveTramo } from "@renfe/shared/api/comprar-transbordo";
 import { FRANJAS, duracionMin, minutosDelDia } from "@renfe/shared/billetes/viaje";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -494,8 +495,8 @@ export default function Resultados() {
                             origen,
                             destino,
                             fecha,
-                            a: a.id,
-                            b: b.id,
+                            a: claveTramo(a),
+                            b: claveTramo(b),
                             pasajeros: String(pasajeros),
                             ninos: String(ninos),
                             ...(bebes ? { bebes: String(bebes) } : {}),
