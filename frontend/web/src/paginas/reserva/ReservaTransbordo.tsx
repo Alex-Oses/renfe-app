@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
-import { buscarTransbordos, cancelarReserva, crearReserva } from "@renfe/shared/api/cliente";
+import { buscarTransbordos, cancelarReserva, comprarReserva } from "@renfe/shared/api/cliente";
 import type { IdDescuento, OpcionTransbordo, Pasajero, TipoViajero, Tren } from "@renfe/shared/api/tipos";
 import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
@@ -10,7 +10,7 @@ import "./reserva.css";
 
 const vacio = (): Pasajero => ({ nombre: "", apellidos: "", documento: "", email: "" });
 const comprarTramo = (tren: Tren, pasajeros: Pasajero[], descuento: IdDescuento, bebes: number) =>
-  crearReserva(tren, { trenId: tren.id, asientos: [], pasajeros, descuento, bebes });
+  comprarReserva(tren, { trenId: tren.id, asientos: [], pasajeros, descuento, bebes });
 
 export default function ReservaTransbordo() {
   const { sesion } = useSesion();
