@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Share, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
+import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { compartirImagen } from "@/compartir";
 import QRCode from "react-native-qrcode-svg";
 import { obtenerAbono } from "@renfe/shared/api/cliente";
 import { estadoAbono } from "@renfe/shared/api/simulado-abonos";
@@ -15,6 +16,7 @@ import { TEXTO_ESTADO, aFecha } from "@renfe/shared/formato/formato";
 // Detalle de un abono con su QR firmado (GET /abonos/:id lo trae; la lista puede venir sin él).
 export default function VerAbono() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const tarjeta = useRef<ComponentRef<typeof View>>(null);
   const [abono, setAbono] = useState<Abono | null>(null);
   const [error, setError] = useState("");
   const { width } = useWindowDimensions();
@@ -41,7 +43,7 @@ export default function VerAbono() {
             {abono.origen ? <Text style={estilos.suave}>{abono.origen.nombre} – {abono.destino?.nombre}</Text> : null}
           </View>
           <Cristal gap={espaciado[3]}>
-            <View style={styles.qr} accessible accessibilityRole="image" accessibilityLabel={`Código QR de ${abono.nombre}`}>
+            <View ref={tarjeta} collapsable={false} style={styles.qr} accessible accessibilityRole="image" accessibilityLabel={`Código QR de ${abono.nombre}`}>
               {abono.qr ? <QRCode value={abono.qr} size={Math.min(width - 118, 240)} ecl="M" /> : <Text style={estilos.suave}>Este abono no tiene QR.</Text>}
             </View>
             <Text style={styles.dato}>Estado: {TEXTO_ESTADO[estadoAbono(abono)]}</Text>
@@ -50,16 +52,13 @@ export default function VerAbono() {
               {abono.viajesRestantes === null ? "Viajes ilimitados" : `Te quedan ${abono.viajesRestantes} de ${abono.viajesTotales} viajes`}
             </Text>
           </Cristal>
-          {/* shortcut: comparte texto (sin expo-sharing ni view-shot no hay imagen); añadirlos si se quiere imagen. */}
           <Boton
             texto="Compartir abono"
             variante="secundario"
             onPress={() =>
-              void Share.share({
-                message: `Abono Renfe: ${abono.nombre}
+              void compartirImagen(tarjeta, `Abono ${abono.nombre}`, `Abono Renfe: ${abono.nombre}
 Válido del ${aFecha(abono.inicio)} al ${aFecha(abono.fin)}${abono.qr ? `
-QR: ${abono.qr}` : ""}`,
-              }).catch(() => {})
+QR: ${abono.qr}` : ""}`)
             }
           />
         </>

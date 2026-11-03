@@ -1,4 +1,5 @@
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, scanFromURLAsync, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -40,6 +41,20 @@ export default function Revisor() {
   const [codigo, setCodigo] = useState("");
   const [historial, setHistorial] = useState<ResultadoValidacion[]>([]);
   const ocupado = useRef(false); // la cámara lee el mismo QR varias veces por segundo
+
+  // Alternativa a la cámara, como «Subir foto del QR» de la web: se lee el QR de una foto de la galería.
+  async function desdeFoto() {
+    setError("");
+    const elegida = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 1 });
+    if (elegida.canceled || !elegida.assets[0]) return;
+    try {
+      const [qr] = await scanFromURLAsync(elegida.assets[0].uri, ["qr"]);
+      if (qr?.data) await comprobar(qr.data);
+      else setError("No se ve ningún QR en esa foto. Prueba con otra más nítida.");
+    } catch {
+      setError("No se pudo leer la foto. Prueba con otra o pega el código.");
+    }
+  }
 
   async function comprobar(texto: string) {
     if (ocupado.current) return;
@@ -145,6 +160,7 @@ export default function Revisor() {
       )}
       {error ? <Aviso texto={error} /> : null}
       <Cristal gap={espaciado[2]}>
+        <Boton texto="Subir foto del QR" variante="secundario" onPress={() => void desdeFoto()} />
         <Campo etiqueta="O pega el código" value={codigo} onChangeText={setCodigo} autoCapitalize="none" placeholder="RNF1…" />
         <Boton texto="Comprobar" variante="secundario" desactivado={!codigo.trim()} onPress={() => void comprobar(codigo.trim())} />
       </Cristal>
