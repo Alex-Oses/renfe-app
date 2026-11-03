@@ -5,4 +5,7 @@ export interface PropsMapa {
   trenes: PosicionTren[];
   seleccion?: string | null;
   onElegir?: (tren: PosicionTren) => void;
+  // Alto aproximado (px) que el panel inferior tapa del mapa: se descuenta al encuadrar el
+  // recorrido para que no quede detrás de la hoja.
+  espacioInferior?: number;
 }

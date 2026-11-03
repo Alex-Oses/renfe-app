@@ -4,6 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Pressable,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { completarRuta, posicionesTrenes } from "@renfe/shared/api/cliente";
@@ -19,6 +21,7 @@ import type { PosicionTren } from "@renfe/shared/api/tipos";
 import { ciudadCorta, etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas } from "@renfe/shared/estado/estado-tren";
 import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
+import { useArrastreCierre } from "@/components/Hoja";
 import { MapaTrenes } from "@/components/MapaTrenes";
 import { colorTipo, colores, espaciado, estilos, fuentes, paleta, siglaTipo, sombraFlotante, sombras, tonos } from "@/tema";
 
@@ -60,6 +63,7 @@ function Retraso({ seg, compacto }: { seg: number | null; compacto?: boolean }) 
 
 export default function Directo() {
   const insets = useSafeAreaInsets();
+  const { height: altoPantalla } = useWindowDimensions();
   // El estado de un tren (herramienta del contenido) enlaza aquí con su trenId ya elegido.
   const { tren: trenPedido } = useLocalSearchParams<{ tren?: string }>();
   const [trenes, setTrenes] = useState<PosicionTren[]>([]);
@@ -199,6 +203,11 @@ export default function Directo() {
   };
 
   const alto: `${number}%` = seleccion ? "61%" : abierto ? "64%" : "43%";
+  // Lo que la hoja tapa del mapa: el encuadre del recorrido deja libre ese hueco.
+  const espacioInferior =
+    Math.round(altoPantalla * (seleccion ? 0.61 : abierto ? 0.64 : 0.43)) + Math.max(insets.bottom, 8) + 86;
+  // Deslizar el asa hacia abajo hace lo mismo que su botón: cierra el detalle o baja el panel.
+  const arrastre = useArrastreCierre(seleccion ? cerrarDetalle : () => setAbierto(false));
 
   const colorFuente = fuente === "real" ? tonos.exito : fuente === "simulado" ? tonos.aviso : colores.textoSuave;
   const textoFuente = fuente === "real" ? "Tiempo real" : fuente === "simulado" ? "Simulados" : "Conectando";
@@ -210,6 +219,7 @@ export default function Directo() {
         trenes={elegido ? trenes.map((t) => (t.trenId === elegido.trenId ? elegido : t)) : trenes}
         seleccion={seleccion}
         onElegir={elegir}
+        espacioInferior={espacioInferior}
       />
 
       <View style={[styles.superior, { top: insets.top + 8 }]} pointerEvents="box-none">
@@ -228,39 +238,44 @@ export default function Directo() {
         </Cristal>
       </View>
 
-      <View style={[styles.hoja, { bottom: Math.max(insets.bottom, 8) + 82, height: alto }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={abierto ? "Bajar el panel" : "Subir el panel"}
-          onPress={() => setAbierto((a) => !a)}
-          style={styles.zonaAsa}
-        >
-          <View style={styles.asa} />
-        </Pressable>
-
-        <View style={styles.hojaCabecera}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={styles.hojaTitulo} accessibilityRole="header">
-              {elegido ? `${elegido.tipo} ${elegido.numero}` : "Trenes en circulación"}
-            </Text>
-            <Text style={estilos.suave} numberOfLines={1}>
-              {elegido
-                ? elegido.linea
-                  ? `Línea ${elegido.linea} · ${elegido.origen || "origen sin datos"} → ${elegido.destino || "destino sin datos"}`
-                  : elegido.origen
-                    ? `${elegido.origen} → ${elegido.destino}`
-                    : "Renfe aún no publica el recorrido de este tren"
-                : `${visibles.length} de ${trenes.length} trenes · ${hace === null ? "conectando…" : `actualizado hace ${hace} s`}`}
-            </Text>
-          </View>
+      <Animated.View
+        style={[styles.hoja, { bottom: Math.max(insets.bottom, 8) + 82, height: alto }, arrastre.estilo]}
+        onLayout={arrastre.alMedir}
+      >
+        <View {...arrastre.panHandlers}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={seleccion ? "Cerrar detalle" : abierto ? "Bajar el panel" : "Subir el panel"}
-            onPress={seleccion ? cerrarDetalle : () => setAbierto((a) => !a)}
-            style={({ pressed }) => [styles.botonRedondo, pressed && { backgroundColor: tonos.rosaFuerte }]}
+            accessibilityLabel={abierto ? "Bajar el panel" : "Subir el panel"}
+            onPress={() => setAbierto((a) => !a)}
+            style={styles.zonaAsa}
           >
-            <Icono nombre={seleccion ? "cerrar" : abierto ? "chevron" : "atras"} tamano={19} color={colores.marca} />
+            <View style={styles.asa} />
           </Pressable>
+
+          <View style={styles.hojaCabecera}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.hojaTitulo} accessibilityRole="header">
+                {elegido ? `${elegido.tipo} ${elegido.numero}` : "Trenes en circulación"}
+              </Text>
+              <Text style={estilos.suave} numberOfLines={1}>
+                {elegido
+                  ? elegido.linea
+                    ? `Línea ${elegido.linea} · ${elegido.origen || "origen sin datos"} → ${elegido.destino || "destino sin datos"}`
+                    : elegido.origen
+                      ? `${elegido.origen} → ${elegido.destino}`
+                      : "Renfe aún no publica el recorrido de este tren"
+                  : `${visibles.length} de ${trenes.length} trenes · ${hace === null ? "conectando…" : `actualizado hace ${hace} s`}`}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={seleccion ? "Cerrar detalle" : abierto ? "Bajar el panel" : "Subir el panel"}
+              onPress={seleccion ? cerrarDetalle : () => setAbierto((a) => !a)}
+              style={({ pressed }) => [styles.botonRedondo, pressed && { backgroundColor: tonos.rosaFuerte }]}
+            >
+              <Icono nombre={seleccion ? "cerrar" : abierto ? "chevron" : "atras"} tamano={19} color={colores.marca} />
+            </Pressable>
+          </View>
         </View>
 
         {avisoApi ? (
@@ -448,7 +463,7 @@ export default function Directo() {
             />
           </>
         )}
-      </View>
+      </Animated.View>
     </View>
   );
 }

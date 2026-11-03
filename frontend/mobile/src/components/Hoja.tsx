@@ -1,7 +1,74 @@
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import {
+  Animated,
+  KeyboardAvoidingView,
+  Modal,
+  PanResponder,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+  type PanResponderGestureState,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colores, espaciado, fuentes, paleta, radios, tipografia, tonos } from "@/tema";
+import { colores, espaciado, fuentes, paleta, tipografia, tonos } from "@/tema";
 import { Icono } from "./Icono";
+
+// Arrastre para cerrar una hoja por el asa/cabecera: sigue al dedo con Animated y, al soltar,
+// cierra si se ha bajado más de un tercio de la hoja o si el gesto iba rápido (vy > 0.5).
+// Se comparte con el panel del mapa (directo.tsx), que se maneja igual con el pulgar.
+export function useArrastreCierre(onCerrar: () => void) {
+  const altura = useRef(0);
+  const avance = useRef(new Animated.Value(0)).current;
+  const cerrar = useRef(onCerrar);
+
+  useEffect(() => {
+    cerrar.current = onCerrar;
+  }, [onCerrar]);
+
+  const responder = useMemo(() => {
+    const volverArriba = () =>
+      Animated.spring(avance, { toValue: 0, bounciness: 0, useNativeDriver: true }).start();
+    // Solo se queda el gesto si es claramente vertical: un toque o un desliz horizontal no cuentan.
+    const vertical = (_: unknown, gesto: PanResponderGestureState) =>
+      Math.abs(gesto.dy) > 6 && Math.abs(gesto.dy) > Math.abs(gesto.dx);
+    return PanResponder.create({
+      onMoveShouldSetPanResponder: vertical,
+      onMoveShouldSetPanResponderCapture: vertical,
+      // Si el usuario vuelve a agarrar la hoja mientras rebota, manda el dedo.
+      onPanResponderGrant: () => avance.stopAnimation(),
+      onPanResponderMove: (_, gesto) => avance.setValue(Math.max(0, gesto.dy)),
+      onPanResponderRelease: (_, gesto) => {
+        // Sin onLayout (por ejemplo, en el primer toque) se usa un alto de referencia.
+        const alto = altura.current || 480;
+        if (gesto.dy > alto / 3 || gesto.vy > 0.5) {
+          Animated.timing(avance, {
+            toValue: Math.max(alto, gesto.dy),
+            duration: 170,
+            useNativeDriver: true,
+          }).start(() => {
+            avance.setValue(0);
+            cerrar.current();
+          });
+          return;
+        }
+        volverArriba();
+      },
+      onPanResponderTerminate: volverArriba,
+    });
+  }, [avance]);
+
+  return {
+    panHandlers: responder.panHandlers,
+    estilo: { transform: [{ translateY: avance }] },
+    alMedir: (e: LayoutChangeEvent) => {
+      altura.current = e.nativeEvent.layout.height;
+    },
+  };
+}
 
 // Hoja inferior para elegir estaciones, fechas, viajeros o descuentos. En la web el buscador
 // despliega una lista; en el móvil una hoja se maneja mejor con el pulgar.
@@ -19,6 +86,7 @@ export function Hoja({
   maximo?: number;
 }) {
   const insets = useSafeAreaInsets();
+  const arrastre = useArrastreCierre(onCerrar);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar} statusBarTranslucent>
       <KeyboardAvoidingView
@@ -26,26 +94,30 @@ export function Hoja({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <Pressable style={styles.velo} accessibilityLabel="Cerrar" onPress={onCerrar} />
-        <View
+        <Animated.View
           style={[
             styles.hoja,
             { maxHeight: `${Math.round(maximo * 100)}%`, paddingBottom: Math.max(insets.bottom, espaciado[3]) },
+            arrastre.estilo,
           ]}
+          onLayout={arrastre.alMedir}
         >
-          <View style={styles.asa} />
-          <View style={styles.cabecera}>
-            <Text style={styles.titulo} accessibilityRole="header">
-              {titulo}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Cerrar"
-              onPress={onCerrar}
-              hitSlop={12}
-              style={({ pressed }) => [styles.cerrar, pressed && { backgroundColor: tonos.rosaFuerte }]}
-            >
-              <Icono nombre="cerrar" tamano={20} color={colores.marca} />
-            </Pressable>
+          <View {...arrastre.panHandlers}>
+            <View style={styles.asa} />
+            <View style={styles.cabecera}>
+              <Text style={styles.titulo} accessibilityRole="header">
+                {titulo}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar"
+                onPress={onCerrar}
+                hitSlop={12}
+                style={({ pressed }) => [styles.cerrar, pressed && { backgroundColor: tonos.rosaFuerte }]}
+              >
+                <Icono nombre="cerrar" tamano={20} color={colores.marca} />
+              </Pressable>
+            </View>
           </View>
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -54,7 +126,7 @@ export function Hoja({
           >
             {children}
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
