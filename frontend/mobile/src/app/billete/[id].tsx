@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Pressable, Share, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { misBilletes, obtenerBillete } from "@renfe/shared/api/cliente";
 import { ciudadDe, type Billete } from "@renfe/shared/api/tipos";
@@ -10,6 +10,7 @@ import { Boton } from "@/components/Boton";
 import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
+import { RetrasoVivo } from "@/components/RetrasoVivo";
 import { euros, fechaCorta, horaLocal } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos, fuentes, radios, sombras, tipografia } from "@/tema";
 
@@ -184,6 +185,7 @@ export default function VerBillete() {
             <View style={styles.estado}>
               <Text style={styles.estadoTexto}>{estadoDe(tren.salida, tren.llegada)}</Text>
             </View>
+            <RetrasoVivo tren={tren} />
           </View>
         </LinearGradient>
         <View style={styles.librea} />
@@ -241,6 +243,21 @@ export default function VerBillete() {
       </View>
 
       <View style={styles.acciones}>
+        {/* shortcut: comparte texto (sin expo-sharing ni view-shot no hay imagen del pase); añadirlos si se quiere imagen. */}
+        <Boton
+          texto="Compartir billete"
+          variante="secundario"
+          onPress={() =>
+            void Share.share({
+              message: `Billete Renfe ${localizador}
+${tren.tipo} ${tren.numero} · ${tren.origen.nombre} – ${tren.destino.nombre}
+${fechaCorta(tren.salida)}, ${horaLocal(tren.salida)} – ${horaLocal(tren.llegada)}
+Coche ${asiento.coche} · Asiento ${asiento.fila}${asiento.letra}
+${pasajero.nombre} ${pasajero.apellidos}
+QR: ${billete.qr}`,
+            }).catch(() => {})
+          }
+        />
         <Boton texto="Ver mis billetes" variante="secundario" icono="billetes" onPress={() => router.navigate("/billetes")} />
       </View>
     </Pantalla>

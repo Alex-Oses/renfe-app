@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Share, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { obtenerAbono } from "@renfe/shared/api/cliente";
 import { estadoAbono } from "@renfe/shared/api/simulado-abonos";
 import type { Abono } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
+import { Boton } from "@/components/Boton";
 import { Cristal } from "@/components/Cristal";
 import { Pantalla } from "@/components/Pantalla";
 import { colores, espaciado, estilos, fuentes } from "@/tema";
@@ -49,6 +50,18 @@ export default function VerAbono() {
               {abono.viajesRestantes === null ? "Viajes ilimitados" : `Te quedan ${abono.viajesRestantes} de ${abono.viajesTotales} viajes`}
             </Text>
           </Cristal>
+          {/* shortcut: comparte texto (sin expo-sharing ni view-shot no hay imagen); añadirlos si se quiere imagen. */}
+          <Boton
+            texto="Compartir abono"
+            variante="secundario"
+            onPress={() =>
+              void Share.share({
+                message: `Abono Renfe: ${abono.nombre}
+Válido del ${aFecha(abono.inicio)} al ${aFecha(abono.fin)}${abono.qr ? `
+QR: ${abono.qr}` : ""}`,
+              }).catch(() => {})
+            }
+          />
         </>
       ) : null}
     </Pantalla>

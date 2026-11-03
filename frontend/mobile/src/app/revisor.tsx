@@ -11,7 +11,7 @@ import { Cristal } from "@/components/Cristal";
 import { Pantalla } from "@/components/Pantalla";
 import { aFecha, fechaCorta, horaLocal } from "@renfe/shared/formato/formato";
 import { leerSesion } from "@/sesion";
-import { colores, espaciado, estilos, fuentes } from "@/tema";
+import { colores, espaciado, estilos, fuentes, tonos } from "@/tema";
 
 type Tono = "ok" | "aviso" | "error";
 // Mismos textos que Revisor.tsx de la web.
@@ -38,6 +38,7 @@ export default function Revisor() {
   const [resultado, setResultado] = useState<ResultadoValidacion | null>(null);
   const [error, setError] = useState("");
   const [codigo, setCodigo] = useState("");
+  const [historial, setHistorial] = useState<ResultadoValidacion[]>([]);
   const ocupado = useRef(false); // la cámara lee el mismo QR varias veces por segundo
 
   async function comprobar(texto: string) {
@@ -45,7 +46,9 @@ export default function Revisor() {
     ocupado.current = true;
     setError("");
     try {
-      setResultado(await validarBillete(texto));
+      const r = await validarBillete(texto);
+      setResultado(r);
+      setHistorial((h) => [r, ...h].slice(0, 20));
     } catch (e) {
       setError((e as Error).message);
       ocupado.current = false;
@@ -57,6 +60,23 @@ export default function Revisor() {
     setCodigo("");
     ocupado.current = false;
   };
+
+  // Últimas lecturas de la sesión, como la web (Revisor.tsx).
+  const lecturas =
+    historial.length > 0 ? (
+      <Cristal gap={espaciado[2]}>
+        <Text style={styles.titulo} accessibilityRole="header">Últimas lecturas</Text>
+        {historial.map((h) => (
+          <View key={h.validadoEn} style={styles.lectura}>
+            <Text style={styles.dato}>{horaLocal(h.validadoEn)}</Text>
+            <Text style={[styles.veredicto, { color: TONO[ver(h).tono] }]}>{ver(h).titulo}</Text>
+            <Text style={[styles.dato, { flex: 1 }]} numberOfLines={1}>
+              {h.billete ? `${h.billete.pasajero} · coche ${h.billete.coche}, ${h.billete.asiento}` : h.abono ? `${h.abono.titular} · ${h.abono.nombre}` : "—"}
+            </Text>
+          </View>
+        ))}
+      </Cristal>
+    ) : null;
 
   if (rol !== "revisor" && rol !== "admin")
     return (
@@ -97,6 +117,7 @@ export default function Revisor() {
         ) : null}
         {!resultado.comprobadoEnServidor ? <Text style={estilos.suave}>Comprobado solo con la firma (sin API).</Text> : null}
         <Boton texto="Escanear otro" icono="refrescar" onPress={otro} />
+        {lecturas}
       </Pantalla>
     );
   }
@@ -127,12 +148,17 @@ export default function Revisor() {
         <Campo etiqueta="O pega el código" value={codigo} onChangeText={setCodigo} autoCapitalize="none" placeholder="RNF1…" />
         <Boton texto="Comprobar" variante="secundario" desactivado={!codigo.trim()} onPress={() => void comprobar(codigo.trim())} />
       </Cristal>
+      {lecturas}
     </Pantalla>
   );
 }
 
+const TONO: Record<Tono, string> = { ok: tonos.exito, aviso: tonos.aviso, error: colores.error };
+
 const styles = StyleSheet.create({
   camara: { height: 320, borderRadius: 20, overflow: "hidden", backgroundColor: "#000" },
   titulo: { fontFamily: fuentes.seminegrita, fontSize: 16, color: colores.titulo },
+  lectura: { flexDirection: "row", alignItems: "center", gap: espaciado[2] },
+  veredicto: { fontFamily: fuentes.seminegrita, fontSize: 13.5 },
   dato: { fontFamily: fuentes.normal, fontSize: 13.5, color: colores.texto },
 });
