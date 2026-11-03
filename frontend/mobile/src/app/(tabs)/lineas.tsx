@@ -13,7 +13,7 @@ import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
 import { SelectorEstacion } from "@/components/Selectores";
 import { colores, espaciado, estilos, fuentes, radios, tipografia, tonos } from "@/tema";
-import { hora } from "@/formato";
+import { horaLocal } from "@renfe/shared/formato/formato";
 
 const CLAVE = "anden.favoritos";
 
@@ -172,18 +172,18 @@ function TarjetaLinea({
               <Pressable
                 key={t.id}
                 accessibilityRole="button"
-                accessibilityLabel={`Elegir ${t.tipo} de las ${hora(t.salida)}`}
+                accessibilityLabel={`Elegir ${t.tipo} de las ${horaLocal(t.salida)}`}
                 onPress={buscar}
                 style={({ pressed }) => [styles.tren, pressed && { backgroundColor: "rgba(214,45,97,0.07)" }]}
               >
                 <View style={{ width: 58, gap: 1 }}>
                   <Text style={styles.cuenta}>{cuenta(Date.parse(t.salida) - ahora)}</Text>
-                  <Text style={styles.hora}>{hora(t.salida)}</Text>
+                  <Text style={styles.hora}>{horaLocal(t.salida)}</Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                   <Text style={styles.tipo}>{t.tipo}</Text>
                   <Text style={styles.detalle}>
-                    Llega {hora(t.llegada)}
+                    Llega {horaLocal(t.llegada)}
                     {t.plazasLibres != null ? ` · ${t.plazasLibres} plazas` : ""}
                   </Text>
                 </View>

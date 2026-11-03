@@ -1,3 +1,4 @@
+import { horaLocal } from "@renfe/shared/formato/formato";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { validarBillete } from "@renfe/shared/api/cliente";
@@ -28,7 +29,6 @@ const ESTADOS_ABONO: Partial<typeof ESTADOS> = {
 const ver = (r: ResultadoValidacion) => (r.abono && ESTADOS_ABONO[r.estado]) || ESTADOS[r.estado];
 const diaCorto = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 
-const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 const dia = (iso: string) => new Date(iso).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" });
 
 export default function Revisor() {
@@ -137,7 +137,7 @@ export default function Revisor() {
                 {info.titulo}
               </h2>
               <p>{info.accion}</p>
-              {resultado.primeraValidacion && <p>Primera validación: {dia(resultado.primeraValidacion)} a las {hora(resultado.primeraValidacion)}.</p>}
+              {resultado.primeraValidacion && <p>Primera validación: {dia(resultado.primeraValidacion)} a las {horaLocal(resultado.primeraValidacion)}.</p>}
             </div>
           </div>
 
@@ -167,11 +167,11 @@ export default function Revisor() {
               </div>
               <div>
                 <dt>Salida</dt>
-                <dd>{hora(b.salida)}</dd>
+                <dd>{horaLocal(b.salida)}</dd>
               </div>
               <div>
                 <dt>Llegada</dt>
-                <dd>{hora(b.llegada)}</dd>
+                <dd>{horaLocal(b.llegada)}</dd>
               </div>
               <div>
                 <dt>Coche</dt>
@@ -240,7 +240,7 @@ export default function Revisor() {
           <ol>
             {historial.map((h) => (
               <li key={h.validadoEn} className={`lectura lectura--${ver(h).tono}`}>
-                <span>{hora(h.validadoEn)}</span>
+                <span>{horaLocal(h.validadoEn)}</span>
                 <strong>{ver(h).titulo}</strong>
                 <span>
                   {h.billete ? `${h.billete.pasajero} · coche ${h.billete.coche}, ${h.billete.asiento}` : h.abono ? `${h.abono.titular} · ${h.abono.nombre}` : "—"}

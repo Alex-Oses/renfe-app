@@ -1,5 +1,6 @@
+import { euros } from "@renfe/shared/formato/formato";
 import { useState } from "react";
-import { euros, NIVELES, puntosGanados, type Nivel } from "./logica";
+import { NIVELES, puntosGanados, type Nivel } from "./logica";
 import { Campo, Herramienta, Selector } from "./comun";
 
 export default function SimuladorPuntos() {

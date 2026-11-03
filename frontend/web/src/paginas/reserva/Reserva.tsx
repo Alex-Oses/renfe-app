@@ -8,7 +8,7 @@ import { PasoAsientos } from "./PasoAsientos";
 import { PasoViajeros } from "./PasoViajeros";
 import { PasoPago } from "./PasoPago";
 import { PasoListo } from "./PasoListo";
-import { euros, hora } from "./formato";
+import { euros, hora } from "@renfe/shared/formato/formato";
 import "./reserva.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
 import { useSesion } from "../../estado/sesion";
@@ -215,7 +215,7 @@ export default function Reserva() {
           </p>
           {desglose.extras > 0 && (
             <p className="resumen__desglose">
-              Billetes {euros.format(desglose.billetes)} · Extras {euros.format(desglose.extras)}
+              Billetes {euros(desglose.billetes)} · Extras {euros(desglose.extras)}
             </p>
           )}
           <p className="resumen__total">
@@ -252,8 +252,8 @@ function TotalAnimado({ valor }: { valor: number }) {
   }, [valor]);
   return (
     <strong aria-live="polite" aria-atomic="true">
-      <span aria-hidden="true">{euros.format(mostrado)}</span>
-      <span className="sr-solo">{euros.format(valor)}</span>
+      <span aria-hidden="true">{euros(mostrado)}</span>
+      <span className="sr-solo">{euros(valor)}</span>
     </strong>
   );
 }

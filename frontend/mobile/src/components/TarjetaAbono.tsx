@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { estadoAbono } from "@renfe/shared/api/simulado-abonos";
 import type { Abono, TipoAbono } from "@renfe/shared/api/tipos";
-import { TEXTO_ESTADO, aFecha } from "@/formato";
+import { TEXTO_ESTADO, aFecha } from "@renfe/shared/formato/formato";
 import { colores, fuentes, radios, sombras } from "@/tema";
 
 // Etiqueta y color por tipo, los mismos que TarjetaAbono.tsx y billetes.css de la web.

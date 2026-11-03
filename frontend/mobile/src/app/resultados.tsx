@@ -11,7 +11,7 @@ import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
 import { textoFecha, textoFechaCorta } from "@/components/Selectores";
-import { euros, hora } from "@/formato";
+import { euros, horaLocal } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos, fuentes, gradientes, radios, sombras, tipografia, tonos } from "@/tema";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -351,9 +351,9 @@ export default function Resultados() {
                 return (
                   <View key={t.id} style={[styles.filaTren, i > 0 && styles.filaTrenBorde]}>
                     <View style={styles.horas}>
-                      <Text style={[styles.hora, completo && { opacity: 0.45 }]}>{hora(t.salida)}</Text>
+                      <Text style={[styles.hora, completo && { opacity: 0.45 }]}>{horaLocal(t.salida)}</Text>
                       <Text style={styles.duracion}>{textoDuracion(dur)}</Text>
-                      <Text style={[styles.hora, completo && { opacity: 0.45 }]}>{hora(t.llegada)}</Text>
+                      <Text style={[styles.hora, completo && { opacity: 0.45 }]}>{horaLocal(t.llegada)}</Text>
                     </View>
                     <View style={styles.via} pointerEvents="none">
                       <View
@@ -380,7 +380,7 @@ export default function Resultados() {
                           <Text style={styles.precio}>{euros(t.precioDesde)}</Text>
                           <Pressable
                             accessibilityRole="button"
-                            accessibilityLabel={`Ver tarifas del ${t.tipo} ${t.numero} de las ${hora(t.salida)}`}
+                            accessibilityLabel={`Ver tarifas del ${t.tipo} ${t.numero} de las ${horaLocal(t.salida)}`}
                             accessibilityState={{ expanded: expandido }}
                             onPress={() => setAbierto((a) => (a === t.id ? null : t.id))}
                             style={({ pressed }) => [styles.elegir, pressed && { transform: [{ scale: 0.96 }] }]}
@@ -476,25 +476,25 @@ export default function Resultados() {
               return (
                 <View key={`${a.id}|${b.id}`} style={[styles.filaTren, i > 0 && styles.filaTrenBorde]}>
                   <View style={styles.horas}>
-                    <Text style={styles.hora}>{hora(a.salida)}</Text>
+                    <Text style={styles.hora}>{horaLocal(a.salida)}</Text>
                     <Text style={styles.duracion}>{textoDuracion(o.duracionMin)}</Text>
-                    <Text style={styles.hora}>{hora(b.llegada)}</Text>
+                    <Text style={styles.hora}>{horaLocal(b.llegada)}</Text>
                   </View>
                   <Text style={styles.tipo}>
-                    <Text style={{ fontFamily: fuentes.negrita }}>{a.tipo}</Text> {a.numero || a.linea} hasta {a.destino.nombre} ({hora(a.llegada)})
+                    <Text style={{ fontFamily: fuentes.negrita }}>{a.tipo}</Text> {a.numero || a.linea} hasta {a.destino.nombre} ({horaLocal(a.llegada)})
                   </Text>
                   <Text style={[styles.tipo, { fontFamily: fuentes.seminegrita, color: colores.marca }]}>
                     Transbordo en {o.transbordo.nombre}: {textoDuracion(o.esperaMin)} de espera
                   </Text>
                   <Text style={styles.tipo}>
-                    <Text style={{ fontFamily: fuentes.negrita }}>{b.tipo}</Text> {b.numero || b.linea} sale a las {hora(b.salida)}
+                    <Text style={{ fontFamily: fuentes.negrita }}>{b.tipo}</Text> {b.numero || b.linea} sale a las {horaLocal(b.salida)}
                   </Text>
                   <View style={styles.compra}>
                     <View style={{ flex: 1 }} />
                     <Text style={styles.precio}>{euros(o.precio)}</Text>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`Elegir el viaje con transbordo de las ${hora(a.salida)}`}
+                      accessibilityLabel={`Elegir el viaje con transbordo de las ${horaLocal(a.salida)}`}
                       onPress={() =>
                         router.push({
                           pathname: "/transbordo",

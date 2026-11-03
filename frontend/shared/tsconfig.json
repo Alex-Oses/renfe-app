@@ -10,5 +10,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["api", "billetes", "contenido", "estado", "tema"]
+  "include": ["api", "billetes", "formato", "contenido", "estado", "tema"]
 }

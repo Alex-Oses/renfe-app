@@ -10,7 +10,7 @@ import { CampoBoton } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
 import { Pantalla } from "@/components/Pantalla";
 import { SelectorEstacion, SelectorFecha, textoFecha } from "@/components/Selectores";
-import { aFecha, euros } from "@/formato";
+import { aFecha, euros } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos, fuentes, tonos } from "@/tema";
 
 // Compra de abonos, igual que Abonos.tsx de la web: tipo, trayecto (si lo lleva), inicio y pago simulado.

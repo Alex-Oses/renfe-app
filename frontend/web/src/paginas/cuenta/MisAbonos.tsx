@@ -3,12 +3,11 @@ import { Link } from "react-router-dom";
 import { misAbonos, obtenerAbono } from "@renfe/shared/api/cliente";
 import { estadoAbono } from "@renfe/shared/api/simulado-abonos";
 import type { Abono, Usuario } from "@renfe/shared/api/tipos";
-import { fecha } from "../reserva/formato";
+import { fecha, TEXTO_ESTADO } from "@renfe/shared/formato/formato";
 import "../abonos/abonos.css";
 
 const aFecha = (iso: string) => fecha(`${iso}T12:00:00`);
 
-const TEXTO_ESTADO = { pendiente: "Aún no empieza", vigente: "Vigente", agotado: "Sin viajes", caducado: "Caducado" };
 const claveCara = (id: string) => `anden-abonos-cara-${id}`;
 
 function leerCara(id: string) {

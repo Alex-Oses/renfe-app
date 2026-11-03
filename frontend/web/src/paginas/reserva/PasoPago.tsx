@@ -7,7 +7,7 @@ import {
 } from "@renfe/shared/api/cliente";
 import type { IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva, Tren } from "@renfe/shared/api/tipos";
 import { EXTRAS, precioExtra } from "@renfe/shared/api/simulado-precios";
-import { euros } from "./formato";
+import { euros } from "@renfe/shared/formato/formato";
 
 interface Props {
   tren: Tren;
@@ -65,7 +65,7 @@ export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, 
               />
               <span className="extra__nombre">{e.nombre}</span>
               <span className="extra__precio">
-                {precio === 0 ? "Incluido" : `${euros.format(precio)}${e.porViajero && asientos.length > 1 ? ` (${asientos.length} viajeros)` : ""}`}
+                {precio === 0 ? "Incluido" : `${euros(precio)}${e.porViajero && asientos.length > 1 ? ` (${asientos.length} viajeros)` : ""}`}
               </span>
             </label>
           );
@@ -84,7 +84,7 @@ export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, 
             tarjeta y no se cobra nada. Al pulsar el botón se confirma la reserva como si el pago hubiera ido bien.
           </p>
           <p className="pago__importe">
-            Importe: <strong>{euros.format(total)}</strong>
+            Importe: <strong>{euros(total)}</strong>
           </p>
         </div>
       </div>
@@ -107,7 +107,7 @@ export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, 
               <span className="girador" aria-hidden="true" /> Procesando el pago…
             </>
           ) : (
-            `Pagar ${euros.format(total)} (simulado)`
+            `Pagar ${euros(total)} (simulado)`
           )}
         </button>
       </div>

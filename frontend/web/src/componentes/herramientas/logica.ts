@@ -1,7 +1,6 @@
 // Cálculos de los widgets. Todo simulado salvo la tabla de puntualidad (renfe.com/es/es/ayuda/compromiso-puntualidad).
 import type { Reserva, TipoTren } from "@renfe/shared/api/tipos";
 
-export const euros = (n: number) => n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
 // Compromiso de puntualidad de Renfe: [minutos, %]; se aplica el tramo más alto superado.

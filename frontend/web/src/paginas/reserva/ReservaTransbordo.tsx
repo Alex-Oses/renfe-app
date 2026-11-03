@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { buscarTransbordos, cancelarReserva, crearReserva } from "@renfe/shared/api/cliente";
 import type { OpcionTransbordo, Pasajero, Tren } from "@renfe/shared/api/tipos";
 import { useSesion } from "../../estado/sesion";
-import { euros, hora } from "./formato";
+import { euros, hora } from "@renfe/shared/formato/formato";
 import "./reserva.css";
 
 const vacio = (): Pasajero => ({ nombre: "", apellidos: "", documento: "", email: "" });
@@ -108,7 +108,7 @@ export default function ReservaTransbordo() {
       ))}
       {error && <p className="campo__error" role="alert">{error}</p>}
       <p>
-        Total: <strong>{euros.format(opcion.precio * n)}</strong> (pago simulado)
+        Total: <strong>{euros(opcion.precio * n)}</strong> (pago simulado)
       </p>
       <button type="submit" className="boton" disabled={estado === "pagando"}>
         {estado === "pagando" ? "Comprando los dos billetes…" : "Comprar los dos billetes"}

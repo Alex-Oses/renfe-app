@@ -16,7 +16,7 @@ import { Boton } from "@/components/Boton";
 import { Campo } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
 import { Pantalla } from "@/components/Pantalla";
-import { euros, hora } from "@/formato";
+import { euros, horaLocal } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos } from "@/tema";
 
 interface DatosViajero {
@@ -108,7 +108,7 @@ export default function Transbordo() {
           <Text style={estilos.texto}>Tienes un billete por cada tren.</Text>
           {compradas.map((r) => (
             <Text key={r.id} style={estilos.suave}>
-              {r.localizador} · {r.tren.tipo} {r.tren.numero} · {hora(r.tren.salida)}–{hora(r.tren.llegada)}
+              {r.localizador} · {r.tren.tipo} {r.tren.numero} · {horaLocal(r.tren.salida)}–{horaLocal(r.tren.llegada)}
             </Text>
           ))}
         </Cristal>
@@ -137,13 +137,13 @@ export default function Transbordo() {
           {ida.origen.nombre} a {sigue.destino.nombre}
         </Text>
         <Text style={estilos.texto}>
-          {ida.tipo} {ida.numero}: {hora(ida.salida)} a {hora(ida.llegada)}
+          {ida.tipo} {ida.numero}: {horaLocal(ida.salida)} a {horaLocal(ida.llegada)}
         </Text>
         <Text style={[estilos.texto, { color: colores.marca }]}>
           Transbordo en {opcion.transbordo.nombre}, {opcion.esperaMin} min de espera
         </Text>
         <Text style={estilos.texto}>
-          {sigue.tipo} {sigue.numero}: {hora(sigue.salida)} a {hora(sigue.llegada)}
+          {sigue.tipo} {sigue.numero}: {horaLocal(sigue.salida)} a {horaLocal(sigue.llegada)}
         </Text>
       </Cristal>
 

@@ -1,6 +1,7 @@
+import { euros } from "@renfe/shared/formato/formato";
 import { useState, type FormEvent } from "react";
 import type { Reserva } from "@renfe/shared/api/tipos";
-import { euros, indemnizacion, porcentajeIndemnizacion } from "./logica";
+import { indemnizacion, porcentajeIndemnizacion } from "./logica";
 import { BuscaReserva, Campo, Exito, Herramienta, ResumenReserva, useEnvio } from "./comun";
 
 export default function FormIndemnizacion() {

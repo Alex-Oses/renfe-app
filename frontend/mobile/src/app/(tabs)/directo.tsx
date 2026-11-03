@@ -1,3 +1,4 @@
+import { horaLocal } from "@renfe/shared/formato/formato";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -42,10 +43,6 @@ function conLimite<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-
-
-const horaCorta = (iso: string) =>
-  new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
 
 // Mismo criterio que la web: adelantado cuenta como puntual y null es "Sin datos", no "A tiempo".
 function Retraso({ seg, compacto }: { seg: number | null; compacto?: boolean }) {
@@ -288,7 +285,7 @@ export default function Directo() {
                     <Text style={styles.datoEtiqueta}>Va a</Text>
                     <Text style={styles.datoValor}>
                       {elegido.destino}
-                      {elegido.llegadaDestino ? ` · ${horaCorta(elegido.llegadaDestino)}` : ""}
+                      {elegido.llegadaDestino ? ` · ${horaLocal(elegido.llegadaDestino)}` : ""}
                     </Text>
                   </View>
                 ) : null}
@@ -297,13 +294,13 @@ export default function Directo() {
                     <Text style={styles.datoEtiqueta}>Próxima parada</Text>
                     <Text style={styles.datoValor}>
                       {elegido.proximaParada}
-                      {elegido.llegadaProxima ? ` · ${horaCorta(elegido.llegadaProxima)}` : ""}
+                      {elegido.llegadaProxima ? ` · ${horaLocal(elegido.llegadaProxima)}` : ""}
                     </Text>
                   </View>
                 ) : null}
                 <View style={styles.datoFila}>
                   <Text style={styles.datoEtiqueta}>Última señal</Text>
-                  <Text style={styles.datoValor}>{horaCorta(elegido.actualizado)}</Text>
+                  <Text style={styles.datoValor}>{horaLocal(elegido.actualizado)}</Text>
                 </View>
               </View>
 
@@ -322,7 +319,7 @@ export default function Directo() {
                           <View style={{ flex: 1, paddingBottom: espaciado[3] }}>
                             <Text style={styles.paradaNombre}>{p.nombre}</Text>
                             <Text style={estilos.suave}>
-                              {horaCorta(p.llegada)} · {p.pasada ? "pasada" : min === 0 ? "llegando" : `en ${min} min`}
+                              {horaLocal(p.llegada)} · {p.pasada ? "pasada" : min === 0 ? "llegando" : `en ${min} min`}
                             </Text>
                           </View>
                         </View>
@@ -420,7 +417,7 @@ export default function Directo() {
                       </Text>
                       <Text style={estilos.suave} numberOfLines={1}>
                         {t.proximaParada && t.origen
-                          ? `Próxima: ${t.proximaParada}${t.llegadaProxima ? ` · ${horaCorta(t.llegadaProxima)}` : ""}`
+                          ? `Próxima: ${t.proximaParada}${t.llegadaProxima ? ` · ${horaLocal(t.llegadaProxima)}` : ""}`
                           : t.linea
                             ? `Línea ${t.linea}`
                             : "Señal GPS recibida"}

@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useParams } from "react-router-dom";
 import QRCode from "qrcode";
 import { misBilletes, obtenerBillete, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Billete as TBillete } from "@renfe/shared/api/tipos";
-import { fecha, hora } from "./reserva/formato";
+import { fecha, hora, euros } from "@renfe/shared/formato/formato";
 import Cartera from "./billetes/Cartera";
 import RetrasoVivo from "./billetes/RetrasoVivo";
 import "./billetes.css";
@@ -132,7 +132,7 @@ export default function Billete() {
           </div>
           <div>
             <dt>Precio</dt>
-            <dd>{b.asiento.precio.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</dd>
+            <dd>{euros(b.asiento.precio)}</dd>
           </div>
           <div className="pase__ancho">
             <dt>Viajero</dt>
