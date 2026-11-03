@@ -724,7 +724,8 @@ Response 200:
       "qr": "RNF1.eyJ2IjoxLCJpZCI6…"
     }
   ],
-  "total": 1
+  "total": 2,
+  "transbordos": [{ "desde": "R-7K3M9Q", "hasta": "R-8F2L1P" }]
 }
 ```
 
@@ -732,6 +733,12 @@ Errores: `401` sin token · `503` BD caída. `estado` es el de `billetes` (`vali
 `anulado` | `caducado`). `numero` puede ser `null`.
 `feed` y `viajeId` (añadidos el 29/10, Alex) identifican el viaje: la web los cruza con `/posiciones`
 para avisar del retraso real del tren del billete.
+
+`transbordos` (**añadido el 03/11, Rubén**): la API ya resuelve qué reservas forman un viaje con
+transbordo, así que el cliente solo ordena y pinta, no decide nada. Dos reservas son un transbordo si
+tienen el mismo número de billetes, una acaba donde empieza la otra, la espera entre la llegada y la
+salida va de 15 min a 3 h y se emitieron con menos de 15 min de diferencia. Una reserva puede estar
+como `desde` de un par y como `hasta` de otro (viajes de tres tramos).
 
 ## GET /billetes/:id/qr
 
