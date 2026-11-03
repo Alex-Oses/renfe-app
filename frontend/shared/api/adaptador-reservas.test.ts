@@ -74,9 +74,11 @@ describe("cuerpoReserva", () => {
       origenId: "60000",
       destinoId: "04040",
       pasajeros: [
-        { nombre: "Lucía Pérez Gómez", documento: "12345678Z" },
-        { nombre: "Marta Pérez Gómez", documento: "87654321X" },
+        { nombre: "Lucía Pérez Gómez", documento: "12345678Z", tipo: "adulto" },
+        { nombre: "Marta Pérez Gómez", documento: "87654321X", tipo: "adulto" },
       ],
+      tarifa: "elige",
+      descuento: "joven",
       asientos: nueva.asientos,
     });
   });

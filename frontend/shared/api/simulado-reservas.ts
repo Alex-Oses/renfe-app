@@ -86,6 +86,11 @@ export function obtenerAsientos(trenId: string): Asiento[] {
   return plantillaAsientos(trenId, obtenerTren(trenId).precioDesde);
 }
 
+export function reservaPorLocalizador(localizador: string): Reserva | undefined {
+  const buscado = localizador.trim().toUpperCase();
+  return leer().reservas.find((r) => r.localizador === buscado);
+}
+
 const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0/O, 1/I
 function nuevoLocalizador(usados: Set<string>): string {
   let l = "";

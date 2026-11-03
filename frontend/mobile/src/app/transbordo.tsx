@@ -3,14 +3,9 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import {
   buscarTransbordos,
-  cancelarReserva,
-  confirmarPagoSimulado,
-  crearIntentoPago,
-  crearReserva,
-  obtenerAsientos,
 } from "@renfe/shared/api/cliente";
 import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
-import type { OpcionTransbordo, Pasajero, Reserva, Tren } from "@renfe/shared/api/tipos";
+import type { NuevaReserva, OpcionTransbordo, Pasajero, Reserva } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { Campo } from "@/components/Campo";
@@ -27,15 +22,6 @@ interface DatosViajero {
 const vacio = (): DatosViajero => ({ nombre: "", apellidos: "", documento: "" });
 const validarDocumento = (v: string) => /^[A-Za-z0-9]{6,12}$/.test(v.trim());
 const validarEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v.trim());
-
-// Mismo flujo de compra que /pasajero (reserva + intento + pago simulado), una vez por tren.
-async function comprarTramo(tren: Tren, pasajeros: Pasajero[]): Promise<Reserva> {
-  const libres = (await obtenerAsientos(tren)).filter((a) => a.libre).slice(0, pasajeros.length);
-  if (libres.length < pasajeros.length) throw new Error(`No quedan plazas suficientes en el ${tren.tipo} ${tren.numero}.`);
-  const r = await crearReserva(tren, { trenId: tren.id, asientos: libres.map((a) => a.id), pasajeros });
-  await crearIntentoPago(r.id);
-  return confirmarPagoSimulado(r.id);
-}
 
 export default function Transbordo() {
   const params = useLocalSearchParams<Record<string, string>>();
@@ -90,7 +76,8 @@ export default function Transbordo() {
       tipo: i >= n - ninos ? "nino" : "adulto",
     }));
     try {
-      setCompradas(await comprarDosTramos((i) => comprarTramo(opcion.tramos[i], pasajeros), cancelarReserva));
+      const datos: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros };
+      setCompradas(await comprarDosTramos(opcion.tramos, datos));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo completar la compra.");
     } finally {

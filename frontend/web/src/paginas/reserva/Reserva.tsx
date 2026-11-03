@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
-import { obtenerAsientos, obtenerTren, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { calcularPrecio, obtenerAsientos, obtenerTren, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
 import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
-import { DESCUENTOS, TARIFAS, calcularTotal } from "@renfe/shared/api/simulado-precios";
+import { DESCUENTOS, TARIFAS } from "@renfe/shared/api/simulado-precios";
 import { PasoAsientos } from "./PasoAsientos";
 import { PasoViajeros } from "./PasoViajeros";
 import { PasoPago } from "./PasoPago";
@@ -41,6 +41,7 @@ export default function Reserva() {
   const [elegidos, setElegidos] = useState<string[]>([]);
   const [pasajeros, setPasajeros] = useState<Pasajero[]>([]);
   const [reserva, setReserva] = useState<TReserva | null>(null);
+  const [desglose, setDesglose] = useState<{ billetes: number; extras: number; total: number } | null>(null);
 
   // Con la API real la reserva exige sesión (401 sin token): sin sesión no se piden datos.
   const conSesion = usaDatosSimulados || Boolean(sesion);
@@ -72,6 +73,24 @@ export default function Reserva() {
     titulo.current?.focus({ preventScroll: true });
   }, [paso]);
 
+  useEffect(() => {
+    if (!tren || !elegidos.length) {
+      setDesglose(null);
+      return;
+    }
+    let vivo = true;
+    const viajeros = (pasajeros.length ? pasajeros : tipos.map((tipo) => ({ nombre: "", apellidos: "", documento: "", email: "", tipo })));
+    const precios = asientos
+      ? elegidos.map((id) => asientos.find((a) => a.id === id)?.precio ?? tren.precioDesde)
+      : undefined;
+    calcularPrecio(tren, { trenId: tren.id, asientos: elegidos, pasajeros: viajeros, tarifa, descuento, extras, bebes }, precios)
+      .then((r) => vivo && setDesglose(r))
+      .catch((e: Error) => vivo && setError(e.message));
+    return () => {
+      vivo = false;
+    };
+  }, [tren, asientos, elegidos, pasajeros, tarifa, descuento, extras, bebes, tipos]);
+
   const ir = (p: IdPaso) => {
     const s = new URLSearchParams(params);
     s.set("paso", p);
@@ -100,8 +119,7 @@ export default function Reserva() {
     );
 
   const seleccion = elegidos.map((id) => asientos.find((a) => a.id === id)!);
-  const desglose = calcularTotal({ precios: seleccion.map((a) => a.precio), tipos, tarifa, descuento, extras });
-  const total = desglose.total;
+  const total = desglose?.total ?? 0;
   const nombreTarifa = TARIFAS.find((t) => t.id === tarifa)!.nombre;
   // Ida y vuelta: al pagar la ida se busca la vuelta con los mismos viajeros.
   const vuelta = params.get("vuelta");
@@ -164,6 +182,7 @@ export default function Reserva() {
               asientos={elegidos}
               pasajeros={pasajeros}
               total={total}
+              importeCargando={Boolean(elegidos.length && !desglose)}
               tarifa={tarifa}
               descuento={descuento}
               bebes={bebes}
@@ -213,7 +232,7 @@ export default function Reserva() {
           <p className="resumen__asientos">
             {seleccion.length ? `Asientos: ${seleccion.map((a) => `coche ${a.coche}, ${a.fila}${a.letra}`).join("; ")}` : `${n} ${n === 1 ? "viajero" : "viajeros"}`}
           </p>
-          {desglose.extras > 0 && (
+          {desglose && desglose.extras > 0 && (
             <p className="resumen__desglose">
               Billetes {euros(desglose.billetes)} · Extras {euros(desglose.extras)}
             </p>

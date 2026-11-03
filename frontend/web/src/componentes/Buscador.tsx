@@ -1,8 +1,8 @@
 import { sinTildes } from "@renfe/shared/formato/texto";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
-import { buscarEstaciones, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { buscarEstaciones, obtenerEstacion, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { estacionConocida } from "@renfe/shared/api/estaciones-memoria";
 import type { Estacion } from "@renfe/shared/api/tipos";
 import { Desplegable } from "./Desplegable";
@@ -68,6 +68,27 @@ export function Buscador({ inicial, compacto }: Props) {
   const [descuento, setDescuento] = useState<string>(inicial?.descuento ?? descuentoGuardado());
   const [giro, setGiro] = useState(0);
   const [error, setError] = useState("");
+  useEffect(() => {
+    if (usaDatosSimulados) return;
+    let vivo = true;
+    const resolverId = async (id: string | undefined, poner: (e: Estacion) => void, ponerTexto: (s: string) => void) => {
+      if (!id) return;
+      try {
+        const estacion = await obtenerEstacion(id);
+        if (vivo) {
+          poner(estacion);
+          ponerTexto(estacion.nombre);
+        }
+      } catch {
+        // La búsqueda posterior mostrará el error si el id ya no existe.
+      }
+    };
+    void resolverId(inicial?.origen, setOrigenElegido, setOrigen);
+    void resolverId(inicial?.destino, setDestinoElegido, setDestino);
+    return () => {
+      vivo = false;
+    };
+  }, [inicial?.origen, inicial?.destino]);
   // Primero el origen: el destino se abre al elegirlo de la lista o si ya viene de una búsqueda anterior.
   const origenListo = !!origenElegido || (!!origen.trim() && [nombreDe(inicial?.origen), nombreDe(inicial?.destino)].includes(origen));
 

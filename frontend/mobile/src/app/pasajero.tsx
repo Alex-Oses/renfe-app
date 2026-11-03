@@ -5,6 +5,7 @@ import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import {
+  calcularPrecio,
   confirmarPagoSimulado,
   crearIntentoPago,
   crearReserva,
@@ -65,6 +66,7 @@ export default function Pasajero() {
   const [cargando, setCargando] = useState(true);
   const [pagando, setPagando] = useState(false);
   const [reserva, setReserva] = useState<Reserva | null>(null);
+  const [desgloseApi, setDesgloseApi] = useState<{ billetes: number; extras: number; total: number } | null>(null);
   const scroll = useRef<ScrollViewInstance>(null);
 
   useEffect(() => {
@@ -114,6 +116,25 @@ export default function Pasajero() {
       }),
     [elegidos, tipos, tarifa, descuento, extras],
   );
+
+  useEffect(() => {
+    if (!tren || !elegidos.length) {
+      setDesgloseApi(null);
+      return;
+    }
+    let vivo = true;
+    const pasajeros = tipos.map((tipo) => ({ nombre: "", apellidos: "", documento: "", email: "", tipo }));
+    calcularPrecio(
+      tren,
+      { trenId, asientos: elegidos.map((a) => a.id), pasajeros, tarifa, descuento, extras, bebes },
+      elegidos.map((a) => a.precio),
+    )
+      .then((r) => vivo && setDesgloseApi(r))
+      .catch((e: Error) => vivo && setError(e.message));
+    return () => {
+      vivo = false;
+    };
+  }, [tren, trenId, elegidos, tipos, tarifa, descuento, extras, bebes]);
 
   const cambiar = (i: number, campo: keyof DatosViajero, valor: string) => {
     setDatos((d) => d.map((p, j) => (j === i ? { ...p, [campo]: valor } : p)));
@@ -534,12 +555,12 @@ export default function Pasajero() {
           <Text style={estilos.h2}>Resumen</Text>
           <View style={styles.resumenFila}>
             <Text style={estilos.texto}>Billetes ({n})</Text>
-            <Text style={styles.resumenValor}>{euros(desglose.billetes)}</Text>
+            <Text style={styles.resumenValor}>{desgloseApi ? euros(desgloseApi.billetes) : "Calculando…"}</Text>
           </View>
-          {desglose.extras > 0 ? (
+          {desgloseApi?.extras ? (
             <View style={styles.resumenFila}>
               <Text style={estilos.texto}>Extras</Text>
-              <Text style={styles.resumenValor}>{euros(desglose.extras)}</Text>
+              <Text style={styles.resumenValor}>{euros(desgloseApi.extras)}</Text>
             </View>
           ) : null}
           {descuento !== "ninguno" ? (
@@ -553,7 +574,7 @@ export default function Pasajero() {
           <View style={styles.separador} />
           <View style={estilos.entre}>
             <Text style={estilos.subtitulo}>Total</Text>
-            <Text style={styles.total}>{euros(desglose.total)}</Text>
+            <Text style={styles.total}>{desgloseApi ? euros(desgloseApi.total) : "Calculando…"}</Text>
           </View>
           <Aviso
             tipo="info"
@@ -562,10 +583,10 @@ export default function Pasajero() {
           />
           {errores.asientos ? <Aviso texto={errores.asientos} /> : null}
           <Boton
-            texto={`Pagar ${euros(desglose.total)} (simulado)`}
+            texto={desgloseApi ? `Pagar ${euros(desgloseApi.total)} (simulado)` : "Calculando importe…"}
             onPress={pagar}
             cargando={pagando}
-            desactivado={!elegidos.length}
+            desactivado={!elegidos.length || !desgloseApi}
           />
           <Text style={styles.pie}>Renfe · Andén 0 · proyecto de clase</Text>
         </Cristal>

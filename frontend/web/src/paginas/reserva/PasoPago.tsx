@@ -14,6 +14,7 @@ interface Props {
   asientos: string[];
   pasajeros: Pasajero[];
   total: number;
+  importeCargando: boolean;
   tarifa: IdTarifa;
   descuento: IdDescuento;
   bebes: number;
@@ -23,7 +24,7 @@ interface Props {
   onAsientoOcupado: () => void;
 }
 
-export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, bebes, extras, onExtras, onPagada, onAsientoOcupado }: Props) {
+export function PasoPago({ tren, asientos, pasajeros, total, importeCargando, tarifa, descuento, bebes, extras, onExtras, onPagada, onAsientoOcupado }: Props) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);
@@ -84,7 +85,7 @@ export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, 
             tarjeta y no se cobra nada. Al pulsar el botón se confirma la reserva como si el pago hubiera ido bien.
           </p>
           <p className="pago__importe">
-            Importe: <strong>{euros(total)}</strong>
+            Importe: <strong>{importeCargando ? "Calculando…" : euros(total)}</strong>
           </p>
         </div>
       </div>
@@ -101,13 +102,13 @@ export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, 
       )}
 
       <div className="reserva__acciones">
-        <button type="button" className="boton" onClick={pagar} disabled={cargando} aria-busy={cargando}>
+        <button type="button" className="boton" onClick={pagar} disabled={cargando || importeCargando} aria-busy={cargando || importeCargando}>
           {cargando ? (
             <>
               <span className="girador" aria-hidden="true" /> Procesando el pago…
             </>
           ) : (
-            `Pagar ${euros(total)} (simulado)`
+            importeCargando ? "Calculando importe…" : `Pagar ${euros(total)} (simulado)`
           )}
         </button>
       </div>

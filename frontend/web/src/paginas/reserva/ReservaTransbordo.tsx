@@ -1,14 +1,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
-import { buscarTransbordos, cancelarReserva, crearReserva } from "@renfe/shared/api/cliente";
-import type { OpcionTransbordo, Pasajero, Tren } from "@renfe/shared/api/tipos";
+import { buscarTransbordos } from "@renfe/shared/api/cliente";
+import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import type { NuevaReserva, OpcionTransbordo, Pasajero } from "@renfe/shared/api/tipos";
 import { useSesion } from "../../estado/sesion";
 import { euros, hora } from "@renfe/shared/formato/formato";
 import "./reserva.css";
 
 const vacio = (): Pasajero => ({ nombre: "", apellidos: "", documento: "", email: "" });
-const comprarTramo = (tren: Tren, pasajeros: Pasajero[]) => crearReserva(tren, { trenId: tren.id, asientos: [], pasajeros });
-
 export default function ReservaTransbordo() {
   const { sesion } = useSesion();
   const { pathname, search } = useLocation();
@@ -51,14 +50,8 @@ export default function ReservaTransbordo() {
     setEstado("pagando");
     setError("");
     try {
-      const primera = await comprarTramo(ida, pasajeros);
-      try {
-        await comprarTramo(sigue, pasajeros);
-      } catch (fallo) {
-        // Sin el segundo tren el primero no sirve: se deshace para no cobrar medio viaje.
-        await cancelarReserva(primera.localizador).catch(() => undefined);
-        throw fallo;
-      }
+      const datos: NuevaReserva = { trenId: ida.id, asientos: [], pasajeros };
+      await comprarDosTramos([ida, sigue], datos);
       window.scrollTo(0, 0);
       setEstado("listo");
     } catch (fallo) {

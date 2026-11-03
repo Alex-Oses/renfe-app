@@ -95,6 +95,7 @@ export function datosDeQr(qr: string): DatosQr {
 const aPasajeroApi = (p: Pasajero): PasajeroApi => ({
   nombre: `${p.nombre} ${p.apellidos}`.trim(),
   documento: p.documento.trim(),
+  tipo: p.tipo ?? "adulto",
 });
 
 // POST /reservas: el tren ya dice feed, tripId, fecha, origen y destino.
@@ -113,6 +114,9 @@ export function cuerpoReserva(tren: Tren, datos: NuevaReserva): NuevaReservaApi 
     origenId: tren.origen.id,
     destinoId: tren.destino.id,
     pasajeros: datos.pasajeros.map(aPasajeroApi),
+    ...(datos.tarifa && { tarifa: datos.tarifa }),
+    ...(datos.descuento && { descuento: datos.descuento }),
+    ...(datos.extras?.length ? { extras: datos.extras } : {}),
     ...(datos.asientos.length ? { asientos: datos.asientos } : {}),
   };
 }
