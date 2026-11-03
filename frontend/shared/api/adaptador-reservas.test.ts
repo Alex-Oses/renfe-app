@@ -108,7 +108,7 @@ describe("reservaDeApi", () => {
     const r = reservaDeApi(creada, tren, nueva);
     expect(r.localizador).toBe("R-7K3M9Q");
     expect(r.estado).toBe("pagada");
-    expect(r.total).toBe(90);
+    expect(r.total).toBe(78.76); // la web aplica tarifa "elige" y descuento joven sobre lo que cobra la API
     expect(r.asientos.map((a) => `${a.coche}-${a.fila}${a.letra}`)).toEqual(["1-1A", "1-1D"]);
     expect(r.asientos[0].clase).toBe("Confort");
     expect(r.pasajeros[0].documento).toBe("••••678Z");
@@ -189,5 +189,20 @@ describe("validacionDeApi", () => {
     expect(validacionDeApi({ ...base, primeraValidacion: null }).primeraValidacion).toBeUndefined();
     expect(validacionDeApi(base).primeraValidacion).toBe("2026-11-02T07:20:11+01:00");
     expect(validacionDeApi(base).estado).toBe("ya_validado");
+  });
+});
+
+describe("reservaDeApi con niños", () => {
+  it("aplica el 40 % del niño aunque la API cobre el precio entero", () => {
+    const tren = { id: "avld:T1:2026-11-04", origen: { id: "1", nombre: "A" }, destino: { id: "2", nombre: "B" } } as never;
+    const creada = { id: "r", localizador: "R-1", total: 100, estado: "pagada", creada: "", billetes: [
+      { asiento: "1A", coche: 1, clase: "Turista", precio: 50 },
+      { asiento: "1B", coche: 1, clase: "Turista", precio: 50 },
+    ] } as never;
+    const datos = { trenId: "x", asientos: [], pasajeros: [
+      { nombre: "A", apellidos: "B", documento: "12345678Z", email: "" },
+      { nombre: "C", apellidos: "D", documento: "12345678Z", email: "", tipo: "nino" as const },
+    ] };
+    expect(reservaDeApi(creada, tren, datos).total).toBe(80);
   });
 });

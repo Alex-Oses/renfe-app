@@ -5,6 +5,7 @@
 // - GET /billetes devuelve un billete plano (coche y asiento como texto) y el viajero solo va
 //   dentro del QR firmado; la UI trabaja con un Tren y un Pasajero.
 import { numeroDeServicio, partirIdTren, tipoDeServicio } from "./adaptador-trenes";
+import { calcularTotal } from "./simulado-precios";
 import type {
   Asiento,
   Billete,
@@ -128,7 +129,14 @@ export function reservaDeApi(creada: ReservaApi, tren: Tren, datos: NuevaReserva
     tren,
     asientos: creada.billetes.map(asientoEmitido),
     pasajeros: datos.pasajeros.map((p) => ({ ...p, documento: enmascararDocumento(p.documento) })),
-    total: creada.total,
+    // La API no sabe de tarifas ni de niños: el total se recalcula con las mismas reglas que la web.
+    total: calcularTotal({
+      precios: creada.billetes.map((b) => b.precio),
+      tipos: datos.pasajeros.map((p) => p.tipo ?? "adulto"),
+      tarifa: datos.tarifa,
+      descuento: datos.descuento,
+      extras: datos.extras,
+    }).total,
     tarifa: datos.tarifa,
     descuento: datos.descuento,
     extras: datos.extras,
