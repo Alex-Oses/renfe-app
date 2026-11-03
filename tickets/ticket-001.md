@@ -2,7 +2,7 @@
 
 - **Prioridad:** P0
 - **Área:** `frontend/mobile`, `frontend/shared`, `backend/api`
-- **Estado:** Pendiente de reproducción
+- **Estado:** Corrección y pruebas automatizadas listas; pendiente de validar en un dispositivo móvil
 - **Dependencias:** Ninguna
 
 ## Problema reportado
@@ -21,3 +21,10 @@ Al pagar desde móvil, la solicitud llega sin el token Bearer y la API rechaza l
 ## Verificación
 
 Ejecutar pruebas de `shared` y móvil; probar con una sesión válida y otra ausente/caducada.
+
+## Reproducción y avance (2026-11-03)
+
+- La pantalla móvil `pasajero.tsx` crea la reserva mediante `POST /reservas`.
+- Con API configurada y sin sesión, antes del cambio el cliente enviaba la solicitud sin `Authorization` y mostraba el error HTTP genérico 401.
+- Ahora la compra sin sesión se detiene antes de la red con un aviso para iniciar sesión. Con sesión, `POST /reservas` conserva el token; ante un 401, invalida la sesión y no continúa el flujo de compra.
+- Pruebas automatizadas de `shared` y TypeScript de móvil pasan. No se pudo hacer la comprobación manual en Android/iOS: este entorno no tiene `adb`, SDK Android ni dispositivo conectado.

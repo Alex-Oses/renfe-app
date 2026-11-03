@@ -140,6 +140,10 @@ function invalidarSesion() {
   oyentesSesion.forEach((oyente) => oyente());
 }
 
+function exigirSesionParaCompra() {
+  if (!token) throw new Error("Inicia sesión para comprar un billete.");
+}
+
 export async function enviarMensajeChatbot(mensaje: string, conversationId?: string): Promise<RespuestaChatbot> {
   if (!BASE) return simular(() => respuestaChatbotDemo(mensaje), 250);
   return pedir<RespuestaChatbot>("/chatbot/mensaje", "POST", {
@@ -433,6 +437,7 @@ export async function obtenerAsientos(tren: Tren): Promise<Asiento[]> {
 // Crea la reserva ya pagada (el pago es simulado) con las butacas elegidas; sin ellas (transbordo) las asigna la API.
 export async function crearReserva(tren: Tren, r: NuevaReserva): Promise<Reserva> {
   if (!BASE) return simular(() => reservas.crearReserva(r), 600);
+  exigirSesionParaCompra();
   const creada = await pedir<ReservaApi>("/reservas", "POST", cuerpoReserva(tren, r));
   return reservaDeApi(creada, tren, r);
 }
@@ -465,8 +470,11 @@ export async function calcularPrecio(tren: Tren, r: NuevaReserva, preciosAsiento
 }
 
 // POST /pagos/intent
-export const crearIntentoPago = (reservaId: string): Promise<IntentoPago> =>
-  BASE ? pedir("/pagos/intent", "POST", { reservaId }) : simular(() => reservas.crearIntentoPago(reservaId));
+export async function crearIntentoPago(reservaId: string): Promise<IntentoPago> {
+  if (!BASE) return simular(() => reservas.crearIntentoPago(reservaId));
+  exigirSesionParaCompra();
+  return pedir("/pagos/intent", "POST", { reservaId });
+}
 
 // Simulado: en la API real la reserva ya nace pagada (el pago de Stripe está pendiente).
 export const confirmarPagoSimulado = (reservaId: string): Promise<Reserva> =>
@@ -520,6 +528,7 @@ export async function crearReservaTransbordo(trenes: [Tren, Tren], r: NuevaReser
       await reservas.crearReserva({ ...r, trenId: trenes[1].id }),
     ];
   }
+  exigirSesionParaCompra();
   const cuerpo = trenes.map((tren) => cuerpoReserva(tren, { ...r, asientos: [] }));
   const respuesta = await pedir<{ reservas: [ReservaApi, ReservaApi]; total: number }>("/reservas/transbordo", "POST", {
     tramos: cuerpo.map(({ pasajeros, tarifa, descuento, extras, ...tramo }) => tramo),
