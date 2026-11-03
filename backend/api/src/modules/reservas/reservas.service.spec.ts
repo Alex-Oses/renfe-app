@@ -206,3 +206,66 @@ describe('ReservasService.crear', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 });
+
+describe('ReservasService.crearTransbordo', () => {
+  const transbordo = () =>
+    ({
+      tramos: [
+        {
+          feed: 'avld',
+          viajeId: '3097L23537C1',
+          fecha: '2099-01-15',
+          origenId: '60000',
+          destinoId: '04040',
+        },
+        {
+          feed: 'avld',
+          viajeId: '0207L23538C1',
+          fecha: '2099-01-15',
+          origenId: '04040',
+          destinoId: '08001',
+        },
+      ],
+      pasajeros: [{ nombre: 'Lucía Pérez Gómez', documento: '12345678Z' }],
+    }) as never;
+
+  it('si el segundo tramo falla no queda la primera reserva (una sola transacción)', async () => {
+    const cliente = crearCliente();
+    const sinDeshacer: string[] = []; // reservas escritas que sobreviven a la transacción
+    const tramosVistos: string[] = []; // viajeId de cada tramo, en orden
+    let viajes = 0;
+
+    const servicio = new ReservasService(
+      {
+        transaccion: async (fn: (c: unknown) => Promise<unknown>) => {
+          const dentro = {
+            query: async (sql: string, valores: unknown[] = []) => {
+              if (sql.includes('from viajes v')) {
+                viajes += 1;
+                tramosVistos.push(String(valores[1]));
+                if (viajes === 2) return { rows: [] }; // el segundo tren no circula
+              }
+              if (sql.includes('insert into reservas')) sinDeshacer.push(String(valores[6]));
+              return cliente.query(sql, valores);
+            },
+          };
+          try {
+            return await fn(dentro);
+          } catch (error) {
+            sinDeshacer.length = 0; // rollback
+            throw error;
+          }
+        },
+      } as unknown as BdService,
+      { get: () => CLAVE } as unknown as ConfigService,
+      { enviar: async () => undefined } as unknown as CorreoService,
+    );
+
+    await expect(servicio.crearTransbordo('usuario-1', transbordo())).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    // El primer tramo llegó a insertar su reserva, pero el rollback la deshace.
+    expect(sinDeshacer).toEqual([]);
+    expect(tramosVistos).toEqual(['3097L23537C1', '0207L23538C1']);
+  });
+});

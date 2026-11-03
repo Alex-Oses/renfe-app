@@ -30,6 +30,7 @@ import {
 import { CorreoService, htmlDeCorreo } from '../../common/correo/correo.service.js';
 import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import type { CrearReservaDto } from './dto/crear-reserva.dto.js';
+import type { CrearTransbordoDto } from './dto/crear-transbordo.dto.js';
 
 export interface ReservaCancelada {
   localizador: string;
@@ -233,6 +234,57 @@ export class ReservasService {
       );
       void this.avisarCompra(usuarioId, creada, dto);
       return creada;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new ServiceUnavailableException('La base de datos no está disponible');
+    }
+  }
+
+  // Los dos tramos van en una sola transacción: si el segundo falla, el rollback
+  // deshace también el primero (no hay medio viaje cobrado).
+  async crearTransbordo(
+    usuarioId: string,
+    dto: CrearTransbordoDto,
+  ): Promise<{ reservas: ReservaCreada[]; total: number }> {
+    const tramos: CrearReservaDto[] = dto.tramos.map((tramo) => ({
+      feed: tramo.feed,
+      viajeId: tramo.viajeId,
+      fecha: tramo.fecha,
+      origenId: tramo.origenId,
+      destinoId: tramo.destinoId,
+      asientos: tramo.asientos,
+      pasajeros: dto.pasajeros,
+      tarifa: dto.tarifa,
+      descuento: dto.descuento,
+      extras: dto.extras,
+    }));
+
+    for (const tramo of tramos) {
+      if (tramo.origenId === tramo.destinoId) {
+        throw new BadRequestException('El origen y el destino no pueden ser la misma estación');
+      }
+      if (tramo.fecha < hoyMadrid()) {
+        throw new BadRequestException('La fecha del viaje ya ha pasado');
+      }
+    }
+
+    // Se lee antes de abrir la transacción: sin clave no hay QR que emitir.
+    const clave = this.config.get<string>('QR_SIGNING_PRIVATE_KEY');
+    if (!clave) {
+      throw new ServiceUnavailableException('La API no tiene configurada QR_SIGNING_PRIVATE_KEY');
+    }
+
+    try {
+      const reservas = await this.bd.transaccion(async (cliente) => {
+        const creadas: ReservaCreada[] = [];
+        for (const tramo of tramos) {
+          creadas.push(await this.crearEn(cliente, usuarioId, tramo, clave));
+        }
+        return creadas;
+      });
+      tramos.forEach((tramo, i) => void this.avisarCompra(usuarioId, reservas[i]!, tramo));
+      const total = reservas.reduce((suma, reserva) => suma + reserva.total, 0);
+      return { reservas, total: Math.round(total * 100) / 100 };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new ServiceUnavailableException('La base de datos no está disponible');
