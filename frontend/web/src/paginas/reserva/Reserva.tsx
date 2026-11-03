@@ -169,7 +169,7 @@ export default function Reserva() {
           </div>
 
           {paso === "asientos" && (
-            <PasoAsientos asientos={asientos} n={n} elegidos={elegidos} onCambio={setElegidos} onSeguir={() => ir("viajeros")} />
+            <PasoAsientos asientos={asientos} n={n} elegidos={elegidos} onCambio={setElegidos} onSeguir={() => ir("viajeros")} tarifa={tarifa} descuento={descuento} />
           )}
           {paso === "viajeros" && (
             <PasoViajeros

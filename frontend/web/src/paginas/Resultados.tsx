@@ -5,7 +5,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { claveTramo } from "@renfe/shared/api/comprar-transbordo";
 import { haSalido } from "@renfe/shared/api/salidas";
 import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
-import type { OpcionTransbordo, TipoTren, Tren } from "@renfe/shared/api/tipos";
+import type { IdDescuento, OpcionTransbordo, TipoTren, Tren } from "@renfe/shared/api/tipos";
 import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
 import { Buscador } from "../componentes/Buscador";
 import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
@@ -48,6 +48,7 @@ export function Resultados() {
   // Viajeros y descuento pasan tal cual a la reserva y a los enlaces de otros días.
   const extra = new URLSearchParams();
   for (const k of ["ninos", "bebes", "descuento", "vuelta", "tramo"]) if (params.get(k)) extra.set(k, params.get(k)!);
+  const descuento = (params.get("descuento") as IdDescuento) ?? "ninguno";
   // shortcut: compara con las estaciones simuladas; con la API real habría que usar GET /estaciones.
   const desconocidas = (usaDatosSimulados ? [origen, destino] : []).filter((id) => !ESTACIONES.some((e) => e.id === id)).map((id) => id || "(vacío)");
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -340,7 +341,7 @@ export function Resultados() {
                         <li key={ta.id} className={`tarifa cristal tarifa--${ta.id}`}>
                           <h3>{ta.nombre}</h3>
                           <p className="tarifa__precio">
-                            <span>desde</span> {euros(precioViajero(t.precioDesde, ta.id))}
+                            <span>desde</span> {euros(precioViajero(t.precioDesde, ta.id, "adulto", descuento))}
                           </p>
                           <ul className="tarifa__incluye">
                             {ta.incluye.map((x) => (

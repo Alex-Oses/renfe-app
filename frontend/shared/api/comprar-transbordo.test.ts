@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { crearReservaTransbordo } from "./cliente";
-import { buscarOpcion, claveTramo, comprarDosTramos } from "./comprar-transbordo";
+import { buscarOpcion, claveTramo, comprarDosTramos, precioOpcion } from "./comprar-transbordo";
 import { transbordoViable } from "./transbordos";
 import type { NuevaReserva, Reserva, Tren } from "./tipos";
 
@@ -30,10 +30,25 @@ describe("buscarOpcion", () => {
   });
 });
 
+describe("precioOpcion", () => {
+  const opcion = {
+    tramos: [{ precioDesde: 40 }, { precioDesde: 20 }] as [{ precioDesde: number }, { precioDesde: number }],
+  };
+
+  it("suma los dos tramos con la tarifa elegida", () => {
+    expect(precioOpcion(opcion, { tipos: ["adulto"], tarifa: "elige" })).toBe(75);
+  });
+
+  it("aplica el descuento y el tipo de cada viajero, como la API", () => {
+    // Adulto joven: 28 + 14 = 42; niño con joven (40 % > 30 %): 24 + 12 = 36.
+    expect(precioOpcion(opcion, { tipos: ["adulto", "nino"], descuento: "joven" })).toBe(78);
+  });
+});
+
 describe("transbordoViable", () => {
   const opcion = (llegada: string, salida: string, cambioEstacion = false) => ({
     cambioEstacion,
-    tramos: [{ llegada }, { salida }],
+    tramos: [{ llegada }, { salida }] as [{ llegada: string }, { salida: string }],
   });
 
   it("acepta 15 min en la misma estación y rechaza 14", () => {

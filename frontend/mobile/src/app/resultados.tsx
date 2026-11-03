@@ -404,7 +404,7 @@ export default function Resultados() {
                               <Text style={styles.tarifaNombre}>{ta.nombre}</Text>
                               <Text style={styles.tarifaPrecio}>
                                 <Text style={styles.tarifaDesde}>desde </Text>
-                                {euros(precioViajero(t.precioDesde, ta.id))}
+                                {euros(precioViajero(t.precioDesde, ta.id, "adulto", descuento))}
                               </Text>
                               <View style={{ gap: 2 }}>
                                 {ta.incluye.slice(0, 2).map((x) => (

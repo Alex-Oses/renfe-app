@@ -2,7 +2,7 @@
 
 - **Prioridad:** P1
 - **Área:** `frontend/mobile`, `frontend/web`, `frontend/shared`, `backend/api`
-- **Estado:** Pendiente de reproducción
+- **Estado:** Arreglado
 - **Dependencias:** Ninguna
 
 ## Problema reportado
@@ -20,3 +20,24 @@ El precio mostrado en la vista previa y el mostrado al seleccionar asiento son d
 ## Verificación
 
 Comparar preview, selección de asiento y resumen final con las mismas entradas y total del endpoint.
+
+## Resolución (2026-11-03, rama `fix/mobile-tickets-pendientes`)
+
+**Causa:** el mapa de asientos de la web enseñaba el precio **base** del asiento, no el ajustado por
+la tarifa/descuento que sí aplicaba el resumen. El transbordo enseñaba `opcion.precio * n` (suma base)
+y la compra **no enviaba** la tarifa/descuento: la app recibía `descuento` y lo ignoraba, la web no lo
+leía, y el servidor cobraba básico. La vista previa de las tarjetas tampoco aplicaba el descuento.
+
+**Arreglo:**
+
+- `precioOpcion` en shared suma un billete por tramo y viajero con `precioViajero`, igual que la API.
+- `PasoAsientos` recibe tarifa/descuento y muestra el precio por adulto ya ajustado («desde»).
+- Web y app de transbordo leen tarifa/descuento/ninos, muestran `precioOpcion` y los envían al
+  comprar; antes el descuento se perdía.
+- Las tarjetas de resultados aplican el descuento a la vista previa.
+- Pruebas de `precioOpcion` con tarifa y con descuento + niño (transbordo con descuento). Total: 161
+  shared; typecheck de shared, web y mobile en verde.
+
+**Pendiente:** sin navegador/dispositivo solo se ha comprobado con typecheck y pruebas de las
+fórmulas; la API ya era la fuente de verdad. Detalles en
+[[2026-11-03-buffy-ticket-010-precio-coherente]].
