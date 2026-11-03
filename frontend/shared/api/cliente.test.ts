@@ -50,7 +50,7 @@ const detalle = {
   retrasoSeg: null,
   paradas: [
     { seq: 1, estacion: { id: "60000", nombre: "Madrid-Puerta de Atocha" }, llega: null, sale: "2020-11-02T07:15:00+01:00", retrasoSeg: null },
-    { seq: 2, estacion: { id: "04040", nombre: "Zaragoza-Delicias" }, llega: "2026-11-02T08:32:00+01:00", sale: null, retrasoSeg: null },
+    { seq: 2, estacion: { id: "04040", nombre: "Zaragoza-Delicias" }, llega: "2099-11-02T08:32:00+01:00", sale: null, retrasoSeg: null },
   ],
 };
 
@@ -156,13 +156,13 @@ describe("con VITE_API_URL", () => {
       [41.6587, -0.9113],
     ]);
     expect(r.paradas[0].pasada).toBe(true); // salida de 2020: siempre pasada
-    expect(r.paradas[1].pasada).toBe(false);
+    expect(r.paradas[1].pasada).toBe(false); // llegada en 2099: futura por siempre (el test no mira el reloj)
     expect(r.origen).toBe("Madrid-Puerta de Atocha");
     expect(r.destino).toBe("Zaragoza-Delicias");
     expect(r.numero).toBe("02070"); // el contrato da numero null: sale del final de la línea
     expect(r.tipo).toBe("AVE");
     expect(r.progreso).toBe(0.5);
-    expect(r.llegadaProxima).toBe("2026-11-02T07:35:00.000Z"); // 08:32 en Madrid + 3 min de retraso
+    expect(r.llegadaProxima).toBe("2099-11-02T07:35:00.000Z"); // 08:32 en Madrid + 3 min de retraso
   });
 
   it("pide la ocupación real a /asientos", async () => {

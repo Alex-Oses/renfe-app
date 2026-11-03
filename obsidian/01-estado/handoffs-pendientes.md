@@ -1,5 +1,5 @@
 ---
-fecha: 2026-10-30
+fecha: 2026-11-03
 autor: Rubén
 area: vault
 tags: [estado, handoffs, triaje, infraestructura]
@@ -73,6 +73,27 @@ alcance sustituido; «abierto» conserva una acción verificable antes de la con
 - **Abiertos:** 16
 - **Cerrados:** 31
 - **Obsoletos:** 6
+
+## Actualización 2026-11-03 — qué sigue abierto de verdad
+
+El facial ya no es «probar Expo»: **está implementado de forma nativa** y en PR
+([[2026-11-02-ruben-facial-movil]], PR #123, CI en verde, esperando las 3 aprobaciones). Lo que
+queda, con dueño y motivo:
+
+| Pendiente | De quién | Por qué sigue abierto |
+|---|---|---|
+| **Compilar el facial y probarlo en un móvil real** | Rubén, con Alex | En este PC no hay Android SDK ni JDK y la app ya no corre en Expo Go (`onnxruntime-react-native`): sin un build (`npx expo run:android` o EAS) la pantalla `/cara` no se ha ejecutado nunca en hardware |
+| **Medir el umbral de `config_cara`** con cámara real (misma cara con gafas/rotación vs. otra persona) | Rubén | El umbral es dato en BD; sin build no hay medidas. Si no da tiempo, el valor por defecto se queda como está |
+| **Liveness** (parpadeo / profundidad) | Rubén | Los 5 puntos de SCRFD no dan párpados. Límite anotado con `shortcut:` en `ficha.ts`; fuera del alcance de la entrega |
+| **Quitar `EXPO_PUBLIC_WEB_URL` de `frontend/Dockerfile`** (`ARG WEB_URL` + `ENV`) | Kevin | Ya no la lee nadie desde que el facial es nativo; no rompe nada, es limpieza |
+| **Migración de la lógica de negocio** (Fases 0–3) | Rubén (API), Alex (web y móvil) | Plan en [[plan-migracion-logica-frontend]], estado `propuesta`, **ninguna fase empezada**. Mínimo antes de congelar: Fase 0 (contrato de precios) y Fase 1 (cálculo en la API) |
+| **Latencia de Gemini en el chatbot** | Rubén | Sigue siendo el riesgo de la demo; hay que medirla en el ensayo |
+| **QR: HMAC-SHA256 vs. Ed25519** | Rubén | El código usa HMAC y el contrato histórico decía Ed25519; hay que decidir y alinear [[endpoints]] |
+| **Revisar el fixture de fecha de `cliente.test.ts`** (cambio de 3 líneas) | Alex | El test caducaba el 02/11; lo pasé a 2099 dentro del PR #123 y es su área |
+
+**Del proceso, para tenerlo en cuenta:** `estado-equipo.md` da conflicto en casi todos los PRs porque
+todos editamos la misma tabla. Regla: **cada uno toca solo su fila y no reordena ni reformatea**; si
+hay conflicto, se resuelve quedándose con las dos filas y no con «la mía».
 
 ## Decisiones abiertas antes de la congelación (04/11)
 

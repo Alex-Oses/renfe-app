@@ -86,8 +86,9 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
 
 ## Pendiente
 
-- **Alex**: OK a cambiar `description` de Human por ArcFace en la web (es su área), y decidir si la app
-  reutiliza la web en webview o monta el modelo nativo.
+- **Alex**: OK a cambiar `description` de Human por ArcFace en la web (es su área). ~~decidir si la app
+  reutiliza la web en webview o monta el modelo nativo~~ → **decidido el 02/11: modelo nativo en la
+  app** (ver «Actualización 2026-11-02 (2)»); la opción webview se descartó.
 - **Kevin**: `backend/face-service/` ya está borrado, junto con su servicio en `docker-compose.yml`, su
   línea en `CODEOWNERS`, el bloque de `dependabot.yml`, la etiqueta de `labeler.yml` y
   `FACE_SERVICE_URL` del `.env.example`. Solo queda que lo revise y que borre la etiqueta `face` en
@@ -126,4 +127,39 @@ de ADR-004 (web primero, API en Render, facial sin servidor Python) no se toca.
   token; otras → 401. **Falta medir el umbral con la cámara y fotos distintas de la misma persona.**
 - **Licencia:** los modelos de InsightFace son solo para uso no comercial/investigación. Vale para el
   proyecto de clase; para un uso real habría que cambiarlo.
+
+## Actualización 2026-11-02 (Rubén): la app abre la web en un WebView
+
+- **Se eligió reutilizar la web en un WebView de la app** (lo que este ADR ya contemplaba como opción).
+  `frontend/mobile/src/app/cara.tsx` carga `${EXPO_PUBLIC_WEB_URL}/acceder?movil=1` y la web devuelve la
+  sesión con `window.ReactNativeWebView.postMessage`; el vector sigue calculándolo el teléfono dentro de
+  la app y no se sube nada más. Coste: cero modelo nativo y cero build propio, que es lo que permite
+  seguir en Expo Go. Ver [[2026-11-02-ruben-facial-movil]].
+- **Registrar la cara también desde el móvil:** `/cara?modo=registrar` abre `${EXPO_PUBLIC_WEB_URL}/cuenta`
+  con la sesión de la app escrita en `sessionStorage` del WebView (`injectedJavaScriptBeforeContentLoaded`).
+  Si ese inyectado llega tarde, se puede seguir registrando la cara una vez en la web: el login facial,
+  que es lo obligatorio, no depende de eso.
+- **Pendiente (no cubierto por el modelo nativo):** probar la cámara dentro del WebView en Android e iOS
+  y medir la latencia de Human en ese contexto, que puede peor que en Chrome.
+
+> **Superada el mismo 02/11:** el equipo (decisión del usuario) descartó WebView y navegador; la app
+> pasó a modelo nativo. Ver «Actualización 2026-11-02 (2)». Lo único que queda en pie de esta sección
+> es que la web, sin `?movil=1`, no cambió.
+
+## Actualización 2026-11-02 (2): la app calcula el facial en nativo
+
+- **La app ya no abre la web ni el navegador para entrar con la cara.** El pipeline corre dentro de la
+  app con `onnxruntime-react-native`: SCRFD (`det-500m.onnx`, 2,5 MB) para detectar y los 5 puntos, y
+  **el mismo `w600k_mbf.onnx` que la web** para la huella → misma plantilla, misma compatibilidad.
+  Lógica en `frontend/mobile/src/fotos/` (`matematica.ts` puro, con tests `node --test`; `ficha.ts`
+  para ONNX y cámara), pantalla en `frontend/mobile/src/app/cara.tsx`.
+- **Consecuencia: la app necesita build propio** (`npx expo run:android` o EAS) y deja de probarse en
+  Expo Go. Android primero: el equipo no tiene Mac para iOS.
+- **Se revirtió el camino WebView**: `?movil=1` fuera de `frontend/web/.../Acceder.tsx` (la web queda
+  igual que en `develop`) y `EXPO_PUBLIC_WEB_URL` eliminada de la app, `.env.example` y README.
+- **Sin liveness**: SCRFD solo da 5 puntos (ojos, nariz, boca), que no sirven para párpados. Queda
+  comentado como `shortcut:` en `ficha.ts`, con la vía de upgrade (Landmarks o antispoof de
+  `onnxruntime` cuando haya margen). El riesgo de seguridad declarado en «Consecuencias» sigue igual.
+- **Pendiente:** compilar en una máquina con Android SDK (en mi PC no lo hay) y medir el umbral con
+  la cámara. Ver [[2026-11-02-ruben-facial-movil]].
 

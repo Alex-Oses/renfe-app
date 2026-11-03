@@ -67,6 +67,7 @@ export default function RootLayout() {
         <Stack.Screen name="chatbot" options={{ headerShown: false }} />
         <Stack.Screen name="informacion" options={{ headerShown: false }} />
         <Stack.Screen name="contenido/[...ruta]" options={{ headerShown: false }} />
+        <Stack.Screen name="cara" options={{ title: "Entrar con tu cara" }} />
       </Stack>
     </>
   );
