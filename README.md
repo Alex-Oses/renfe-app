@@ -1,8 +1,8 @@
 # 🚆 Renfe App — Monorepo del equipo
 
-App tipo Renfe hecha en equipo: búsqueda de trenes por fecha, reserva y pago (simulado con Stripe test), billetes QR validados contra la base de datos, login con reconocimiento facial, mapa en tiempo real y chatbot con IA.
+Prototipo de app Renfe en desarrollo: monorepo con cliente web y móvil, API, catálogo/horarios GTFS, chatbot y flujos de cuenta, reservas simuladas y reconocimiento facial móvil.
 
-> **Estado actual:** esqueleto. Hay estructura, configuraciones de ejemplo y documentación, pero **ninguna funcionalidad implementada todavía**. Cada carpeta tiene un `README.md` que explica qué irá ahí y quién es responsable.
+> **Estado y límites:** ya hay funcionalidades y pruebas en varias áreas, pero su disponibilidad depende de la configuración, los datos y la plataforma. No equivale a un servicio de venta real: Renfe no publica API de reservas ni precios; reservas, asientos y pagos del proyecto son simulados. El reconocimiento facial usa código nativo y requiere compilar la app móvil.
 
 ---
 
@@ -27,8 +27,8 @@ Además, en la raíz:
 | `.claude/` | Config de Claude Code: hook de inicio que lee el vault y comando `/handoff`. |
 | `.opencode/` | Comandos de OpenCode (`/handoff`, `/estado`). |
 | `scripts/` | Scripts del monorepo (p. ej. `agent-context.mjs`, que resume el vault para las IAs). |
-| `docker-compose.yml` | Levanta todos los servicios en local (placeholder). |
-| `.github/` | Plantillas de PR/issues, CODEOWNERS y CI (placeholder). |
+| `docker-compose.yml` | Configura PostgreSQL, API y el worker GTFS de ejecución manual. |
+| `.github/` | Plantillas, CODEOWNERS y workflows de CI/PR. |
 
 ```
 renfe-app/

@@ -90,7 +90,7 @@ Comandos: `/rama` (empezar tarea), `/pr` (commits + handoff + push + PR), `/hand
 - Asientos, precios, reservas y pagos son **simulados** (Renfe solo publica GTFS/GTFS-RT). Stripe siempre en **modo test**.
 - Reconocimiento facial: solo se guardan embeddings, nunca fotos.
 - No cambies la config de CI, hooks ni protección de ramas sin que lo pida Kevin.
-- Esto es un esqueleto: no inventes funcionalidades que no estén en el sprint actual.
+- El estado de implementación evoluciona y la documentación puede quedarse atrás. Antes de proponer una función, inspecciona el código, sus pruebas y el README del área; reproduce el problema si es posible. Que una función exista en código no demuestra que esté desplegada o lista para producción. Respeta el alcance explícito de cada ticket y no inventes comportamiento fuera de él.
 
 ## 6. Mapa rápido
 
