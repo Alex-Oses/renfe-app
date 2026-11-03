@@ -4,6 +4,7 @@ import {
   buscarTrenes,
   comprobarApi,
   completarRuta,
+  comprarReserva,
   configurarApi,
   crearReserva,
   obtenerAsientos,
@@ -164,6 +165,45 @@ describe("reserva móvil autenticada", () => {
     );
     expect(aviso).toHaveBeenCalledOnce();
     quitar();
+  });
+});
+
+describe("compra completa desde móvil", () => {
+  afterEach(() => usarToken(null));
+
+  it("con API no pide /pagos/intent: la reserva creada ya está pagada", async () => {
+    configurarApi({ api: "http://api" });
+    usarToken("token-de-la-sesion");
+    const llamadas = api((url) => (url === "http://api/reservas"
+      ? Response.json({
+          id: "reserva-1",
+          localizador: "R-7K3M9Q",
+          estado: "pagada",
+          total: 45,
+          creada: "2026-11-02T07:00:00+01:00",
+          billetes: [],
+        }, { status: 201 })
+      : undefined));
+
+    const reserva = await comprarReserva(trenReserva, nuevaReserva);
+
+    expect(reserva.estado).toBe("pagada");
+    expect(llamadas.map((l) => l.url)).toEqual(["http://api/reservas"]);
+    expect(llamadas[0].init?.headers).toHaveProperty(
+      "Authorization",
+      "Bearer token-de-la-sesion",
+    );
+  });
+
+  it("sin sesión la compra se corta antes de la red y no devuelve reserva", async () => {
+    configurarApi({ api: "http://api" });
+    usarToken(null);
+    const llamadas = api(() => Response.json({}, { status: 201 }));
+
+    await expect(comprarReserva(trenReserva, nuevaReserva)).rejects.toThrow(
+      "Inicia sesión para comprar un billete.",
+    );
+    expect(llamadas).toHaveLength(0);
   });
 });
 

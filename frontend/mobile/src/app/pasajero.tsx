@@ -6,9 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import {
   calcularPrecio,
-  confirmarPagoSimulado,
-  crearIntentoPago,
-  crearReserva,
+  comprarReserva,
   obtenerAsientos,
   obtenerTren,
 } from "@renfe/shared/api/cliente";
@@ -179,7 +177,8 @@ export default function Pasajero() {
         email: email.trim(),
         tipo: tipos[i],
       }));
-      const r = await crearReserva(tren, {
+      // Con API la reserva ya nace pagada (no hay /pagos/intent); sin API hace el pago simulado.
+      const pagada = await comprarReserva(tren, {
         trenId,
         asientos: elegidos.map((a) => a.id),
         pasajeros,
@@ -188,8 +187,6 @@ export default function Pasajero() {
         extras,
         bebes,
       });
-      await crearIntentoPago(r.id);
-      const pagada = await confirmarPagoSimulado(r.id);
       setReserva(pagada);
       scroll.current?.scrollTo({ y: 0, animated: false });
     } catch (e) {

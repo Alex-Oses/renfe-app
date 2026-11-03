@@ -2,7 +2,7 @@
 
 - **Prioridad:** P0
 - **Área:** `frontend/mobile`, `frontend/shared`, `backend/api`
-- **Estado:** Corrección y pruebas automatizadas listas; pendiente de validar en un dispositivo móvil
+- **Estado:** Arreglado y verificado con pruebas automatizadas; pendiente de validar en un dispositivo móvil
 - **Dependencias:** Ninguna
 
 ## Problema reportado
@@ -28,3 +28,21 @@ Ejecutar pruebas de `shared` y móvil; probar con una sesión válida y otra aus
 - Con API configurada y sin sesión, antes del cambio el cliente enviaba la solicitud sin `Authorization` y mostraba el error HTTP genérico 401.
 - Ahora la compra sin sesión se detiene antes de la red con un aviso para iniciar sesión. Con sesión, `POST /reservas` conserva el token; ante un 401, invalida la sesión y no continúa el flujo de compra.
 - Pruebas automatizadas de `shared` y TypeScript de móvil pasan. No se pudo hacer la comprobación manual en Android/iOS: este entorno no tiene `adb`, SDK Android ni dispositivo conectado.
+
+## Resolución (2026-11-03, rama `fix/mobile-tickets-pendientes`)
+
+Al comprobar el arreglo anterior **con sesión** apareció un segundo fallo en la misma compra:
+
+- `pasajero.tsx` hacía `crearReserva` → `crearIntentoPago` → `confirmarPagoSimulado`. La API **no
+  tiene módulo de pagos**, así que `POST /pagos/intent` devuelve 404, y `confirmarPagoSimulado`
+  rechaza a propósito cuando hay API. Con token válido la reserva se creaba, pero la pantalla
+  mostraba error y el usuario no llegaba al billete.
+- Ahora la pantalla usa `comprarReserva`, el mismo camino que la web: con API devuelve la reserva de
+  `POST /reservas`, que ya nace pagada; sin API conserva el pago simulado.
+- Pruebas nuevas en `frontend/shared/api/cliente.test.ts` («compra completa desde móvil»): con sesión
+  se envía `Authorization: Bearer …`, no se llama a `/pagos/intent` y la reserva vuelve `pagada`; sin
+  sesión la compra se corta antes de la red y no se devuelve reserva.
+- Comprobado: `pnpm --filter @renfe/shared test` (148 pruebas) y `pnpm --filter @renfe/mobile lint`
+  en verde.
+- Pendiente: la prueba manual en Android/iOS sigue sin hacerse en este entorno (sin SDK ni
+  dispositivo). Detalle en [[2026-11-03-buffy-ticket-001-bearer-pago-movil]].
