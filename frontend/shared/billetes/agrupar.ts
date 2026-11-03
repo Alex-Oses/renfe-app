@@ -28,7 +28,7 @@ function sonTransbordo(a: Viaje, b: Viaje): boolean {
   return espera >= 15 && espera <= 180 && Math.abs(Date.parse(y.emitido) - Date.parse(x.emitido)) <= 15 * MINUTO;
 }
 
-const emision = (v: Viaje) => Date.parse(v.billetes[0]!.emitido);
+const emision = (v: Viaje) => Date.parse(v.billetes[0]!.emitido ?? "");
 
 // Si el mismo viaje se compra dos veces seguidas, cada segundo tren va con el primero que se emitió más cerca.
 export function unirTransbordos(viajes: Viaje[]): Viaje[] {
