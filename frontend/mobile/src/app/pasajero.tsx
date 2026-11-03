@@ -1,3 +1,4 @@
+import { documentoValido, emailValido } from "@renfe/shared/billetes/viaje";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
@@ -37,8 +38,6 @@ interface DatosViajero {
 
 const vacio = (): DatosViajero => ({ nombre: "", apellidos: "", documento: "" });
 
-const validarDocumento = (v: string) => /^[A-Za-z0-9]{6,12}$/.test(v.trim());
-const validarEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v.trim());
 
 const duracion = (t: Tren) => {
   const min = Math.max(0, Math.round((Date.parse(t.llegada) - Date.parse(t.salida)) / 60_000));
@@ -133,10 +132,10 @@ export default function Pasajero() {
       if (!p.nombre.trim()) nuevos[`${i}-nombre`] = "Escribe el nombre.";
       if (!p.apellidos.trim()) nuevos[`${i}-apellidos`] = "Escribe los apellidos.";
       if (!p.documento.trim()) nuevos[`${i}-documento`] = "Escribe el documento.";
-      else if (!validarDocumento(p.documento)) nuevos[`${i}-documento`] = "Entre 6 y 12 letras o números, sin espacios.";
+      else if (!documentoValido(p.documento)) nuevos[`${i}-documento`] = "Entre 6 y 12 letras o números, sin espacios.";
     });
     if (!email.trim()) nuevos.email = "Escribe un correo de contacto.";
-    else if (!validarEmail(email)) nuevos.email = "Ese correo no parece válido.";
+    else if (!emailValido(email)) nuevos.email = "Ese correo no parece válido.";
     if (!elegidos.length || elegidos.length < n) nuevos.asientos = "No quedan asientos libres suficientes en este tren.";
     setErrores(nuevos);
     return Object.keys(nuevos).length === 0;

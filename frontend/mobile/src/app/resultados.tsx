@@ -1,3 +1,4 @@
+import { FRANJAS, duracionMin, minutosDelDia } from "@renfe/shared/billetes/viaje";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -15,11 +16,6 @@ import { euros, horaLocal } from "@renfe/shared/formato/formato";
 import { colores, espaciado, estilos, fuentes, gradientes, radios, sombras, tipografia, tonos } from "@/tema";
 import { LinearGradient } from "expo-linear-gradient";
 
-const FRANJAS = [
-  { id: "manana", texto: "Mañana", desde: 0, hasta: 12 * 60 },
-  { id: "tarde", texto: "Tarde", desde: 12 * 60, hasta: 18 * 60 },
-  { id: "noche", texto: "Noche", desde: 18 * 60, hasta: 24 * 60 },
-] as const;
 const ORDENES = [
   { id: "hora", texto: "Hora" },
   { id: "precio", texto: "Precio" },
@@ -27,11 +23,6 @@ const ORDENES = [
 ] as const;
 type Orden = (typeof ORDENES)[number]["id"];
 
-const minutos = (iso: string) => {
-  const m = /T(\d{2}):(\d{2})/.exec(iso);
-  return m ? Number(m[1]) * 60 + Number(m[2]) : 0;
-};
-const duracion = (t: Tren) => (new Date(t.llegada).getTime() - new Date(t.salida).getTime()) / 60_000;
 const textoDuracion = (min: number) =>
   min < 60 ? `${Math.round(min)} min` : `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")}`;
 const hoyIso = () => new Date().toISOString().slice(0, 10);
@@ -127,17 +118,17 @@ export default function Resultados() {
         .filter(
           (t) =>
             !franjas.length ||
-            FRANJAS.some((f) => franjas.includes(f.id) && minutos(t.salida) >= f.desde && minutos(t.salida) < f.hasta),
+            FRANJAS.some((f) => franjas.includes(f.id) && minutosDelDia(t.salida) >= f.desde && minutosDelDia(t.salida) < f.hasta),
         )
         .sort((a, b) => {
           if (orden === "precio") return a.precioDesde - b.precioDesde;
-          if (orden === "duracion") return duracion(a) - duracion(b);
+          if (orden === "duracion") return duracionMin(a) - duracionMin(b);
           return a.salida.localeCompare(b.salida);
         }),
     [trenes, tipos, franjas, orden],
   );
-  const inicio = trenes?.length ? Math.min(...trenes.map((t) => minutos(t.salida))) : 0;
-  const fin = trenes?.length ? Math.max(...trenes.map((t) => minutos(t.salida) + duracion(t))) : 1;
+  const inicio = trenes?.length ? Math.min(...trenes.map((t) => minutosDelDia(t.salida))) : 0;
+  const fin = trenes?.length ? Math.max(...trenes.map((t) => minutosDelDia(t.salida) + duracionMin(t))) : 1;
   const origenNombre = ESTACIONES.find((e) => e.id === origen) ?? (params.origenNombre ? { id: origen, nombre: params.origenNombre } : undefined);
   const destinoNombre = ESTACIONES.find((e) => e.id === destino) ?? (params.destinoNombre ? { id: destino, nombre: params.destinoNombre } : undefined);
   const semanas = [-3, -2, -1, 0, 1, 2, 3].map((d) => moverDia(fecha, d));
@@ -343,8 +334,8 @@ export default function Resultados() {
           ) : (
             <View style={styles.lista}>
               {visibles.map((t, i) => {
-                const dur = duracion(t);
-                const izquierda = ((minutos(t.salida) - inicio) / Math.max(fin - inicio, 1)) * 100;
+                const dur = duracionMin(t);
+                const izquierda = ((minutosDelDia(t.salida) - inicio) / Math.max(fin - inicio, 1)) * 100;
                 const ancho = Math.max((dur / Math.max(fin - inicio, 1)) * 100, 6);
                 const completo = t.plazasLibres < pasajeros;
                 const expandido = abierto === t.id;

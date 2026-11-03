@@ -1,3 +1,4 @@
+import { FRANJAS, duracionMin, minutosDelDia } from "@renfe/shared/billetes/viaje";
 import { euros, hora } from "@renfe/shared/formato/formato";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -10,22 +11,12 @@ import "./resultados.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 
-const minutos = (iso: string) => {
-  const [h, m] = hora(iso).split(":").map(Number);
-  return h * 60 + m;
-};
-const duracion = (t: Tren) => (new Date(t.llegada).getTime() - new Date(t.salida).getTime()) / 60_000;
 const textoDuracion = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")}`;
 
-const FRANJAS = [
-  { id: "manana", texto: "Mañana", desde: 0, hasta: 12 * 60 },
-  { id: "tarde", texto: "Tarde", desde: 12 * 60, hasta: 18 * 60 },
-  { id: "noche", texto: "Noche", desde: 18 * 60, hasta: 24 * 60 },
-] as const;
 const ORDENES = {
   hora: { texto: "Hora", f: (a: Tren, b: Tren) => a.salida.localeCompare(b.salida) },
   precio: { texto: "Precio", f: (a: Tren, b: Tren) => a.precioDesde - b.precioDesde },
-  duracion: { texto: "Duración", f: (a: Tren, b: Tren) => duracion(a) - duracion(b) },
+  duracion: { texto: "Duración", f: (a: Tren, b: Tren) => duracionMin(a) - duracionMin(b) },
 };
 type Orden = keyof typeof ORDENES;
 
@@ -116,14 +107,14 @@ export function Resultados() {
     () =>
       (trenes ?? [])
         .filter((t) => !tipos.size || tipos.has(t.tipo))
-        .filter((t) => !franjas.size || FRANJAS.some((f) => franjas.has(f.id) && minutos(t.salida) >= f.desde && minutos(t.salida) < f.hasta))
+        .filter((t) => !franjas.size || FRANJAS.some((f) => franjas.has(f.id) && minutosDelDia(t.salida) >= f.desde && minutosDelDia(t.salida) < f.hasta))
         .sort(ORDENES[orden].f),
     [trenes, tipos, franjas, orden],
   );
 
   // Escala común: la barra de cada tren ocupa su franja real dentro del día.
-  const inicio = trenes?.length ? Math.min(...trenes.map((t) => minutos(t.salida))) : 0;
-  const fin = trenes?.length ? Math.max(...trenes.map((t) => minutos(t.salida) + duracion(t))) : 1;
+  const inicio = trenes?.length ? Math.min(...trenes.map((t) => minutosDelDia(t.salida))) : 0;
+  const fin = trenes?.length ? Math.max(...trenes.map((t) => minutosDelDia(t.salida) + duracionMin(t))) : 1;
   const fechaLarga = fecha
     ? new Date(`${fecha}T12:00:00`).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })
     : "";
@@ -299,8 +290,8 @@ export function Resultados() {
       {visibles.length > 0 && (
         <ol className="trenes" aria-live="polite">
           {visibles.map((t, i) => {
-            const dur = duracion(t);
-            const izquierda = ((minutos(t.salida) - inicio) / (fin - inicio)) * 100;
+            const dur = duracionMin(t);
+            const izquierda = ((minutosDelDia(t.salida) - inicio) / (fin - inicio)) * 100;
             const ancho = (dur / (fin - inicio)) * 100;
             const completo = t.plazasLibres < pasajeros;
             return (
