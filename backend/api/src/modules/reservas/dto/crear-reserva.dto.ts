@@ -11,17 +11,8 @@ import {
   Matches,
   ValidateNested,
 } from 'class-validator';
+import { EXTRAS, FACTOR_TARIFA, PCT_DESCUENTO, TIPOS_VIAJERO, type TipoViajero } from '../../../common/simulado/precio.js';
 import { FEEDS, type Feed } from '../../estaciones/dto/buscar-estaciones.dto.js';
-import {
-  IDS_DESCUENTO,
-  IDS_EXTRA,
-  IDS_TARIFA,
-  IDS_TIPO_VIAJERO,
-  type IdDescuento,
-  type IdExtra,
-  type IdTarifa,
-  type TipoViajero,
-} from '../../../common/simulado/precios.js';
 
 export class PasajeroDto {
   @ApiProperty({ description: 'Nombre completo del viajero (va en el QR)', example: 'Lucía Pérez Gómez' })
@@ -37,13 +28,9 @@ export class PasajeroDto {
   @Length(4, 20)
   documento!: string;
 
-  @ApiProperty({
-    enum: IDS_TIPO_VIAJERO,
-    description: 'Sin tipo = adulto',
-    required: false,
-  })
+  @ApiProperty({ required: false, enum: TIPOS_VIAJERO, description: 'Niño (4-13): 40 % de descuento' })
   @IsOptional()
-  @IsIn(IDS_TIPO_VIAJERO)
+  @IsIn(TIPOS_VIAJERO)
   tipo?: TipoViajero;
 }
 
@@ -93,20 +80,20 @@ export class CrearReservaDto {
   @Matches(/^\d-\d{1,2}[A-D]$/, { each: true })
   asientos?: string[];
 
-  @ApiProperty({ enum: IDS_TARIFA, description: 'Por defecto, básico', required: false })
+  @ApiProperty({ required: false, enum: Object.keys(FACTOR_TARIFA) })
   @IsOptional()
-  @IsIn(IDS_TARIFA)
-  tarifa?: IdTarifa;
+  @IsIn(Object.keys(FACTOR_TARIFA))
+  tarifa?: string;
 
-  @ApiProperty({ enum: IDS_DESCUENTO, description: 'Por defecto, sin descuento', required: false })
+  @ApiProperty({ required: false, enum: Object.keys(PCT_DESCUENTO) })
   @IsOptional()
-  @IsIn(IDS_DESCUENTO)
-  descuento?: IdDescuento;
+  @IsIn(Object.keys(PCT_DESCUENTO))
+  descuento?: string;
 
-  @ApiProperty({ enum: IDS_EXTRA, isArray: true, required: false })
+  @ApiProperty({ required: false, isArray: true, enum: Object.keys(EXTRAS) })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(5)
-  @IsIn(IDS_EXTRA, { each: true })
-  extras?: IdExtra[];
+  @IsIn(Object.keys(EXTRAS), { each: true })
+  extras?: string[];
 }

@@ -1,5 +1,7 @@
 // Fotos de Wikimedia Commons (licencias libres) por ciudad o lugar, comprobadas con curl (200/302).
 // Generado con la imagen P18 de Wikidata; el autor y la licencia vienen de los metadatos de Commons.
+import { fotosExtra } from "./imagenes-extra";
+
 export type Foto = { archivo: string; autor: string };
 
 export const fotos: Record<string, Foto> = {
@@ -186,6 +188,22 @@ export function urlFoto(archivo: string, ancho = 800): string {
   return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(archivo)}?width=${ancho}`;
 }
 
+// Una semilla por carga de página: la foto de cada ciudad cambia entre visitas pero no al volver a pintar.
+let semilla = Math.floor(Math.random() * 1_000);
+/** Solo para tests: fija la variante (0 = la foto principal de `fotos`). */
+export const fijarSemilla = (n: number) => void (semilla = n);
+
+const hash = (t: string) => [...t].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+
+/** Todas las fotos de una ciudad: la principal y las extra de Commons. */
+export const variantes = (slug: string): Foto[] => (fotos[slug] ? [fotos[slug], ...(fotosExtra[slug] ?? [])] : []);
+
+/** La foto de esta visita para una ciudad; cada ciudad cae en una variante distinta. */
+export function fotoDe(slug: string): Foto | undefined {
+  const lista = variantes(slug);
+  return lista.length ? lista[(semilla + hash(slug)) % lista.length] : undefined;
+}
+
 // Claves más largas primero: "villanueva-de-cordoba" gana a "cordoba".
 const claves = Object.keys(fotos).sort((a, b) => b.length - a.length);
 
@@ -216,9 +234,9 @@ export function fotoDeRuta(ruta: string): Foto | undefined {
   const slug = (tramos[0] === "cercanias" ? tramos[1] : tramos[tramos.length - 1]) ?? "";
   const alias: Record<string, string> = { "rodalies-catalunya": "barcelona", "murcia-alicante": "murcia" };
   const s = alias[slug] ?? slug;
-  if (fotos[s]) return fotos[s];
+  if (fotos[s]) return fotoDe(s);
   const k = claves.find((c) => s.endsWith("-" + c) || s.startsWith(c + "-") || s.includes("-" + c + "-"));
-  return k ? fotos[k] : undefined;
+  return k ? fotoDe(k) : undefined;
 }
 
 /** Foto de la ciudad de un núcleo de Cercanías (`/cercanias/madrid`), no de sus subpáginas. */

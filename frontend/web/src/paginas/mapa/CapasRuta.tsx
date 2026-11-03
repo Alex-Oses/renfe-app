@@ -5,26 +5,10 @@ import { ESTACIONES } from "@renfe/shared/api/simulado";
 import type { PosicionTren } from "@renfe/shared/api/tipos";
 import { COLOR_TIPO } from "./CapaTrenes";
 import { extremos } from "@renfe/shared/estado/estado-tren";
+// El corte del recorrido es común con la app Expo: partir-ruta.ts y sus tests viven en shared.
+import { partirRuta, type PuntoRuta } from "@renfe/shared/estado/partir-ruta";
 
-type LL = [number, number];
-
-// Corta la ruta en el punto más cercano al tren: lo anterior es lo recorrido.
-export function partirRuta(ruta: LL[], lat: number, lon: number): { hecho: LL[]; pendiente: LL[] } {
-  if (ruta.length < 2) return { hecho: [], pendiente: ruta };
-  const k = Math.cos((lat * Math.PI) / 180); // escala de la longitud
-  let mejor = { i: 0, d: Infinity, q: ruta[0] };
-  for (let i = 0; i < ruta.length - 1; i++) {
-    const [a, b] = [ruta[i], ruta[i + 1]];
-    const dx = (b[1] - a[1]) * k;
-    const dy = b[0] - a[0];
-    const l2 = dx * dx + dy * dy || 1e-12;
-    const f = Math.max(0, Math.min(1, (((lon - a[1]) * k) * dx + (lat - a[0]) * dy) / l2));
-    const q: LL = [a[0] + dy * f, a[1] + (b[1] - a[1]) * f];
-    const d = ((q[1] - lon) * k) ** 2 + (q[0] - lat) ** 2;
-    if (d < mejor.d) mejor = { i, d, q };
-  }
-  return { hecho: [...ruta.slice(0, mejor.i + 1), mejor.q], pendiente: [mejor.q, ...ruta.slice(mejor.i + 1)] };
-}
+type LL = PuntoRuta;
 
 export function RutaElegida({ tren }: { tren: PosicionTren }) {
   const c = COLOR_TIPO[tren.tipo];

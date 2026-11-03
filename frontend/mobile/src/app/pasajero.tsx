@@ -1,37 +1,31 @@
 import { documentoValido, emailValido } from "@renfe/shared/billetes/viaje";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
-import { haSalido } from "@renfe/shared/api/salidas";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
-import {
-  calcularPrecio,
-  comprarReserva,
-  obtenerAsientos,
-  obtenerTren,
-} from "@renfe/shared/api/cliente";
+import { comprarReserva, obtenerAsientos, obtenerTren } from "@renfe/shared/api/cliente";
 import { DESCUENTOS, EXTRAS, TARIFAS, calcularTotal, precioExtra } from "@renfe/shared/api/simulado-precios";
-import { nombreDeTarifa, resolverTarifa } from "@renfe/shared/api/tarifas";
-import { ciudadDe, type Asiento, type IdDescuento, type IdExtra, type IdTarifa, type Pasajero, type Reserva, type Tren } from "@renfe/shared/api/tipos";
+import {
+  ciudadDe,
+  type Asiento,
+  type IdDescuento,
+  type IdExtra,
+  type IdTarifa,
+  type Pasajero,
+  type Reserva,
+  type Tren,
+} from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { Campo } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
+import { MapaAsientos } from "@/components/compra/MapaAsientos";
+import { PasosCompra } from "@/components/compra/PasosCompra";
 import { euros, fechaCorta, horaLocal } from "@renfe/shared/formato/formato";
-import { abrirConfirmacionFacial, consumirConfirmacion, decidirCompra } from "@/compra/confirmacion-facial";
-import { leerSesion } from "@/sesion";
 import { colores, espaciado, estilos, fuentes, gradientes, sombras, tonos } from "@/tema";
-
-// Clase de asiento que encaja con cada tarifa: así el precio que se enseña es el que se cobra.
-const CLASE_DE_TARIFA: Record<IdTarifa, Asiento["clase"]> = {
-  basico: "Estándar",
-  elige: "Estándar",
-  "elige-confort": "Confort",
-  premium: "Prémium",
-};
 
 interface DatosViajero {
   nombre: string;
@@ -39,8 +33,11 @@ interface DatosViajero {
   documento: string;
 }
 
-const vacio = (): DatosViajero => ({ nombre: "", apellidos: "", documento: "" });
-
+const vacio = (): DatosViajero => ({
+  nombre: "",
+  apellidos: "",
+  documento: "",
+});
 
 const duracion = (t: Tren) => {
   const min = Math.max(0, Math.round((Date.parse(t.llegada) - Date.parse(t.salida)) / 60_000));
@@ -55,15 +52,11 @@ export default function Pasajero() {
   const bebes = Math.max(Number(params.bebes) || 0, 0);
   const adultos = Math.max(n - ninos, 1);
   const descuento = (DESCUENTOS.find((d) => d.id === params.descuento)?.id ?? "ninguno") as IdDescuento;
-  const tarifaInicial = resolverTarifa(params.tarifa);
+  const tarifaInicial = (TARIFAS.find((t) => t.id === params.tarifa)?.id ?? "basico") as IdTarifa;
 
   const [tren, setTren] = useState<Tren | null>(null);
   const [asientos, setAsientos] = useState<Asiento[] | null>(null);
   const [tarifa, setTarifa] = useState<IdTarifa>(tarifaInicial);
-  // Si se llega desde otra búsqueda con otra tarifa, el estado se sincroniza con la URL.
-  useEffect(() => {
-    setTarifa(tarifaInicial);
-  }, [tarifaInicial]);
   const [datos, setDatos] = useState<DatosViajero[]>(() => Array.from({ length: n }, vacio));
   const [email, setEmail] = useState("");
   const [extras, setExtras] = useState<IdExtra[]>([]);
@@ -72,37 +65,31 @@ export default function Pasajero() {
   const [cargando, setCargando] = useState(true);
   const [pagando, setPagando] = useState(false);
   const [reserva, setReserva] = useState<Reserva | null>(null);
-  const [desgloseApi, setDesgloseApi] = useState<{ billetes: number; extras: number; total: number } | null>(null);
+  // 0 Asientos, 1 Viajeros, 2 Pago (3 Listo = reserva hecha).
+  const [paso, setPaso] = useState(0);
+  const [ids, setIds] = useState<string[]>([]);
   const scroll = useRef<ScrollViewInstance>(null);
-  const intentoFacial = useRef<string | null>(null);
 
   useEffect(() => {
     let vivo = true;
     obtenerTren(trenId)
       .then(async (detalle) => {
         const t = soloTramo(detalle, params.origen, params.destino);
-        if (haSalido(t.salida)) return null;
         return [t, await obtenerAsientos(t)] as const;
       })
       .then(
-      (par) => {
-        if (!vivo) return;
-        if (!par) {
-          setError("Ese tren ya ha salido. Vuelve a los resultados y elige otro.");
+        ([t, a]) => {
+          if (!vivo) return;
+          setTren(t);
+          setAsientos(a);
           setCargando(false);
-          return;
-        }
-        const [t, a] = par;
-        setTren(t);
-        setAsientos(a);
-        setCargando(false);
-      },
-      (e: Error) => {
-        if (!vivo) return;
-        setError(e.message);
-        setCargando(false);
-      },
-    );
+        },
+        (e: Error) => {
+          if (!vivo) return;
+          setError(e.message);
+          setCargando(false);
+        },
+      );
     return () => {
       vivo = false;
     };
@@ -110,14 +97,13 @@ export default function Pasajero() {
 
   const tipos = useMemo(() => Array.from({ length: n }, (_, i) => (i >= n - ninos ? ("nino" as const) : ("adulto" as const))), [n, ninos]);
 
-  // Asignación automática: los primeros libres de la clase que toca. En una app real se elegirían en un plano.
-  const elegidos = useMemo(() => {
-    if (!asientos) return [];
-    const libres = asientos.filter((a) => a.libre);
-    const clase = CLASE_DE_TARIFA[tarifa];
-    const deClase = libres.filter((a) => a.clase === clase);
-    return (deClase.length >= n ? deClase : libres).slice(0, n);
-  }, [asientos, n, tarifa]);
+  // Asientos elegidos en el mapa, en el orden en que se marcaron (el 1.º es del viajero 1).
+  const elegidos = useMemo(() => ids.map((id) => asientos?.find((a) => a.id === id)).filter((a): a is Asiento => !!a), [asientos, ids]);
+
+  const irA = (i: number) => {
+    setPaso(i);
+    scroll.current?.scrollTo({ y: 0, animated: false });
+  };
 
   const desglose = useMemo(
     () =>
@@ -130,25 +116,6 @@ export default function Pasajero() {
       }),
     [elegidos, tipos, tarifa, descuento, extras],
   );
-
-  useEffect(() => {
-    if (!tren || !elegidos.length) {
-      setDesgloseApi(null);
-      return;
-    }
-    let vivo = true;
-    const pasajeros = tipos.map((tipo) => ({ nombre: "", apellidos: "", documento: "", email: "", tipo }));
-    calcularPrecio(
-      tren,
-      { trenId, asientos: elegidos.map((a) => a.id), pasajeros, tarifa, descuento, extras, bebes },
-      elegidos.map((a) => a.precio),
-    )
-      .then((r) => vivo && setDesgloseApi(r))
-      .catch((e: Error) => vivo && setError(e.message));
-    return () => {
-      vivo = false;
-    };
-  }, [tren, trenId, elegidos, tipos, tarifa, descuento, extras, bebes]);
 
   const cambiar = (i: number, campo: keyof DatosViajero, valor: string) => {
     setDatos((d) => d.map((p, j) => (j === i ? { ...p, [campo]: valor } : p)));
@@ -171,16 +138,16 @@ export default function Pasajero() {
     });
     if (!email.trim()) nuevos.email = "Escribe un correo de contacto.";
     else if (!emailValido(email)) nuevos.email = "Ese correo no parece válido.";
-    if (!elegidos.length || elegidos.length < n) nuevos.asientos = "No quedan asientos libres suficientes en este tren.";
+    if (elegidos.length !== n) nuevos.asientos = `Elige ${n} ${n === 1 ? "asiento" : "asientos"} en el mapa.`;
     setErrores(nuevos);
     return Object.keys(nuevos).length === 0;
   };
 
-  // Compra ya validada: solo se llama con la confirmación facial de este intento.
-  const comprar = useCallback(async () => {
+  const pagar = async () => {
     if (!tren) return;
-    if (haSalido(tren.salida)) {
-      setError("Ese tren ya ha salido. Vuelve a los resultados y elige otro.");
+    if (!validar()) {
+      setError("");
+      irA(elegidos.length !== n ? 0 : 1);
       return;
     }
     setError("");
@@ -193,8 +160,7 @@ export default function Pasajero() {
         email: email.trim(),
         tipo: tipos[i],
       }));
-      // Con API la reserva ya nace pagada (no hay /pagos/intent); sin API hace el pago simulado.
-      const pagada = await comprarReserva(tren, {
+      const r = await comprarReserva(tren, {
         trenId,
         asientos: elegidos.map((a) => a.id),
         pasajeros,
@@ -203,58 +169,14 @@ export default function Pasajero() {
         extras,
         bebes,
       });
-      setReserva(pagada);
+      setReserva(r);
       scroll.current?.scrollTo({ y: 0, animated: false });
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setPagando(false);
     }
-  }, [tren, datos, email, tipos, elegidos, trenId, tarifa, descuento, extras, bebes]);
-
-  const pagar = () => {
-    if (!tren) return;
-    if (haSalido(tren.salida)) {
-      setError("Ese tren ya ha salido. Vuelve a los resultados y elige otro.");
-      scroll.current?.scrollTo({ y: 0, animated: true });
-      return;
-    }
-    if (!validar()) {
-      setError("");
-      scroll.current?.scrollTo({ y: 0, animated: true });
-      return;
-    }
-    const sesion = leerSesion();
-    if (!sesion?.usuario.email) {
-      setError("Inicia sesión para comprar un billete.");
-      scroll.current?.scrollTo({ y: 0, animated: true });
-      return;
-    }
-    // La reserva no se envía hasta que la cara coincida con la de la sesión: el intento liga la
-    // verificación a esta compra concreta.
-    const intento = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    intentoFacial.current = intento;
-    abrirConfirmacionFacial(intento);
-    router.push({ pathname: "/cara", params: { intento, email: sesion.usuario.email } });
   };
-
-  // Al volver de la cámara se resuelve el intento: sin éxito no se compra.
-  useFocusEffect(
-    useCallback(() => {
-      const intento = intentoFacial.current;
-      if (!intento) return;
-      const resultado = consumirConfirmacion(intento);
-      if (!resultado) return;
-      intentoFacial.current = null;
-      const decision = decidirCompra(resultado);
-      if (!decision.continuar) {
-        setError(decision.mensaje);
-        scroll.current?.scrollTo({ y: 0, animated: true });
-        return;
-      }
-      void comprar();
-    }, [comprar]),
-  );
 
   if (cargando) {
     return (
@@ -282,6 +204,7 @@ export default function Pasajero() {
     const vuelta = params.vuelta ?? "";
     return (
       <Pantalla volver={() => router.replace("/")} sinAviso>
+        <PasosCompra indice={3} />
         <View style={styles.exito}>
           <LinearGradient
             colors={gradientes.marca}
@@ -344,7 +267,13 @@ export default function Pasajero() {
 
         {vuelta ? (
           <Cristal padding={espaciado[4]} gap={espaciado[3]}>
-            <View style={{ flexDirection: "row", gap: espaciado[3], alignItems: "center" }}>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: espaciado[3],
+                alignItems: "center",
+              }}
+            >
               <View style={styles.iconoRedondo}>
                 <Icono nombre="intercambiar" tamano={20} color={colores.marca} />
               </View>
@@ -382,10 +311,11 @@ export default function Pasajero() {
   }
 
   const tarifaActual = TARIFAS.find((t) => t.id === tarifa)!;
+  const libres = asientos?.filter((a) => a.libre).length ?? 0;
 
   return (
     <Pantalla
-      volver={() => router.back()}
+      volver={() => (paso > 0 ? irA(paso - 1) : router.back())}
       sinAviso
       scroll={false}
       contenido={{ paddingHorizontal: 12, paddingTop: 4, paddingBottom: 0 }}
@@ -401,15 +331,23 @@ export default function Pasajero() {
             Termina tu reserva
           </Text>
           <Text style={estilos.suave}>
-            {n} {n === 1 ? "viajero" : "viajeros"} · elige tarifa y rellena los datos
+            {n} {n === 1 ? "viajero" : "viajeros"} · {["elige tus asientos", "tarifa y datos", "revisa y paga"][paso]}
           </Text>
         </View>
+
+        <PasosCompra indice={paso} onIr={irA} />
 
         {error ? <Aviso texto={error} /> : null}
 
         <Cristal padding={espaciado[4]} gap={espaciado[2]}>
           <View style={estilos.entre}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: espaciado[2] }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: espaciado[2],
+              }}
+            >
               <View style={styles.tipoTren}>
                 <Text style={styles.tipoTrenTexto}>{tren.tipo}</Text>
               </View>
@@ -465,192 +403,224 @@ export default function Pasajero() {
           </View>
         </Cristal>
 
-        <View style={{ gap: espaciado[2] }}>
-          <Text style={estilos.h2}>Tu tarifa</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espaciado[2], paddingRight: 4 }}>
-            {TARIFAS.map((t) => {
-              const activa = t.id === tarifa;
-              const precio = calcularTotal({
-                precios: elegidos.map((a) => a.precio),
-                tipos,
-                tarifa: t.id,
-                descuento,
-              }).billetes;
-              return (
-                <Pressable
-                  key={t.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: activa }}
-                  onPress={() => setTarifa(t.id)}
-                  style={({ pressed }) => [
-                    styles.tarjetaTarifa,
-                    activa && styles.tarjetaTarifaActiva,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <View style={estilos.entre}>
-                    <Text style={[styles.tarifaNombre, activa && { color: colores.marca }]}>{t.nombre}</Text>
-                    {activa ? <Icono nombre="check" tamano={18} color={colores.marca} grosor={2.3} /> : null}
-                  </View>
-                  <Text style={styles.tarifaPrecio}>{euros(precio)}</Text>
-                  <Text style={styles.tarifaTexto} numberOfLines={2}>
-                    {t.incluye[0]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+        {paso === 0 ? (
+          <View style={{ gap: espaciado[2] }}>
+            <Text style={estilos.h2}>Elige tus asientos</Text>
+            {libres < n ? (
+              <Aviso texto="No quedan asientos libres suficientes en este tren." />
+            ) : asientos ? (
+              <MapaAsientos asientos={asientos} n={n} elegidos={ids} onCambio={setIds} />
+            ) : null}
+            <Boton texto="Continuar con los viajeros" desactivado={elegidos.length !== n} onPress={() => irA(1)} />
+          </View>
+        ) : null}
 
-        <View style={{ gap: espaciado[2] }}>
-          <Text style={estilos.h2}>Viajeros</Text>
-          <Text style={estilos.suave}>
-            Asientos asignados automáticamente ({tarifaActual.nombre}). Podrás elegir otro en el próximo sprint.
-          </Text>
-          {datos.map((p, i) => {
-            const asiento = elegidos[i];
-            return (
-              <Cristal key={i} padding={espaciado[4]} gap={espaciado[3]}>
-                <View style={estilos.entre}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: espaciado[2] }}>
-                    <View style={styles.numeroViajero}>
-                      <Text style={styles.numeroViajeroTexto}>{i + 1}</Text>
-                    </View>
-                    <View style={{ gap: 1 }}>
-                      <Text style={estilos.subtitulo}>Viajero {i + 1}</Text>
-                      <Text style={estilos.suave}>{tipos[i] === "nino" ? "Niño (4-13 años)" : "Adulto"}</Text>
-                    </View>
-                  </View>
-                  {asiento ? (
-                    <View style={styles.asiento}>
-                      <Icono nombre="tren" tamano={14} color={colores.marca} />
-                      <Text style={styles.asientoTexto}>
-                        {asiento.coche}-{asiento.fila}
-                        {asiento.letra}
+        {paso === 1 ? (
+          <>
+            <View style={{ gap: espaciado[2] }}>
+              <Text style={estilos.h2}>Tu tarifa</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: espaciado[2], paddingRight: 4 }}>
+                {TARIFAS.map((t) => {
+                  const activa = t.id === tarifa;
+                  const precio = calcularTotal({
+                    precios: elegidos.map((a) => a.precio),
+                    tipos,
+                    tarifa: t.id,
+                    descuento,
+                  }).billetes;
+                  return (
+                    <Pressable
+                      key={t.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: activa }}
+                      onPress={() => setTarifa(t.id)}
+                      style={({ pressed }) => [styles.tarjetaTarifa, activa && styles.tarjetaTarifaActiva, pressed && { opacity: 0.85 }]}
+                    >
+                      <View style={estilos.entre}>
+                        <Text style={[styles.tarifaNombre, activa && { color: colores.marca }]}>{t.nombre}</Text>
+                        {activa ? <Icono nombre="check" tamano={18} color={colores.marca} grosor={2.3} /> : null}
+                      </View>
+                      <Text style={styles.tarifaPrecio}>{euros(precio)}</Text>
+                      <Text style={styles.tarifaTexto} numberOfLines={2}>
+                        {t.incluye[0]}
                       </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            <View style={{ gap: espaciado[2] }}>
+              <Text style={estilos.h2}>Viajeros</Text>
+              <Text style={estilos.suave}>Tarifa {tarifaActual.nombre}. Asiento de cada viajero según el orden en que los elegiste.</Text>
+              {datos.map((p, i) => {
+                const asiento = elegidos[i];
+                return (
+                  <Cristal key={i} padding={espaciado[4]} gap={espaciado[3]}>
+                    <View style={estilos.entre}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: espaciado[2],
+                        }}
+                      >
+                        <View style={styles.numeroViajero}>
+                          <Text style={styles.numeroViajeroTexto}>{i + 1}</Text>
+                        </View>
+                        <View style={{ gap: 1 }}>
+                          <Text style={estilos.subtitulo}>Viajero {i + 1}</Text>
+                          <Text style={estilos.suave}>{tipos[i] === "nino" ? "Niño (4-13 años)" : "Adulto"}</Text>
+                        </View>
+                      </View>
+                      {asiento ? (
+                        <View style={styles.asiento}>
+                          <Icono nombre="tren" tamano={14} color={colores.marca} />
+                          <Text style={styles.asientoTexto}>
+                            {asiento.coche}-{asiento.fila}
+                            {asiento.letra}
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
-                  ) : null}
+                    <Campo
+                      etiqueta="Nombre"
+                      value={p.nombre}
+                      onChangeText={(v) => cambiar(i, "nombre", v)}
+                      placeholder="Ana"
+                      autoComplete="given-name"
+                      error={errores[`${i}-nombre`]}
+                    />
+                    <Campo
+                      etiqueta="Apellidos"
+                      value={p.apellidos}
+                      onChangeText={(v) => cambiar(i, "apellidos", v)}
+                      placeholder="García López"
+                      autoComplete="family-name"
+                      error={errores[`${i}-apellidos`]}
+                    />
+                    <Campo
+                      etiqueta="DNI, NIE o pasaporte"
+                      value={p.documento}
+                      onChangeText={(v) => cambiar(i, "documento", v)}
+                      placeholder="12345678Z"
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      error={errores[`${i}-documento`]}
+                    />
+                  </Cristal>
+                );
+              })}
+              <Cristal padding={espaciado[4]} gap={espaciado[3]}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: espaciado[2],
+                    alignItems: "center",
+                  }}
+                >
+                  <Icono nombre="info" tamano={20} color={colores.marca} />
+                  <Text style={[estilos.subtitulo, { flex: 1 }]}>Correo de contacto</Text>
                 </View>
                 <Campo
-                  etiqueta="Nombre"
-                  value={p.nombre}
-                  onChangeText={(v) => cambiar(i, "nombre", v)}
-                  placeholder="Ana"
-                  autoComplete="given-name"
-                  error={errores[`${i}-nombre`]}
+                  etiqueta="Email"
+                  value={email}
+                  onChangeText={(v) => {
+                    setEmail(v);
+                    if (errores.email) setErrores((e) => ({ ...e, email: "" }));
+                  }}
+                  placeholder="ana@correo.es"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  error={errores.email}
                 />
-                <Campo
-                  etiqueta="Apellidos"
-                  value={p.apellidos}
-                  onChangeText={(v) => cambiar(i, "apellidos", v)}
-                  placeholder="García López"
-                  autoComplete="family-name"
-                  error={errores[`${i}-apellidos`]}
-                />
-                <Campo
-                  etiqueta="DNI, NIE o pasaporte"
-                  value={p.documento}
-                  onChangeText={(v) => cambiar(i, "documento", v)}
-                  placeholder="12345678Z"
-                  autoCapitalize="characters"
-                  autoComplete="off"
-                  error={errores[`${i}-documento`]}
-                />
+                <Text style={estilos.suave}>Te enviaremos ahí el localizador y los cambios del viaje.</Text>
               </Cristal>
-            );
-          })}
-          <Cristal padding={espaciado[4]} gap={espaciado[3]}>
-            <View style={{ flexDirection: "row", gap: espaciado[2], alignItems: "center" }}>
-              <Icono nombre="info" tamano={20} color={colores.marca} />
-              <Text style={[estilos.subtitulo, { flex: 1 }]}>Correo de contacto</Text>
             </View>
-            <Campo
-              etiqueta="Email"
-              value={email}
-              onChangeText={(v) => {
-                setEmail(v);
-                if (errores.email) setErrores((e) => ({ ...e, email: "" }));
+
+            <View style={{ gap: espaciado[2] }}>
+              <Text style={estilos.h2}>Añade a tu viaje</Text>
+              <View style={styles.extras}>
+                {EXTRAS.map((e) => {
+                  const activo = extras.includes(e.id);
+                  const precio = precioExtra(e.id, n, tarifa);
+                  return (
+                    <Pressable
+                      key={e.id}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: activo }}
+                      onPress={() => setExtras((s) => (activo ? s.filter((x) => x !== e.id) : [...s, e.id]))}
+                      style={({ pressed }) => [styles.extra, activo && styles.extraActivo, pressed && { opacity: 0.8 }]}
+                    >
+                      <View
+                        style={[
+                          styles.extraCheck,
+                          activo && {
+                            backgroundColor: colores.marca,
+                            borderColor: colores.marca,
+                          },
+                        ]}
+                      >
+                        {activo ? <Icono nombre="check" tamano={13} color="#fff" grosor={2.6} /> : null}
+                      </View>
+                      <Text style={styles.extraNombre} numberOfLines={2}>
+                        {e.nombre}
+                      </Text>
+                      <Text style={styles.extraPrecio}>{precio === 0 ? "Incluido" : euros(precio)}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <Boton
+              texto="Continuar al pago"
+              onPress={() => {
+                if (validar()) irA(2);
+                else scroll.current?.scrollTo({ y: 0, animated: true });
               }}
-              placeholder="ana@correo.es"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              error={errores.email}
             />
-            <Text style={estilos.suave}>Te enviaremos ahí el localizador y los cambios del viaje.</Text>
-          </Cristal>
-        </View>
+          </>
+        ) : null}
 
-        <View style={{ gap: espaciado[2] }}>
-          <Text style={estilos.h2}>Añade a tu viaje</Text>
-          <View style={styles.extras}>
-            {EXTRAS.map((e) => {
-              const activo = extras.includes(e.id);
-              const precio = precioExtra(e.id, n, tarifa);
-              return (
-                <Pressable
-                  key={e.id}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: activo }}
-                  onPress={() => setExtras((s) => (activo ? s.filter((x) => x !== e.id) : [...s, e.id]))}
-                  style={({ pressed }) => [styles.extra, activo && styles.extraActivo, pressed && { opacity: 0.8 }]}
-                >
-                  <View style={[styles.extraCheck, activo && { backgroundColor: colores.marca, borderColor: colores.marca }]}>
-                    {activo ? <Icono nombre="check" tamano={13} color="#fff" grosor={2.6} /> : null}
-                  </View>
-                  <Text style={styles.extraNombre} numberOfLines={2}>
-                    {e.nombre}
-                  </Text>
-                  <Text style={styles.extraPrecio}>{precio === 0 ? "Incluido" : euros(precio)}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <Cristal padding={espaciado[4]} gap={espaciado[3]}>
-          <Text style={estilos.h2}>Resumen</Text>
-          <View style={styles.resumenFila}>
-            <Text style={estilos.texto}>Tarifa</Text>
-            <Text style={styles.resumenValor}>{nombreDeTarifa(tarifa)}</Text>
-          </View>
-          <View style={styles.resumenFila}>
-            <Text style={estilos.texto}>Billetes ({n})</Text>
-            <Text style={styles.resumenValor}>{desgloseApi ? euros(desgloseApi.billetes) : "Calculando…"}</Text>
-          </View>
-          {desgloseApi?.extras ? (
+        {paso === 2 ? (
+          <Cristal padding={espaciado[4]} gap={espaciado[3]}>
+            <Text style={estilos.h2}>Resumen</Text>
             <View style={styles.resumenFila}>
-              <Text style={estilos.texto}>Extras</Text>
-              <Text style={styles.resumenValor}>{euros(desgloseApi.extras)}</Text>
-            </View>
-          ) : null}
-          {descuento !== "ninguno" ? (
-            <View style={styles.resumenFila}>
-              <Text style={estilos.suave}>
-                Descuento · {DESCUENTOS.find((d) => d.id === descuento)?.nombre}
+              <Text style={estilos.texto}>
+                Billetes ({adultos} {adultos === 1 ? "adulto" : "adultos"}
+                {ninos ? `, ${ninos} ${ninos === 1 ? "niño" : "niños"}` : ""}) · {tarifaActual.nombre}
               </Text>
-              <Text style={styles.descuentoTexto}>aplicado</Text>
+              <Text style={styles.resumenValor}>{euros(desglose.billetes)}</Text>
             </View>
-          ) : null}
-          <View style={styles.separador} />
-          <View style={estilos.entre}>
-            <Text style={estilos.subtitulo}>Total</Text>
-            <Text style={styles.total}>{desgloseApi ? euros(desgloseApi.total) : "Calculando…"}</Text>
-          </View>
-          <Aviso
-            tipo="info"
-            icono="info"
-            texto="Pago en modo prueba: no se pide tarjeta y no se cobra nada. Antes de confirmar te pediremos la cara; la foto no sale del teléfono."
-          />
-          {errores.asientos ? <Aviso texto={errores.asientos} /> : null}
-          <Boton
-            texto={desgloseApi ? `Pagar ${euros(desgloseApi.total)} · confirmar con la cara` : "Calculando importe…"}
-            onPress={pagar}
-            cargando={pagando}
-            desactivado={!elegidos.length || !desgloseApi}
-          />
-          <Text style={styles.pie}>Renfe · Andén 0</Text>
-        </Cristal>
+            {desglose.extras > 0 ? (
+              <View style={styles.resumenFila}>
+                <Text style={estilos.texto}>Extras</Text>
+                <Text style={styles.resumenValor}>{euros(desglose.extras)}</Text>
+              </View>
+            ) : null}
+            {descuento !== "ninguno" ? (
+              <View style={styles.resumenFila}>
+                <Text style={estilos.suave}>Descuento · {DESCUENTOS.find((d) => d.id === descuento)?.nombre}</Text>
+                <Text style={styles.descuentoTexto}>aplicado</Text>
+              </View>
+            ) : null}
+            <View style={styles.separador} />
+            <View style={estilos.entre}>
+              <Text style={estilos.subtitulo}>Total</Text>
+              <Text style={styles.total}>{euros(desglose.total)}</Text>
+            </View>
+            <Aviso
+              tipo="info"
+              icono="info"
+              texto="Pago en modo prueba: no se pide tarjeta y no se cobra nada. La reserva se confirma al instante."
+            />
+            {errores.asientos ? <Aviso texto={errores.asientos} /> : null}
+            <Boton texto={`Pagar ${euros(desglose.total)} (simulado)`} onPress={pagar} cargando={pagando} desactivado={!elegidos.length} />
+            <Text style={styles.pie}>Renfe · Andén 0 · proyecto de clase</Text>
+          </Cristal>
+        ) : null}
       </ScrollView>
     </Pantalla>
   );
@@ -663,15 +633,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  tipoTrenTexto: { fontFamily: fuentes.negrita, fontSize: 12, color: "#fff", letterSpacing: 0.2 },
-  numeroTren: { fontFamily: fuentes.seminegrita, fontSize: 15, color: colores.texto },
-  ruta: { flexDirection: "row", alignItems: "center", gap: espaciado[2], paddingVertical: espaciado[2] },
-  ciudad: { fontFamily: fuentes.negrita, fontSize: 20, color: colores.titulo, letterSpacing: -0.6 },
-  hora: { fontFamily: fuentes.negrita, fontSize: 25, color: colores.accion, letterSpacing: -1, fontVariant: ["tabular-nums"] },
+  tipoTrenTexto: {
+    fontFamily: fuentes.negrita,
+    fontSize: 12,
+    color: "#fff",
+    letterSpacing: 0.2,
+  },
+  numeroTren: {
+    fontFamily: fuentes.seminegrita,
+    fontSize: 15,
+    color: colores.texto,
+  },
+  ruta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: espaciado[2],
+    paddingVertical: espaciado[2],
+  },
+  ciudad: {
+    fontFamily: fuentes.negrita,
+    fontSize: 20,
+    color: colores.titulo,
+    letterSpacing: -0.6,
+  },
+  hora: {
+    fontFamily: fuentes.negrita,
+    fontSize: 25,
+    color: colores.accion,
+    letterSpacing: -1,
+    fontVariant: ["tabular-nums"],
+  },
   trayecto: { alignItems: "center", gap: 2, flex: 1 },
-  duracion: { fontFamily: fuentes.normal, fontSize: 11.5, color: colores.textoSuave },
+  duracion: {
+    fontFamily: fuentes.normal,
+    fontSize: 11.5,
+    color: colores.textoSuave,
+  },
   linea: { flexDirection: "row", alignItems: "center", gap: 3, width: "100%" },
-  punto: { width: 7, height: 7, borderRadius: 4, borderWidth: 2, borderColor: colores.marca, backgroundColor: "#fff" },
+  punto: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: colores.marca,
+    backgroundColor: "#fff",
+  },
   raya: { flex: 1, height: 1.5, backgroundColor: "rgba(129,0,94,0.35)" },
   chipsViajeros: { flexDirection: "row", flexWrap: "wrap", gap: espaciado[2] },
   chipDato: {
@@ -683,7 +689,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  chipDatoTexto: { fontFamily: fuentes.medio, fontSize: 12.5, color: colores.texto },
+  chipDatoTexto: {
+    fontFamily: fuentes.medio,
+    fontSize: 12.5,
+    color: colores.texto,
+  },
   tarjetaTarifa: {
     width: 178,
     minHeight: 126,
@@ -699,9 +709,22 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.95)",
     ...sombras[1],
   },
-  tarifaNombre: { fontFamily: fuentes.negrita, fontSize: 16.5, color: colores.titulo },
-  tarifaPrecio: { fontFamily: fuentes.negrita, fontSize: 18, color: colores.accion },
-  tarifaTexto: { fontFamily: fuentes.normal, fontSize: 12, color: colores.textoSuave, lineHeight: 16 },
+  tarifaNombre: {
+    fontFamily: fuentes.negrita,
+    fontSize: 16.5,
+    color: colores.titulo,
+  },
+  tarifaPrecio: {
+    fontFamily: fuentes.negrita,
+    fontSize: 18,
+    color: colores.accion,
+  },
+  tarifaTexto: {
+    fontFamily: fuentes.normal,
+    fontSize: 12,
+    color: colores.textoSuave,
+    lineHeight: 16,
+  },
   numeroViajero: {
     width: 36,
     height: 36,
@@ -710,7 +733,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  numeroViajeroTexto: { fontFamily: fuentes.negrita, fontSize: 15, color: "#fff" },
+  numeroViajeroTexto: {
+    fontFamily: fuentes.negrita,
+    fontSize: 15,
+    color: "#fff",
+  },
   asiento: {
     flexDirection: "row",
     alignItems: "center",
@@ -720,7 +747,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  asientoTexto: { fontFamily: fuentes.negrita, fontSize: 12.3, color: colores.marca },
+  asientoTexto: {
+    fontFamily: fuentes.negrita,
+    fontSize: 12.3,
+    color: colores.marca,
+  },
   extras: { flexDirection: "row", flexWrap: "wrap", gap: espaciado[2] },
   extra: {
     width: "48.6%",
@@ -732,7 +763,10 @@ const styles = StyleSheet.create({
     padding: espaciado[3],
     gap: 3,
   },
-  extraActivo: { borderColor: colores.marca, backgroundColor: tonos.rosaFuerte },
+  extraActivo: {
+    borderColor: colores.marca,
+    backgroundColor: tonos.rosaFuerte,
+  },
   extraCheck: {
     width: 20,
     height: 20,
@@ -743,14 +777,48 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 2,
   },
-  extraNombre: { fontFamily: fuentes.seminegrita, fontSize: 12.8, color: colores.texto, lineHeight: 16 },
-  extraPrecio: { fontFamily: fuentes.negrita, fontSize: 12.4, color: colores.marca },
-  resumenFila: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: espaciado[3] },
-  resumenValor: { fontFamily: fuentes.seminegrita, fontSize: 14.5, color: colores.texto, fontVariant: ["tabular-nums"] },
-  descuentoTexto: { fontFamily: fuentes.seminegrita, fontSize: 13, color: tonos.exito },
+  extraNombre: {
+    fontFamily: fuentes.seminegrita,
+    fontSize: 12.8,
+    color: colores.texto,
+    lineHeight: 16,
+  },
+  extraPrecio: {
+    fontFamily: fuentes.negrita,
+    fontSize: 12.4,
+    color: colores.marca,
+  },
+  resumenFila: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: espaciado[3],
+  },
+  resumenValor: {
+    fontFamily: fuentes.seminegrita,
+    fontSize: 14.5,
+    color: colores.texto,
+    fontVariant: ["tabular-nums"],
+  },
+  descuentoTexto: {
+    fontFamily: fuentes.seminegrita,
+    fontSize: 13,
+    color: tonos.exito,
+  },
   separador: { height: 1, backgroundColor: colores.borde },
-  total: { fontFamily: fuentes.negrita, fontSize: 29, color: colores.accion, letterSpacing: -0.8 },
-  pie: { fontFamily: fuentes.normal, fontSize: 11, color: colores.textoSuave, textAlign: "center", paddingTop: 2 },
+  total: {
+    fontFamily: fuentes.negrita,
+    fontSize: 29,
+    color: colores.accion,
+    letterSpacing: -0.8,
+  },
+  pie: {
+    fontFamily: fuentes.normal,
+    fontSize: 11,
+    color: colores.textoSuave,
+    textAlign: "center",
+    paddingTop: 2,
+  },
   exito: {
     borderRadius: 28,
     padding: espaciado[6],
@@ -768,7 +836,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: espaciado[1],
   },
-  exitoTitulo: { fontFamily: fuentes.negrita, fontSize: 25, color: "#fff", letterSpacing: -0.5 },
+  exitoTitulo: {
+    fontFamily: fuentes.negrita,
+    fontSize: 25,
+    color: "#fff",
+    letterSpacing: -0.5,
+  },
   exitoTexto: {
     fontFamily: fuentes.normal,
     fontSize: 14,
@@ -777,7 +850,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 300,
   },
-  localizador: { fontFamily: fuentes.negrita, fontSize: 27, color: colores.marca, letterSpacing: 4 },
+  localizador: {
+    fontFamily: fuentes.negrita,
+    fontSize: 27,
+    color: colores.marca,
+    letterSpacing: 4,
+  },
   selloPagado: {
     flexDirection: "row",
     alignItems: "center",
@@ -787,7 +865,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  selloPagadoTexto: { fontFamily: fuentes.seminegrita, fontSize: 11.5, color: tonos.exito },
+  selloPagadoTexto: {
+    fontFamily: fuentes.seminegrita,
+    fontSize: 11.5,
+    color: tonos.exito,
+  },
   filaViajero: {
     flexDirection: "row",
     alignItems: "center",
@@ -796,9 +878,22 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(129,0,94,0.08)",
   },
-  nombreViajero: { fontFamily: fuentes.seminegrita, fontSize: 14.5, color: colores.texto },
-  totalFila: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: espaciado[2] },
-  totalExito: { fontFamily: fuentes.negrita, fontSize: 23, color: colores.accion },
+  nombreViajero: {
+    fontFamily: fuentes.seminegrita,
+    fontSize: 14.5,
+    color: colores.texto,
+  },
+  totalFila: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: espaciado[2],
+  },
+  totalExito: {
+    fontFamily: fuentes.negrita,
+    fontSize: 23,
+    color: colores.accion,
+  },
   iconoRedondo: {
     width: 42,
     height: 42,

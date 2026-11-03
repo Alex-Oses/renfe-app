@@ -74,12 +74,12 @@ describe("cuerpoReserva", () => {
       origenId: "60000",
       destinoId: "04040",
       pasajeros: [
-        { nombre: "Lucía Pérez Gómez", documento: "12345678Z", tipo: "adulto" },
-        { nombre: "Marta Pérez Gómez", documento: "87654321X", tipo: "adulto" },
+        { nombre: "Lucía Pérez Gómez", documento: "12345678Z" },
+        { nombre: "Marta Pérez Gómez", documento: "87654321X" },
       ],
+      asientos: nueva.asientos,
       tarifa: "elige",
       descuento: "joven",
-      asientos: nueva.asientos,
     });
   });
 
@@ -203,7 +203,7 @@ describe("precio por viajero en la API", () => {
 
   it("manda el tipo de cada viajero, la tarifa y el descuento", () => {
     const cuerpo = cuerpoReserva(tren, datos);
-    expect(cuerpo.pasajeros.map((p) => p.tipo)).toEqual(["adulto", "nino"]);
+    expect(cuerpo.pasajeros.map((p) => p.tipo)).toEqual([undefined, "nino"]);
     expect(cuerpo).toMatchObject({ tarifa: "elige", descuento: "joven" });
   });
 

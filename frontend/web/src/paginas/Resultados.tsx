@@ -3,9 +3,8 @@ import { euros, hora } from "@renfe/shared/formato/formato";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { claveTramo } from "@renfe/shared/api/comprar-transbordo";
-import { haSalido } from "@renfe/shared/api/salidas";
 import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
-import type { IdDescuento, OpcionTransbordo, TipoTren, Tren } from "@renfe/shared/api/tipos";
+import type { OpcionTransbordo, TipoTren, Tren } from "@renfe/shared/api/tipos";
 import { nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
 import { Buscador } from "../componentes/Buscador";
 import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
@@ -48,7 +47,6 @@ export function Resultados() {
   // Viajeros y descuento pasan tal cual a la reserva y a los enlaces de otros días.
   const extra = new URLSearchParams();
   for (const k of ["ninos", "bebes", "descuento", "vuelta", "tramo"]) if (params.get(k)) extra.set(k, params.get(k)!);
-  const descuento = (params.get("descuento") as IdDescuento) ?? "ninguno";
   // shortcut: compara con las estaciones simuladas; con la API real habría que usar GET /estaciones.
   const desconocidas = (usaDatosSimulados ? [origen, destino] : []).filter((id) => !ESTACIONES.some((e) => e.id === id)).map((id) => id || "(vacío)");
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -298,9 +296,8 @@ export function Resultados() {
             const izquierda = ((minutosDelDia(t.salida) - inicio) / (fin - inicio)) * 100;
             const ancho = (dur / (fin - inicio)) * 100;
             const completo = t.plazasLibres < pasajeros;
-            const salido = haSalido(t.salida);
             return (
-              <li key={t.id} className={`tren aparece-escalonado${completo || salido ? " tren--completo" : ""}`} style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
+              <li key={t.id} className={`tren aparece-escalonado${completo ? " tren--completo" : ""}`} style={{ animationDelay: `${Math.min(i, 10) * 40}ms` }}>
                 <div className="tren__horas">
                   <time dateTime={t.salida}>{hora(t.salida)}</time>
                   <span className="tren__duracion">{textoDuracion(dur)}</span>
@@ -313,9 +310,7 @@ export function Resultados() {
                   <span className="tren__tipo">{t.tipo}</span> {t.numero || t.linea}
                 </div>
                 <div className="tren__compra">
-                  {salido ? (
-                    <span className="tren__agotado">Ya ha salido</span>
-                  ) : completo ? (
+                  {completo ? (
                     <span className="tren__agotado">{t.plazasLibres === 0 ? "Completo" : `Solo ${t.plazasLibres} plazas`}</span>
                   ) : (
                     <>
@@ -341,7 +336,7 @@ export function Resultados() {
                         <li key={ta.id} className={`tarifa cristal tarifa--${ta.id}`}>
                           <h3>{ta.nombre}</h3>
                           <p className="tarifa__precio">
-                            <span>desde</span> {euros(precioViajero(t.precioDesde, ta.id, "adulto", descuento))}
+                            <span>desde</span> {euros(precioViajero(t.precioDesde, ta.id))}
                           </p>
                           <ul className="tarifa__incluye">
                             {ta.incluye.map((x) => (

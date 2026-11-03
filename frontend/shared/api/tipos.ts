@@ -183,7 +183,6 @@ export interface Billete {
   extras?: IdExtra[]; // de su reserva
   extrasReserva?: number; // euros de esos extras, una vez por reserva
   qr: string; // contenido firmado (Ed25519 en la API real); el frontend solo lo pinta
-  transbordos?: TransbordoApi[];
 }
 
 // --- Cuenta ---
@@ -396,7 +395,7 @@ export interface RespuestaChatbot {
 export interface PasajeroApi {
   nombre: string; // nombre completo ("Lucía Pérez Gómez")
   documento: string; // se guarda entero; el QR solo lleva los 4 últimos
-  tipo?: TipoViajero;
+  tipo?: "adulto" | "nino"; // el bebé no ocupa butaca y no se manda
 }
 
 export interface NuevaReservaApi {
@@ -406,10 +405,10 @@ export interface NuevaReservaApi {
   origenId: string;
   destinoId: string;
   pasajeros: PasajeroApi[]; // de 1 a 6: una butaca por pasajero
-  tarifa?: IdTarifa;
-  descuento?: IdDescuento;
-  extras?: IdExtra[];
   asientos?: string[]; // butacas elegidas: "coche-asiento"
+  tarifa?: IdTarifa; // la API cobra cada billete con tarifa, tipo y descuento
+  descuento?: IdDescuento;
+  extras?: IdExtra[]; // la API los cobra y los suma al total
 }
 
 export interface BilleteEmitidoApi {
@@ -427,20 +426,8 @@ export interface ReservaApi {
   localizador: string;
   estado: "pagada";
   total: number;
-  desglose?: Desglose;
   creada: string; // ISO con offset
   billetes: BilleteEmitidoApi[];
-}
-
-export interface Desglose {
-  billetes: number;
-  extras: number;
-  total: number;
-}
-
-export interface RespuestaPrecioApi {
-  precioAsiento: number;
-  desglose: Desglose;
 }
 
 // GET /billetes: lo justo para pintar el billete; el viajero y el documento salen del QR firmado.
@@ -460,16 +447,11 @@ export interface BilleteApi {
   asiento: string; // "12A"
   clase: string; // "Turista" | "Confort"
   precio: number;
+  extras?: IdExtra[]; // de la reserva: se repiten en cada billete
+  extrasReserva?: number; // euros de esos extras, una vez por reserva
   emitido: string;
   expira: string;
   qr: string; // RNF1.…
-  extras?: IdExtra[]; // de la reserva: se repiten en cada billete
-  extrasReserva?: number; // euros de la reserva, una vez por reserva
-}
-
-export interface TransbordoApi {
-  desde: string;
-  hasta: string;
 }
 
 // GET /billetes/:id/qr (idempotente: devuelve el token ya guardado).

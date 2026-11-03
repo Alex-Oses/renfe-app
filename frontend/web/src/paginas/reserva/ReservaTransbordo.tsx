@@ -1,23 +1,26 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
-import { buscarTransbordos } from "@renfe/shared/api/cliente";
-import { buscarOpcion, comprarDosTramos, precioOpcion } from "@renfe/shared/api/comprar-transbordo";
-import type { IdDescuento, NuevaReserva, OpcionTransbordo, Pasajero, TipoViajero } from "@renfe/shared/api/tipos";
-import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
-import { resolverTarifa } from "@renfe/shared/api/tarifas";
+import { buscarTransbordos, cancelarReserva, comprarReserva } from "@renfe/shared/api/cliente";
+import type { IdDescuento, OpcionTransbordo, Pasajero, TipoViajero, Tren } from "@renfe/shared/api/tipos";
+import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
+import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
 import { useSesion } from "../../estado/sesion";
 import { euros, hora } from "@renfe/shared/formato/formato";
 import "./reserva.css";
 
 const vacio = (): Pasajero => ({ nombre: "", apellidos: "", documento: "", email: "" });
+const comprarTramo = (tren: Tren, pasajeros: Pasajero[], descuento: IdDescuento, bebes: number) =>
+  comprarReserva(tren, { trenId: tren.id, asientos: [], pasajeros, descuento, bebes });
+
 export default function ReservaTransbordo() {
   const { sesion } = useSesion();
   const { pathname, search } = useLocation();
   const [params] = useSearchParams();
   const n = Math.min(Math.max(Number(params.get("pasajeros")) || 1, 1), 6);
   const ninos = Math.min(Math.max(Number(params.get("ninos")) || 0, 0), n - 1);
-  const descuento = (DESCUENTOS.find((d) => d.id === params.get("descuento"))?.id ?? "ninguno") as IdDescuento;
-  const tarifa = resolverTarifa(params.get("tarifa"));
+  const bebes = Math.max(Number(params.get("bebes")) || 0, 0);
+  const descuento = (DESCUENTOS.find((d) => d.id === params.get("descuento")) ?? DESCUENTOS[0]).id as IdDescuento;
+  // Como en la reserva directa: los últimos viajeros son los niños.
   const tipos: TipoViajero[] = Array.from({ length: n }, (_, i) => (i >= n - ninos ? "nino" : "adulto"));
   const [opcion, setOpcion] = useState<OpcionTransbordo | null>(null);
   const [pasajeros, setPasajeros] = useState<Pasajero[]>(() => Array.from({ length: n }, vacio));
@@ -32,7 +35,6 @@ export default function ReservaTransbordo() {
   useEffect(() => {
     buscarTransbordos({ origen, destino, fecha }).then(
       (lista) => {
-        // En la URL va `claveTramo` (tipo|número|salida), no el `id`, que cambia entre búsquedas.
         const elegida = buscarOpcion(lista, a, b);
         if (elegida) setOpcion(elegida);
         else setError("Esa combinación ya no está disponible. Vuelve a buscar.");
@@ -44,6 +46,8 @@ export default function ReservaTransbordo() {
   if (!sesion) return <Navigate to={`/acceder?volver=${encodeURIComponent(pathname + search)}`} replace />;
   if (!opcion) return <p className="contenedor seccion cargando" role={error ? "alert" : undefined}>{error || "Cargando el viaje…"}</p>;
   const [ida, sigue] = opcion.tramos;
+  // Cada tramo se cobra por separado con las mismas reglas; el total es la suma.
+  const total = opcion.tramos.reduce((s, t) => s + calcularTotal({ precios: Array(n).fill(t.precioDesde), tipos, descuento }).total, 0);
 
   const cambiar = (i: number, campo: keyof Pasajero, valor: string) =>
     setPasajeros((ps) => ps.map((p, j) => (j === i ? { ...p, [campo]: valor } : p)));
@@ -57,8 +61,8 @@ export default function ReservaTransbordo() {
     setEstado("pagando");
     setError("");
     try {
-      const datos: NuevaReserva = { trenId: ida.id, asientos: [], pasajeros, tarifa, descuento };
-      await comprarDosTramos([ida, sigue], datos);
+      const conTipo = pasajeros.map((p, i) => ({ ...p, tipo: tipos[i] }));
+      await comprarDosTramos((i) => comprarTramo(opcion!.tramos[i], conTipo, descuento, bebes), cancelarReserva);
       window.scrollTo(0, 0);
       setEstado("listo");
     } catch (fallo) {
@@ -85,13 +89,14 @@ export default function ReservaTransbordo() {
         {ida.origen.nombre} a {sigue.destino.nombre}
       </h1>
       <p>
-        {ida.tipo} {ida.numero}: {hora(ida.salida)} a {hora(ida.llegada)}. Transbordo en <strong>{opcion.transbordo.nombre}</strong>, {opcion.esperaMin} min de espera.
+        {ida.tipo} {ida.numero}: {hora(ida.salida)} a {hora(ida.llegada)}. Transbordo en <strong>{opcion.transbordo.nombre}</strong>
+        {opcion.cambioEstacion && opcion.transbordoSalida && <> (sales desde <strong>{opcion.transbordoSalida.nombre}</strong>)</>}, {opcion.esperaMin} min de espera.
         <br />
         {sigue.tipo} {sigue.numero}: {hora(sigue.salida)} a {hora(sigue.llegada)}.
       </p>
       {pasajeros.map((p, i) => (
         <fieldset key={i} className="tarjeta">
-          <legend>Viajero {i + 1}</legend>
+          <legend>Viajero {i + 1}{tipos[i] === "nino" ? " (niño)" : ""}</legend>
           {(
             [
               ["nombre", "Nombre"],
@@ -108,7 +113,9 @@ export default function ReservaTransbordo() {
       ))}
       {error && <p className="campo__error" role="alert">{error}</p>}
       <p>
-        Total: <strong>{euros(precioOpcion(opcion, { tipos, tarifa, descuento }))}</strong> (pago simulado)
+        Total: <strong>{euros(total)}</strong> (pago simulado)
+        {ninos > 0 && ` · ${ninos} ${ninos === 1 ? "niño" : "niños"} con descuento`}
+        {bebes > 0 && ` · ${bebes} ${bebes === 1 ? "bebé" : "bebés"} gratis`}
       </p>
       <button type="submit" className="boton" disabled={estado === "pagando"}>
         {estado === "pagando" ? "Comprando los dos billetes…" : "Comprar los dos billetes"}

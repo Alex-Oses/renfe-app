@@ -1,4 +1,4 @@
-// Pie de la app con el mapa del sitio, los enlaces legales y el aviso legal.
+// Pie de la app con el mapa del sitio, los enlaces legales y el aviso de proyecto de clase.
 // Misma arquitectura de información que el Pie.tsx de la web.
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -9,12 +9,12 @@ import { Icono, type NombreIcono } from "./Icono";
 
 const ir = (ruta: string) => router.push(`/contenido${ruta}` as never);
 
-// Atajos a las cuatro secciones principales: no hay cuentas sociales reales que enlazar.
-const ATAJOS: { nombre: string; ruta: string; icono: NombreIcono }[] = [
-  { nombre: "Viajar", ruta: "/viajar", icono: "comprar" },
-  { nombre: "Inspírate", ruta: "/inspirate", icono: "estrella" },
-  { nombre: "Gestiona", ruta: "/gestiona", icono: "billetes" },
-  { nombre: "Ayuda", ruta: "/ayuda", icono: "info" },
+// Canales simulados: enlazan a contacto hasta tener cuentas reales, como en la web.
+const REDES: { nombre: string; icono: NombreIcono }[] = [
+  { nombre: "Vídeos", icono: "comprar" },
+  { nombre: "Fotos", icono: "estrella" },
+  { nombre: "Mensajes", icono: "campana" },
+  { nombre: "Noticias", icono: "info" },
 ];
 
 export function Pie() {
@@ -46,13 +46,12 @@ export function Pie() {
       </View>
 
       <View style={styles.redes}>
-        {ATAJOS.map((r) => (
+        {REDES.map((r) => (
           <Pressable
             key={r.nombre}
             accessibilityRole="link"
-            accessibilityLabel={r.nombre}
-            accessibilityHint={`Ir a ${r.nombre}`}
-            onPress={() => ir(r.ruta)}
+            accessibilityLabel={`${r.nombre} (canal simulado)`}
+            onPress={() => ir("/ayuda/contacto")}
             style={({ pressed }) => [styles.red, pressed && { backgroundColor: tonos.rosaFuerte }]}
           >
             <Icono nombre={r.icono} tamano={18} color={colores.marca} />
@@ -61,7 +60,7 @@ export function Pie() {
       </View>
 
       <Text style={styles.aviso}>
-        Andén 0, sin relación con Renfe. Horarios basados en datos abiertos GTFS de Renfe (CC BY 4.0).
+        Proyecto académico (ASIX 2), sin relación con Renfe. Horarios basados en datos abiertos GTFS de Renfe (CC BY 4.0).
         {usaDatosSimulados ? " Ahora mismo los trenes, precios, pagos y posiciones son simulados." : ""}
       </Text>
     </View>

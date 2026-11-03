@@ -21,16 +21,10 @@ import {
 } from '../../common/formato.js';
 import { PREFIJO_BILLETE, firmar } from '../../common/qr/firma.js';
 import { BdService } from '../../common/bd/bd.service.js';
-import { kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
-import {
-  calcularDesglose,
-  precioViajero,
-  type Desglose,
-} from '../../common/simulado/precios.js';
+import { centimosExtras, centimosViajero, kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
 import { CorreoService, htmlDeCorreo } from '../../common/correo/correo.service.js';
 import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import type { CrearReservaDto } from './dto/crear-reserva.dto.js';
-import type { CrearTransbordoDto } from './dto/crear-transbordo.dto.js';
 
 export interface ReservaCancelada {
   localizador: string;
@@ -78,7 +72,6 @@ export interface ReservaCreada {
   localizador: string;
   estado: 'pagada';
   total: number;
-  desglose: Desglose;
   creada: string;
   billetes: BilleteEmitido[];
 }
@@ -240,57 +233,6 @@ export class ReservasService {
     }
   }
 
-  // Los dos tramos van en una sola transacción: si el segundo falla, el rollback
-  // deshace también el primero (no hay medio viaje cobrado).
-  async crearTransbordo(
-    usuarioId: string,
-    dto: CrearTransbordoDto,
-  ): Promise<{ reservas: ReservaCreada[]; total: number }> {
-    const tramos: CrearReservaDto[] = dto.tramos.map((tramo) => ({
-      feed: tramo.feed,
-      viajeId: tramo.viajeId,
-      fecha: tramo.fecha,
-      origenId: tramo.origenId,
-      destinoId: tramo.destinoId,
-      asientos: tramo.asientos,
-      pasajeros: dto.pasajeros,
-      tarifa: dto.tarifa,
-      descuento: dto.descuento,
-      extras: dto.extras,
-    }));
-
-    for (const tramo of tramos) {
-      if (tramo.origenId === tramo.destinoId) {
-        throw new BadRequestException('El origen y el destino no pueden ser la misma estación');
-      }
-      if (tramo.fecha < hoyMadrid()) {
-        throw new BadRequestException('La fecha del viaje ya ha pasado');
-      }
-    }
-
-    // Se lee antes de abrir la transacción: sin clave no hay QR que emitir.
-    const clave = this.config.get<string>('QR_SIGNING_PRIVATE_KEY');
-    if (!clave) {
-      throw new ServiceUnavailableException('La API no tiene configurada QR_SIGNING_PRIVATE_KEY');
-    }
-
-    try {
-      const reservas = await this.bd.transaccion(async (cliente) => {
-        const creadas: ReservaCreada[] = [];
-        for (const tramo of tramos) {
-          creadas.push(await this.crearEn(cliente, usuarioId, tramo, clave));
-        }
-        return creadas;
-      });
-      tramos.forEach((tramo, i) => void this.avisarCompra(usuarioId, reservas[i]!, tramo));
-      const total = reservas.reduce((suma, reserva) => suma + reserva.total, 0);
-      return { reservas, total: Math.round(total * 100) / 100 };
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new ServiceUnavailableException('La base de datos no está disponible');
-    }
-  }
-
   async cancelar(usuarioId: string, localizador: string): Promise<ReservaCancelada> {
     try {
       const cancelada = await this.bd.transaccion((cliente) =>
@@ -415,13 +357,6 @@ export class ReservasService {
       throw new NotFoundException('Ese viaje no circula en esa fecha o el trayecto no existe');
     }
 
-    // La fecha sola no basta: un tren que salió esta mañana sigue siendo "hoy". Se valida aquí,
-    // antes de escribir, y cubre también los dos tramos de un transbordo.
-    const salida = intervaloAIso(dto.fecha, viaje.sale);
-    if (Date.parse(salida) <= Date.now()) {
-      throw new BadRequestException('Ese tren ya ha salido: elige otro horario');
-    }
-
     await cliente.query(SQL_PLANTILLA, [
       dto.feed,
       dto.viajeId,
@@ -430,21 +365,17 @@ export class ReservasService {
     ]);
 
     const plazas = dto.pasajeros.length;
-    const precioAsiento = precioSimulado(
-      viaje.tipo_servicio,
-      kmTrayecto(viaje.lat_o, viaje.lon_o, viaje.lat_d, viaje.lon_d),
-      `${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`,
+    const precioCentimos = Math.round(
+      precioSimulado(
+        viaje.tipo_servicio,
+        kmTrayecto(viaje.lat_o, viaje.lon_o, viaje.lat_d, viaje.lon_d),
+        `${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`,
+      ) * 100,
     );
-    const desglose = calcularDesglose({
-      precioAsiento,
-      tipos: dto.pasajeros.map((p) => p.tipo ?? 'adulto'),
-      tarifa: dto.tarifa,
-      descuento: dto.descuento,
-      extras: dto.extras,
-    });
-    const totalCentimos = Math.round(desglose.total * 100);
+    const centimos = dto.pasajeros.map((p) => centimosViajero(precioCentimos, p.tipo, dto.tarifa, dto.descuento));
     const extras = [...new Set(dto.extras ?? [])];
-    const extrasCentimos = Math.round(desglose.extras * 100);
+    const extrasCentimos = centimosExtras(extras, plazas, dto.tarifa);
+    const totalCentimos = centimos.reduce((s, c) => s + c, 0) + extrasCentimos;
 
     const { rows: reservas } = await cliente.query<FilaReserva>(SQL_RESERVA, [
       usuarioId,
@@ -484,15 +415,13 @@ export class ReservasService {
     ]);
     const asientos = ocupados.sort((a, b) => a.coche - b.coche || a.numero - b.numero);
 
+    const salida = intervaloAIso(dto.fecha, viaje.sale);
     const llegada = intervaloAIso(dto.fecha, viaje.llega);
     const expira = new Date(intervaloAIso(dto.fecha, '26:00:00')).toISOString();
 
     const billetes: BilleteEmitido[] = [];
     for (const [indice, asiento] of asientos.entries()) {
       const pasajero = dto.pasajeros[indice]!;
-      const precioBillete = Math.round(
-        precioViajero(precioAsiento, dto.tarifa, pasajero.tipo ?? 'adulto', dto.descuento) * 100,
-      );
       const id = randomUUID();
       const asientoEtiqueta = etiquetaAsiento(asiento.numero);
       const qr = firmar(
@@ -530,7 +459,7 @@ export class ReservasService {
         asiento.coche,
         asientoEtiqueta,
         asiento.clase,
-        precioBillete,
+        centimos[indice]!,
         qr,
         expira,
       ]);
@@ -541,7 +470,7 @@ export class ReservasService {
         coche: asiento.coche,
         asiento: asientoEtiqueta,
         clase: claseVisible(asiento.clase),
-        precio: precioBillete / 100,
+        precio: centimos[indice]! / 100,
       });
     }
 
@@ -550,7 +479,6 @@ export class ReservasService {
       localizador: reserva.referencia,
       estado: 'pagada',
       total: totalCentimos / 100,
-      desglose,
       creada: instanteAIso(reserva.creada_en),
       billetes,
     };
