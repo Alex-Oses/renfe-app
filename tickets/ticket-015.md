@@ -2,7 +2,7 @@
 
 - **Prioridad:** P2
 - **Área:** `frontend/web` mapa
-- **Estado:** Pendiente de reproducción
+- **Estado:** Arreglado
 - **Dependencias:** Ninguna
 
 ## Problema reportado
@@ -19,3 +19,17 @@ Al seleccionar un tren en el mapa, el zoom vuelve correctamente al alejarse, per
 ## Verificación
 
 Probar mouse/touch y acercar/alejar con un tren seleccionado.
+
+## Resolución (2026-11-03, rama `fix/mobile-tickets-pendientes`)
+
+**Causa:** no existía manejador del clic en el fondo del mapa; solo se podía cerrar con el botón. El
+clic de un marcador podía llegar además al mapa como si fuera fondo.
+
+**Arreglo:** `ClicFondo` (`useMapEvents`) cierra el detalle al pulsar el fondo y solo se monta con una
+selección activa. Los marcadores usan `bubblingMouseEvents: false` y `stopPropagation` en su clic. La
+regla `seleccionTrasClic` queda extraída y probada.
+
+**Comprobación:** 37 pruebas de web y lint en verde. En Chrome real con 30 marcadores: el primero
+selecciona «AVE 2024», otro cambia a «AVE 5456», el zoom conserva la selección y un clic en el fondo
+vuelve a `/mapa` sin detalle. Detalles en
+[[2026-11-03-buffy-ticket-015-deseleccionar-mapa]].
