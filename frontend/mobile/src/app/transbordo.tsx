@@ -5,6 +5,8 @@ import {
   buscarTransbordos,
 } from "@renfe/shared/api/cliente";
 import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import { haSalido } from "@renfe/shared/api/salidas";
+import { resolverTarifa } from "@renfe/shared/api/tarifas";
 import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import type { IdDescuento, NuevaReserva, OpcionTransbordo, Pasajero, Reserva, TipoViajero } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
@@ -32,6 +34,8 @@ export default function Transbordo() {
   const ninos = Math.min(Math.max(Number(params.ninos) || 0, 0), n - 1);
   const bebes = Math.max(Number(params.bebes) || 0, 0);
   const descuento = (DESCUENTOS.find((d) => d.id === params.descuento)?.id ?? "ninguno") as IdDescuento;
+  // La tarifa elegida en los resultados llega por la URL y se valida contra el contrato.
+  const tarifa = resolverTarifa(params.tarifa);
   // Como en la reserva directa: los últimos viajeros son los niños.
   const tipos: TipoViajero[] = Array.from({ length: n }, (_, i) => (i >= n - ninos ? "nino" : "adulto"));
   const { origen = "", destino = "", fecha = "", a, b } = params;
@@ -49,8 +53,11 @@ export default function Transbordo() {
       (lista) => {
         if (!vivo) return;
         const elegida = buscarOpcion(lista, a, b);
-        if (elegida) setOpcion(elegida);
-        else setError("Esa combinación ya no está disponible. Vuelve a buscar.");
+        if (!elegida) return setError("Esa combinación ya no está disponible. Vuelve a buscar.");
+        if (haSalido(elegida.tramos[0].salida)) {
+          return setError("El primer tren de esta combinación ya ha salido. Vuelve a buscar.");
+        }
+        setOpcion(elegida);
       },
       (e: Error) => vivo && setError(e.message),
     );
@@ -64,6 +71,10 @@ export default function Transbordo() {
 
   const pagar = async () => {
     if (!opcion) return;
+    if (haSalido(opcion.tramos[0].salida)) {
+      setError("Ese tren ya ha salido. Vuelve a buscar otro horario.");
+      return;
+    }
     if (datos.some((p) => !p.nombre.trim() || !p.apellidos.trim() || !validarDocumento(p.documento))) {
       setError("Rellena nombre, apellidos y documento (6 a 12 letras o números) de cada viajero.");
       return;
@@ -87,7 +98,7 @@ export default function Transbordo() {
       tipo: tipos[i],
     }));
     try {
-      const datos: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros, descuento, bebes };
+      const datos: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros, descuento, bebes, tarifa };
       setCompradas(await comprarDosTramos(opcion.tramos, datos));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo completar la compra.");
@@ -130,7 +141,7 @@ export default function Transbordo() {
   const [ida, sigue] = opcion.tramos;
   // Cada tramo se cobra por separado con las mismas reglas; el total es la suma.
   const total = opcion.tramos.reduce(
-    (s, t) => s + calcularTotal({ precios: Array(n).fill(t.precioDesde), tipos, descuento }).total,
+    (s, t) => s + calcularTotal({ precios: Array(n).fill(t.precioDesde), tipos, descuento, tarifa }).total,
     0,
   );
   return (

@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { calcularPrecio, obtenerAsientos, obtenerTren, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
-import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
-import { DESCUENTOS, TARIFAS } from "@renfe/shared/api/simulado-precios";
+import type { Asiento, IdDescuento, IdExtra, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
+import { DESCUENTOS } from "@renfe/shared/api/simulado-precios";
+import { haSalido } from "@renfe/shared/api/salidas";
+import { nombreDeTarifa, resolverTarifa } from "@renfe/shared/api/tarifas";
 import { PasoAsientos } from "./PasoAsientos";
 import { PasoViajeros } from "./PasoViajeros";
 import { PasoPago } from "./PasoPago";
@@ -29,7 +31,8 @@ export default function Reserva() {
   const n = Math.min(Math.max(Number(params.get("pasajeros")) || 1, 1), 8);
   const ninos = Math.min(Math.max(Number(params.get("ninos")) || 0, 0), n - 1);
   const bebes = Math.max(Number(params.get("bebes")) || 0, 0);
-  const tarifa = (TARIFAS.find((t) => t.id === params.get("tarifa")) ?? TARIFAS[0]).id as IdTarifa;
+  // La tarifa de la URL se valida contra el contrato; cualquier otro valor cae al básico.
+  const tarifa = resolverTarifa(params.get("tarifa"));
   const descuento = (DESCUENTOS.find((d) => d.id === params.get("descuento")) ?? DESCUENTOS[0]).id as IdDescuento;
   // Los últimos asientos son de los niños.
   const tipos: TipoViajero[] = Array.from({ length: n }, (_, i) => (i >= n - ninos ? "nino" : "adulto"));
@@ -51,6 +54,11 @@ export default function Reserva() {
     obtenerTren(trenId)
       .then(async (detalle) => {
         const t = soloTramo(detalle, params.get("origen"), params.get("destino"));
+        // Un enlace directo a un tren que ya salió no puede seguir hasta el pago.
+        if (haSalido(t.salida)) {
+          setError("Ese tren ya ha salido. Vuelve a buscar y elige otro horario.");
+          return;
+        }
         setTren(t);
         setAsientos(await obtenerAsientos(t));
       })
@@ -120,7 +128,7 @@ export default function Reserva() {
 
   const seleccion = elegidos.map((id) => asientos.find((a) => a.id === id)!);
   const total = desglose?.total ?? 0;
-  const nombreTarifa = TARIFAS.find((t) => t.id === tarifa)!.nombre;
+  const nombreTarifa = nombreDeTarifa(tarifa);
   // Ida y vuelta: al pagar la ida se busca la vuelta con los mismos viajeros.
   const vuelta = params.get("vuelta");
   const qVuelta = new URLSearchParams({ origen: tren.destino.id, destino: tren.origen.id, fecha: vuelta ?? "", pasajeros: String(n), tramo: "vuelta", vuelta: vuelta ?? "" });

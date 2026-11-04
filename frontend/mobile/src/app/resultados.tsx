@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { haSalido } from "@renfe/shared/api/salidas";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
 import { ciudadDe, type IdDescuento, type IdTarifa, type OpcionTransbordo, type TipoTren, type Tren } from "@renfe/shared/api/tipos";
@@ -340,20 +341,22 @@ export default function Resultados() {
                 const izquierda = ((minutosDelDia(t.salida) - inicio) / Math.max(fin - inicio, 1)) * 100;
                 const ancho = Math.max((dur / Math.max(fin - inicio, 1)) * 100, 6);
                 const completo = t.plazasLibres < pasajeros;
+                // Un tren que ya ha salido no se puede comprar: ni tarifas ni botón de elegir.
+                const salido = haSalido(t.salida);
                 const expandido = abierto === t.id;
                 return (
                   <View key={t.id} style={[styles.filaTren, i > 0 && styles.filaTrenBorde]}>
                     <View style={styles.horas}>
-                      <Text style={[styles.hora, completo && { opacity: 0.45 }]}>{horaLocal(t.salida)}</Text>
+                      <Text style={[styles.hora, (completo || salido) && { opacity: 0.45 }]}>{horaLocal(t.salida)}</Text>
                       <Text style={styles.duracion}>{textoDuracion(dur)}</Text>
-                      <Text style={[styles.hora, completo && { opacity: 0.45 }]}>{horaLocal(t.llegada)}</Text>
+                      <Text style={[styles.hora, (completo || salido) && { opacity: 0.45 }]}>{horaLocal(t.llegada)}</Text>
                     </View>
                     <View style={styles.via} pointerEvents="none">
                       <View
                         style={[
                           styles.viaTramo,
                           { left: `${izquierda}%`, width: `${Math.min(ancho, 100 - izquierda)}%` },
-                          completo && { opacity: 0.45 },
+                          (completo || salido) && { opacity: 0.45 },
                         ]}
                       />
                     </View>
@@ -362,13 +365,15 @@ export default function Resultados() {
                         <Text style={styles.tipo} numberOfLines={1}>
                           <Text style={{ fontFamily: fuentes.negrita }}>{t.tipo}</Text> {t.numero}
                         </Text>
-                        {completo ? (
+                        {salido ? (
+                          <Text style={styles.agotado}>Ya ha salido</Text>
+                        ) : completo ? (
                           <Text style={styles.agotado}>
                             {t.plazasLibres === 0 ? "Completo" : `Solo ${t.plazasLibres} plazas`}
                           </Text>
                         ) : null}
                       </View>
-                      {completo ? null : (
+                      {completo || salido ? null : (
                         <>
                           <Text style={styles.precio}>{euros(t.precioDesde)}</Text>
                           <Pressable
@@ -390,7 +395,7 @@ export default function Resultados() {
                       )}
                     </View>
 
-                    {expandido ? (
+                    {expandido && !salido ? (
                       <View style={{ paddingTop: espaciado[3], gap: espaciado[2] }}>
                         <Text style={[estilos.etiqueta, { marginLeft: 2 }]}>
                           Elige tarifa · {pasajeros} {pasajeros === 1 ? "viajero" : "viajeros"}
