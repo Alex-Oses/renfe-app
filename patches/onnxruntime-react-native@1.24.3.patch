@@ -1,25 +1,26 @@
 diff --git a/android/build.gradle b/android/build.gradle
-index 41b43599a9af6ef1c170047d39db1f3baa6ca682..9f4dc3f8f8bfb7e7c6e546f1404cac8d0e870f36 100644
+index 41b43599a9af6ef1c170047d39db1f3baa6ca682..33b864339ee0a0fa92c434e542d1856c1eb64f69 100644
 --- a/android/build.gradle
 +++ b/android/build.gradle
-@@ -116,6 +116,10 @@ android {
+@@ -116,6 +116,9 @@ android {
    externalNativeBuild {
      cmake {
        path "CMakeLists.txt"
-+      // Windows: la ruta del repo + los .cpp de ../cpp generan rutas de objeto de mas
-+      // de 260 caracteres y ninja no puede crear sus carpetas. Un staging dir corto
-+      // (C:\Users\<usuario>\.ort-cxx) lo evita sin tocar el resto del build.
++      // En Windows la ruta del repo + los .cpp de ../cpp pasan de MAX_PATH (260) y ninja
++      // no puede crear las carpetas de objetos: un staging dir corto lo evita.
 +      buildStagingDirectory = new File(System.getProperty("user.home"), ".ort-cxx")
      }
    }
  
-@@ -247,7 +251,8 @@ dependencies {
+@@ -247,10 +250,7 @@ dependencies {
      extractLibs "com.microsoft.onnxruntime:onnxruntime-android:latest.integration@aar"
    }
  
 -  if (VersionNumber.parse(REACT_NATIVE_VERSION) < VersionNumber.parse("0.71")) {
-+  def reactNativeVersion = REACT_NATIVE_VERSION.tokenize('.').take(2).collect { it as int }
-+  if ((reactNativeVersion[0] * 100 + reactNativeVersion[1]) < 71) {
-     extractLibs "com.facebook.fbjni:fbjni:+:headers"
-     extractLibs "com.facebook.fbjni:fbjni:+"
-   }
+-    extractLibs "com.facebook.fbjni:fbjni:+:headers"
+-    extractLibs "com.facebook.fbjni:fbjni:+"
+-  }
++  // Parche: VersionNumber ya no existe en Gradle 9; este bloque solo era para RN < 0.71.
+ 
+   // By default it will just include onnxruntime full aar package
+   if (ortExtensionsEnabled) {

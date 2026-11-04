@@ -19,11 +19,13 @@ import { Vigilante } from "@/Vigilante";
 
 export { ErrorBoundary } from "expo-router";
 
-// Sin EXPO_PUBLIC_API_URL, datos simulados; el mapa tira de la API de Render por defecto.
+// Sin EXPO_PUBLIC_API_URL, datos simulados. Si la principal (el Docker por Funnel) cae, la app pasa
+// sola a la API de Render y vuelve cuando se recupera; el mapa tira de Render por defecto.
+const RENDER = "https://renfe-api.onrender.com";
 configurarApi({
   api: process.env.EXPO_PUBLIC_API_URL,
-  respaldo: process.env.EXPO_PUBLIC_API_RESPALDO_URL,
-  posiciones: process.env.EXPO_PUBLIC_POSICIONES_URL || "https://renfe-api.onrender.com",
+  respaldo: process.env.EXPO_PUBLIC_API_RESPALDO_URL || RENDER,
+  posiciones: process.env.EXPO_PUBLIC_POSICIONES_URL || RENDER,
 });
 vigilarApi();
 
