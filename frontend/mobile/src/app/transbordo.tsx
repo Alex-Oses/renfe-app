@@ -8,6 +8,7 @@ import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transb
 import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import type { IdDescuento, NuevaReserva, OpcionTransbordo, Pasajero, Reserva, TipoViajero } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
+import { confirmarPagoConCara } from "@/confirmarPago";
 import { Boton } from "@/components/Boton";
 import { Campo } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
@@ -71,6 +72,11 @@ export default function Transbordo() {
       setError("Escribe un correo de contacto válido.");
       return;
     }
+    const importe = opcion.tramos.reduce(
+      (s, t) => s + calcularTotal({ precios: Array(n).fill(t.precioDesde), tipos, descuento }).total,
+      0,
+    );
+    if (!(await confirmarPagoConCara(importe))) return;
     setError("");
     setPagando(true);
     const pasajeros: Pasajero[] = datos.map((p, i) => ({

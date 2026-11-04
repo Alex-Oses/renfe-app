@@ -14,6 +14,7 @@ import { Icono, type NombreIcono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
 import { SelectorDescuento } from "@/components/Selectores";
 import { descuentoGuardado, guardarDescuento } from "@/components/Buscador";
+import { enExpoGo } from "@/confirmarPago";
 import { guardarSesion, leerSesion } from "@/sesion";
 import { colores, espaciado, estilos, fuentes, gradientes, radios, sombras, tipografia, tonos } from "@/tema";
 
@@ -122,6 +123,10 @@ export default function Cuenta() {
           ? await iniciarSesion({ email: email.trim(), contrasena })
           : await registrarse({ nombre: nombre.trim(), email: email.trim(), contrasena });
       entrar(s);
+      // Cada pago se confirma con la cara: al crear la cuenta se registra sí o sí (en Expo Go no hay
+      // ONNX, así que se deja para la APK).
+      if (pestana === "crear" && !s.usuario.caraRegistrada && !enExpoGo)
+        router.push({ pathname: "/cara", params: { modo: "registrar", obligatorio: "1" } } as never);
     } catch (e) {
       setErrores(repartir((e as Error).message));
     } finally {

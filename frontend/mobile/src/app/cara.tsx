@@ -5,13 +5,14 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
-import { registrarCara, verificarCara } from "@renfe/shared/api/cliente";
+import { registrarCara, usarToken, verificarCara } from "@renfe/shared/api/cliente";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { Campo } from "@/components/Campo";
 import { Cristal } from "@/components/Cristal";
 import { cargarModelos, detectarCara, fotoDeJpeg, huellaArcFace } from "@/fotos/ficha";
 import { normalizar } from "@/fotos/matematica";
+import { resolverCara } from "@/confirmarPago";
 import { guardarSesion, leerSesion } from "@/sesion";
 import { colores, espaciado, estilos, fuentes } from "@/tema";
 
@@ -34,10 +35,14 @@ async function capturar(ref: CameraView | null) {
 }
 
 export default function Cara() {
-  const { modo, email: emailParam } = useLocalSearchParams<{ modo?: string; email?: string }>();
+  const { modo, email: emailParam, obligatorio } = useLocalSearchParams<{ modo?: string; email?: string; obligatorio?: string }>();
   const registrar = modo === "registrar";
+  // Pago: se comprueba la cara del titular (o se registra si aún no la tiene) y se vuelve a la compra.
+  const pago = modo === "pago";
+  // Tras crear la cuenta: no se puede salir sin registrar la cara (solo cerrando la sesión).
+  const forzado = registrar && obligatorio === "1";
   // La sesión no cambia mientras la pantalla esté abierta: se lee una vez al montar.
-  const sesion = useMemo(() => (registrar ? leerSesion() : null), [registrar]);
+  const sesion = useMemo(() => (registrar || pago ? leerSesion() : null), [registrar, pago]);
   const [permiso, pedirPermiso] = useCameraPermissions();
   const [email, setEmail] = useState(emailParam ?? "");
   // Si el email viene de Cuenta no hay que volver a escribirlo.
@@ -53,7 +58,10 @@ export default function Cara() {
   const preparado = useRef(false);
   const activo = useRef(false);
 
-  const sinEmail = !registrar && !(EMAIL_OK.test(email.trim()) && confirmado);
+  const sinEmail = !registrar && !pago && !(EMAIL_OK.test(email.trim()) && confirmado);
+
+  // Salir de la pantalla del pago sin cara comprobada cancela el pago.
+  useEffect(() => () => { if (pago) resolverCara(false); }, [pago]);
 
   // Bucle de captura: fotos seguidas, y cuando junta MUESTRAS huellas manda la media a la API.
   // Ojo: `fase` se lee en el guard pero no está en las deps a propósito, para que cambiar de fase
@@ -92,9 +100,23 @@ export default function Cara() {
         activo.current = false;
         setFase("procesando");
         const media = normalizar(huellas[0]!.map((_, i) => huellas.reduce((s, h) => s + h[i]!, 0) / huellas.length));
-        if (registrar) await registrarCara(media);
-        else guardarSesion(await verificarCara({ email: email.trim(), embedding: media }));
-        if (!cancelado) setFase("ok");
+        if (pago && sesion) {
+          // La API solo cobra con un token de cara recién comprobada (claim cara_en): siempre se
+          // verifica, y si la cuenta aún no tiene cara se registra antes con la misma huella.
+          if (!sesion.usuario.caraRegistrada) await registrarCara(media);
+          guardarSesion(await verificarCara({ email: sesion.usuario.email, embedding: media }));
+        } else if (registrar) {
+          await registrarCara(media);
+          if (sesion) guardarSesion({ ...sesion, usuario: { ...sesion.usuario, caraRegistrada: true } });
+        } else if (!pago) guardarSesion(await verificarCara({ email: email.trim(), embedding: media }));
+        // pago sin sesión (modo simulado, sin API): basta con haber captado la cara.
+        if (cancelado) return;
+        if (pago) {
+          resolverCara(true);
+          router.back();
+          return;
+        }
+        setFase("ok");
       } catch (e) {
         activo.current = false;
         if (!cancelado) {
@@ -107,7 +129,7 @@ export default function Cara() {
       cancelado = true;
       activo.current = false;
     };
-  }, [permiso?.granted, listo, sinEmail, fase, registrar, email, reintento]);
+  }, [permiso?.granted, listo, sinEmail, fase, registrar, pago, sesion, email, reintento]);
 
   // Antes de la primera foto: el tamaño más pequeño que siga valiendo para detectar la cara.
   const alEstarLista = async () => {
@@ -124,7 +146,14 @@ export default function Cara() {
     setListo(true);
   };
 
-  const volver = () => router.back();
+  const volver = () => {
+    if (forzado) {
+      guardarSesion(null); // sin cara no hay cuenta usable: la única salida es cerrar la sesión
+      usarToken(null);
+    }
+    router.back();
+  };
+  const textoSalir = forzado ? "Cerrar sesión" : pago ? "Cancelar el pago" : "Cancelar";
   const reintentar = () => {
     setError("");
     setMensaje("Buscando tu cara…");
@@ -190,7 +219,7 @@ export default function Cara() {
       <>
         <Text style={estilos.h1}>{registrar ? "Cara registrada" : "Cara reconocida"}</Text>
         <Aviso tipo="ok" texto={registrar ? "Ya puedes entrar mirando a la cámara." : "Has entrado en tu cuenta."} />
-        <Boton texto="Volver" onPress={volver} />
+        <Boton texto="Volver" onPress={() => router.back()} />
       </>
     );
   } else if (fase === "error") {
@@ -199,7 +228,7 @@ export default function Cara() {
         <Text style={estilos.h1}>No ha salido bien</Text>
         <Aviso tipo="error" texto={error} />
         <Boton texto="Reintentar" onPress={reintentar} />
-        <Boton texto="Volver" variante="texto" onPress={volver} />
+        <Boton texto={textoSalir} variante="texto" onPress={volver} />
       </>
     );
   } else {
@@ -220,16 +249,23 @@ export default function Cara() {
           </View>
         </View>
         <Text style={estilos.suave}>
-          La imagen se queda en el teléfono: solo se envía la huella a {registrar ? "tu cuenta" : email.trim()}.
+          {forzado ? "Último paso de tu cuenta: cada pago se confirma con tu cara. " : ""}
+          La imagen se queda en el teléfono: solo se envía la huella a {registrar || pago ? "tu cuenta" : email.trim()}.
         </Text>
-        <Boton texto="Cancelar" variante="texto" onPress={volver} />
+        <Boton texto={textoSalir} variante="texto" onPress={volver} />
       </>
     );
   }
 
   return (
     <View style={styles.raiz}>
-      <Stack.Screen options={{ title: registrar ? "Registrar mi cara" : "Entrar con tu cara" }} />
+      <Stack.Screen
+        options={{
+          title: pago ? "Confirmar el pago" : registrar ? "Registrar mi cara" : "Entrar con tu cara",
+          gestureEnabled: !forzado,
+          headerBackVisible: !forzado,
+        }}
+      />
       {cuerpo}
     </View>
   );

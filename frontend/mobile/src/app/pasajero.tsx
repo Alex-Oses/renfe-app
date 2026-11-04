@@ -5,6 +5,7 @@ import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import { calcularPrecio, comprarReserva, obtenerAsientos, obtenerTren } from "@renfe/shared/api/cliente";
+import { confirmarPagoConCara } from "@/confirmarPago";
 import { DESCUENTOS, EXTRAS, TARIFAS, calcularTotal, precioExtra } from "@renfe/shared/api/simulado-precios";
 import {
   ciudadDe,
@@ -170,6 +171,7 @@ export default function Pasajero() {
       irA(elegidos.length !== n ? 0 : 1);
       return;
     }
+    if (!desgloseApi || !(await confirmarPagoConCara(desgloseApi.total))) return;
     setError("");
     setPagando(true);
     try {
