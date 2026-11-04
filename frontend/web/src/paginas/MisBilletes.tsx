@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { misAbonos, misBilletes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Abono, Billete } from "@renfe/shared/api/tipos";
-import { agrupar, totalViaje, unirTransbordos, type Viaje } from "@renfe/shared/billetes/agrupar";
+import { agrupar, haTerminado, totalViaje, unirTransbordos, type Viaje } from "@renfe/shared/billetes/agrupar";
 import { TarjetaAbono } from "./billetes/TarjetaAbono";
 import { fecha, hora, euros } from "@renfe/shared/formato/formato";
 import RetrasoVivo from "./billetes/RetrasoVivo";
@@ -33,10 +33,9 @@ export default function MisBilletes() {
   if (error) return <p className="contenedor seccion" role="alert">{error}</p>;
   if (!billetes) return <p className="contenedor seccion cargando">Cargando tus billetes…</p>;
 
-  const ahora = new Date().toISOString().slice(0, 19);
   const viajes = unirTransbordos(agrupar(billetes));
-  const proximos = viajes.filter((v) => v.billetes[0].tren.llegada >= ahora);
-  const pasados = viajes.filter((v) => v.billetes[0].tren.llegada < ahora).reverse();
+  const proximos = viajes.filter((v) => !haTerminado(v));
+  const pasados = viajes.filter((v) => haTerminado(v)).reverse();
 
   return (
     <div className="contenedor seccion billetes">
