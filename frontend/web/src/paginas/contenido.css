@@ -424,3 +424,39 @@
   font-weight: 600;
   font-size: 0.9rem;
 }
+.app-descarga__boton {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  max-width: 22rem;
+  height: auto;
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  text-align: center;
+}
+.app-descarga__tren {
+  display: block;
+  padding: 1.1rem 1rem 0.6rem;
+  background: linear-gradient(#fbeef6, #f3dbe9);
+  border-bottom: 3px solid #c9a3b9; /* el andén */
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.app-descarga__tren svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.app-descarga__texto {
+  display: block;
+  padding: 0.85rem 1rem;
+}
+.app-descarga__boton:hover .app-descarga__tren svg {
+  transform: translateX(5%);
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-descarga__boton:hover .app-descarga__tren svg { transform: none; }
+}
