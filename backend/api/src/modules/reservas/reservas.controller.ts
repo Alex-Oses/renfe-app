@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import {
+  ApiForbiddenResponse,
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
@@ -13,6 +14,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import type { UsuarioAutenticado } from '../../common/auth/auth.types.js';
+import { CaraRecienteGuard } from '../../common/auth/cara-reciente.guard.js';
 import { SupabaseJwtGuard } from '../../common/auth/supabase-jwt.guard.js';
 import { CrearReservaDto } from './dto/crear-reserva.dto.js';
 import { CrearTransbordoDto } from './dto/crear-transbordo.dto.js';
@@ -43,13 +45,14 @@ export class ReservasController {
   }
 
   @Post()
-  @UseGuards(SupabaseJwtGuard)
+  @UseGuards(SupabaseJwtGuard, CaraRecienteGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Crea una reserva pagada (pago simulado) y emite un billete con QR por butaca',
   })
   @ApiCreatedResponse({ description: 'Reserva con sus billetes y QR firmados' })
   @ApiBadRequestResponse({ description: 'Fecha pasada o tramo inválido' })
+  @ApiForbiddenResponse({ description: 'El token no viene de una cara comprobada hace menos de 10 min' })
   @ApiUnauthorizedResponse({ description: 'Token ausente o inválido' })
   @ApiNotFoundResponse({ description: 'El viaje no circula ese día o el trayecto no existe' })
   @ApiConflictResponse({ description: 'No quedan butacas libres' })
@@ -59,7 +62,7 @@ export class ReservasController {
   }
 
   @Post('transbordo')
-  @UseGuards(SupabaseJwtGuard)
+  @UseGuards(SupabaseJwtGuard, CaraRecienteGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Compra los dos tramos de un transbordo en una sola transacción',
@@ -68,6 +71,7 @@ export class ReservasController {
   })
   @ApiCreatedResponse({ description: '`{ reservas, total }`' })
   @ApiBadRequestResponse({ description: 'Fecha pasada, origen = destino en un tramo o tramos ≠ 2' })
+  @ApiForbiddenResponse({ description: 'El token no viene de una cara comprobada hace menos de 10 min' })
   @ApiUnauthorizedResponse({ description: 'Token ausente o inválido' })
   @ApiNotFoundResponse({ description: 'El viaje no circula ese día o el trayecto no existe' })
   @ApiConflictResponse({ description: 'No quedan butacas libres en algún tramo' })

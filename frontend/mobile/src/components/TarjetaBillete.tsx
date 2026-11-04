@@ -44,12 +44,7 @@ export function TarjetaBillete({
   );
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Abrir billete de ${ciudadDe(tren.origen)} a ${destino}, ${fechaCorta(tren.salida)}`}
-      onPress={() => onAbrir(viaje.billetes[0])}
-      style={({ pressed }) => [styles.tarjeta, pasado && { opacity: 0.72 }, pressed && { opacity: 0.9 }]}
-    >
+    <View style={[styles.tarjeta, pasado && { opacity: 0.72 }]}>
       <ImageBackground
         source={foto ? { uri: urlFoto(foto.archivo, 720) } : undefined}
         style={styles.foto}
@@ -99,10 +94,7 @@ export function TarjetaBillete({
                 key={b.id}
                 accessibilityRole="button"
                 accessibilityLabel={`Billete de ${b.pasajero.nombre} ${b.pasajero.apellidos}, coche ${b.asiento.coche}, asiento ${b.asiento.fila}${b.asiento.letra}. Abrir QR`}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onAbrir(b);
-                }}
+                onPress={() => onAbrir(b)}
                 style={({ pressed }) => [styles.viajero, pressed && { backgroundColor: "rgba(214,45,97,0.08)" }]}
               >
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -145,7 +137,7 @@ export function TarjetaBillete({
           {euros(todos.reduce((suma, b) => suma + b.asiento.precio, 0))}
         </Text>
       </LinearGradient>
-    </Pressable>
+    </View>
   );
 }
 

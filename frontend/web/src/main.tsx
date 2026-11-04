@@ -29,8 +29,10 @@ const MisBilletes = lazy(() => import("./paginas/MisBilletes"));
 const Billete = lazy(() => import("./paginas/Billete"));
 const Acceder = lazy(() => import("./paginas/Acceder"));
 const Cuenta = lazy(() => import("./paginas/Cuenta"));
+const RegistrarCara = lazy(() => import("./paginas/RegistrarCara"));
 const Abonos = lazy(() => import("./paginas/abonos/Abonos"));
 const Mapa = lazy(() => import("./paginas/Mapa"));
+const DescargarApp = lazy(() => import("./paginas/DescargarApp"));
 const MisLineas = lazy(() => import("./paginas/MisLineas"));
 const Revisor = lazy(() => import("./paginas/Revisor"));
 const Admin = lazy(() => import("./paginas/Admin"));
@@ -57,8 +59,10 @@ function App() {
             <Route path="/billetes/:id" element={<Billete />} />
             <Route path="/acceder" element={<Acceder />} />
             <Route path="/cuenta" element={<Cuenta />} />
+            <Route path="/registrar-cara" element={<RegistrarCara />} />
             <Route path="/abonos" element={<Abonos />} />
             <Route path="/mapa" element={<Mapa />} />
+            <Route path="/app" element={<DescargarApp />} />
             <Route path="/lineas" element={<MisLineas />} />
             <Route path="/revisor" element={<Revisor />} />
             <Route path="/admin" element={<Admin />} />

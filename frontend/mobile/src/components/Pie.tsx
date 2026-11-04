@@ -1,4 +1,4 @@
-// Pie de la app con el mapa del sitio, los enlaces legales y el aviso de demostración.
+// Pie de la app con el mapa del sitio, los enlaces legales y el aviso de proyecto de clase.
 // Misma arquitectura de información que el Pie.tsx de la web.
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -60,7 +60,7 @@ export function Pie() {
       </View>
 
       <Text style={styles.aviso}>
-        Andén 0, sin relación con Renfe. Horarios basados en datos abiertos GTFS de Renfe (CC BY 4.0).
+        Proyecto académico (ASIX 2), sin relación con Renfe. Horarios basados en datos abiertos GTFS de Renfe (CC BY 4.0).
         {usaDatosSimulados ? " Ahora mismo los trenes, precios, pagos y posiciones son simulados." : ""}
       </Text>
     </View>

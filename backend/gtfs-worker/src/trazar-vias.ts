@@ -63,7 +63,7 @@ async function obtenerOsm(ruta: string | null): Promise<Osm> {
     try {
       const r = await fetch(servidor, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "anden-0/0.1" },
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "renfe-app/0.1 (proyecto de clase)" },
         body: new URLSearchParams({ data: CONSULTA_OSM }),
       });
       const texto = await r.text();

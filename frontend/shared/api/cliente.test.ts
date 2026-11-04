@@ -1,22 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buscarEstaciones,
   buscarTrenes,
   comprobarApi,
   completarRuta,
-  comprarReserva,
   configurarApi,
-  crearReserva,
   obtenerAsientos,
   posicionDeTren,
   registrarCara,
   usaApiRespaldo,
   alSesionInvalida,
   misBilletes,
+  verificarCara,
   SESION_CADUCADA,
   usarToken,
 } from "./cliente";
-import type { NuevaReserva, PosicionTren, Tren } from "./tipos";
+import type { PosicionTren, Tren } from "./tipos";
 
 const vector = (n: number) => Array.from({ length: n }, () => 0.01);
 
@@ -82,145 +81,10 @@ const posicion = (): PosicionTren => ({
   paradas: [],
 });
 
-const trenReserva: Tren = {
-  id: "avld:3097L23537C1:2026-11-02",
-  tipo: "AVE",
-  numero: "02070",
-  origen: { id: "60000", nombre: "Madrid-Puerta de Atocha" },
-  destino: { id: "04040", nombre: "Zaragoza-Delicias" },
-  salida: "2026-11-02T07:15:00+01:00",
-  llegada: "2026-11-02T08:32:00+01:00",
-  precioDesde: 45,
-  plazasLibres: 12,
-};
-
-const nuevaReserva: NuevaReserva = {
-  trenId: trenReserva.id,
-  asientos: ["1-1A"],
-  pasajeros: [{
-    nombre: "Ana",
-    apellidos: "Pérez Gómez",
-    documento: "12345678Z",
-    email: "ana@ejemplo.es",
-  }],
-};
-
 afterEach(() => {
   configurarApi({});
   vi.unstubAllGlobals();
   vi.useRealTimers();
-});
-
-describe("reserva móvil autenticada", () => {
-  afterEach(() => usarToken(null));
-
-  it("envía el token de la sesión en la llamada que crea la reserva", async () => {
-    configurarApi({ api: "http://api" });
-    usarToken("token-de-la-sesion");
-    const llamadas = api(() => Response.json({
-      id: "reserva-1",
-      localizador: "R-7K3M9Q",
-      estado: "pagada",
-      total: 45,
-      creada: "2026-11-02T07:00:00+01:00",
-      billetes: [],
-    }, { status: 201 }));
-
-    await crearReserva(trenReserva, nuevaReserva);
-
-    expect(llamadas[0].url).toBe("http://api/reservas");
-    expect(llamadas[0].init?.headers).toHaveProperty(
-      "Authorization",
-      "Bearer token-de-la-sesion",
-    );
-  });
-
-  it("sin sesión informa del requisito y no envía ni simula una reserva", async () => {
-    configurarApi({ api: "http://api" });
-    usarToken(null);
-    const llamadas = api(() => new Response("", { status: 401 }));
-
-    await expect(crearReserva(trenReserva, nuevaReserva)).rejects.toThrow(
-      "Inicia sesión para comprar un billete.",
-    );
-    expect(llamadas).toHaveLength(0);
-  });
-
-  it("un token caducado falla la compra y cierra la sesión", async () => {
-    configurarApi({ api: "http://api" });
-    usarToken("token-caducado");
-    const aviso = vi.fn();
-    const quitar = alSesionInvalida(aviso);
-    const llamadas = api(() => Response.json(
-      { message: "Token inválido o caducado" },
-      { status: 401 },
-    ));
-
-    await expect(crearReserva(trenReserva, nuevaReserva)).rejects.toThrow(
-      SESION_CADUCADA,
-    );
-    expect(llamadas[0].init?.headers).toHaveProperty(
-      "Authorization",
-      "Bearer token-caducado",
-    );
-    expect(aviso).toHaveBeenCalledOnce();
-    quitar();
-  });
-});
-
-describe("compra completa desde móvil", () => {
-  // El fixture sale el 2026-11-02 a las 07:15: se fija el reloj para no depender del día real.
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-02T07:00:00+01:00") });
-  });
-
-  afterEach(() => usarToken(null));
-
-  it("no compra un tren que ya ha salido ni llama a la red", async () => {
-    configurarApi({ api: "http://api" });
-    usarToken("token-de-la-sesion");
-    const llamadas = api(() => Response.json({}, { status: 201 }));
-
-    await expect(
-      comprarReserva({ ...trenReserva, salida: "2026-11-02T06:00:00+01:00" }, nuevaReserva),
-    ).rejects.toThrow("ya ha salido");
-    expect(llamadas).toHaveLength(0);
-  });
-
-  it("con API no pide /pagos/intent: la reserva creada ya está pagada", async () => {
-    configurarApi({ api: "http://api" });
-    usarToken("token-de-la-sesion");
-    const llamadas = api((url) => (url === "http://api/reservas"
-      ? Response.json({
-          id: "reserva-1",
-          localizador: "R-7K3M9Q",
-          estado: "pagada",
-          total: 45,
-          creada: "2026-11-02T07:00:00+01:00",
-          billetes: [],
-        }, { status: 201 })
-      : undefined));
-
-    const reserva = await comprarReserva(trenReserva, nuevaReserva);
-
-    expect(reserva.estado).toBe("pagada");
-    expect(llamadas.map((l) => l.url)).toEqual(["http://api/reservas"]);
-    expect(llamadas[0].init?.headers).toHaveProperty(
-      "Authorization",
-      "Bearer token-de-la-sesion",
-    );
-  });
-
-  it("sin sesión la compra se corta antes de la red y no devuelve reserva", async () => {
-    configurarApi({ api: "http://api" });
-    usarToken(null);
-    const llamadas = api(() => Response.json({}, { status: 201 }));
-
-    await expect(comprarReserva(trenReserva, nuevaReserva)).rejects.toThrow(
-      "Inicia sesión para comprar un billete.",
-    );
-    expect(llamadas).toHaveLength(0);
-  });
 });
 
 describe("con VITE_API_URL", () => {
@@ -413,6 +277,18 @@ describe("sesión caducada", () => {
     expect(aviso).toHaveBeenCalledTimes(1);
     await misBilletes().catch(() => {});
     expect(llamadas[1].init?.headers).not.toHaveProperty("Authorization");
+    quitar();
+  });
+
+  it("una cara que no coincide no cierra la sesión", async () => {
+    configurarApi({ api: "http://api" });
+    usarToken("vigente");
+    const aviso = vi.fn();
+    const quitar = alSesionInvalida(aviso);
+    api(() => new Response(JSON.stringify({ message: "La cara no coincide" }), { status: 401 }));
+
+    await expect(verificarCara({ email: "a@b.es", embedding: Array(512).fill(0.01) })).rejects.toThrow("La cara no coincide");
+    expect(aviso).not.toHaveBeenCalled();
     quitar();
   });
 

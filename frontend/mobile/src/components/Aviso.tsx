@@ -19,11 +19,7 @@ export function Aviso({
   }[tipo];
 
   return (
-    <View
-      accessibilityRole={tipo === "error" ? "alert" : "text"}
-      accessibilityLiveRegion={tipo === "error" ? "assertive" : "polite"}
-      style={[styles.caja, { backgroundColor: aspecto.fondo, borderColor: aspecto.borde }]}
-    >
+    <View style={[styles.caja, { backgroundColor: aspecto.fondo, borderColor: aspecto.borde }]}>
       <Icono nombre={icono ?? aspecto.icono} tamano={20} color={aspecto.color} />
       <Text style={[styles.texto, { color: aspecto.color }]}>{texto}</Text>
     </View>

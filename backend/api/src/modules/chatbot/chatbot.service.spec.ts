@@ -6,7 +6,7 @@ import { comprobarEntrada, comprobarRespuesta } from './guardrails.js';
 
 describe('ChatbotService', () => {
   const estaciones = { buscar: vi.fn() };
-  const trenes = { buscar: vi.fn(), detalle: vi.fn(), transbordos: vi.fn() };
+  const trenes = { buscar: vi.fn(), detalle: vi.fn() };
   const posiciones = { obtener: vi.fn(), posicionDe: vi.fn() };
   const gemini = { completar: vi.fn() };
 
@@ -149,115 +149,6 @@ describe('ChatbotService', () => {
 
     expect(pasos).toEqual(['analizando', 'consultando:buscar_trenes', 'razonando']);
     expect(respuesta.trenes).toEqual([tren]);
-    const mensajes = gemini.completar.mock.calls[1]![0] as {
-      parts: { functionResponse: { response: { resultado: { ruta: string; consulta: unknown } } } }[];
-    }[];
-    const resultado = mensajes[2]!.parts[0]!.functionResponse.response.resultado;
-    expect(resultado.ruta).toBe('directa');
-    expect(resultado.consulta).toEqual({ origen: '60000', destino: '71801', fecha: '2026-10-31', limit: 10 });
-  });
-
-  it('sin directos devuelve transbordos de la ruta pedida y ninguna tarjeta', async () => {
-    trenes.buscar.mockResolvedValue({ datos: [], total: 0 });
-    trenes.transbordos.mockResolvedValue({
-      datos: [
-        {
-          tramos: [{ id: 'avld:A', origen: { id: '04104' }, destino: { id: '71801' } }],
-          transbordo: { id: '71801', nombre: 'Barcelona-Sants' },
-          esperaMin: 40,
-          duracionMin: 200,
-          precio: 50,
-        },
-      ],
-      total: 1,
-    });
-    gemini.completar
-      .mockResolvedValueOnce({
-        candidates: [{
-          content: {
-            role: 'model',
-            parts: [{ functionCall: { name: 'buscar_trenes', args: { origen: '04104', destino: '60000', fecha: '2026-11-04' } } }],
-          },
-        }],
-      })
-      .mockResolvedValueOnce({
-        candidates: [{ content: { role: 'model', parts: [{ text: 'No hay directo; hay un transbordo.' }] } }],
-      });
-
-    const respuesta = await servicio().responder({ mensaje: 'Tarragona a Madrid el 4' });
-
-    expect(trenes.transbordos).toHaveBeenCalledWith({
-      origen: '04104',
-      destino: '60000',
-      fecha: '2026-11-04',
-      limit: 10,
-    });
-    expect(respuesta.trenes).toEqual([]);
-    const mensajes = gemini.completar.mock.calls[1]![0] as {
-      parts: { functionResponse: { response: { resultado: { ruta: string; consulta: unknown; transbordos: unknown[] } } } }[];
-    }[];
-    const resultado = mensajes[2]!.parts[0]!.functionResponse.response.resultado;
-    expect(resultado.ruta).toBe('con_transbordo');
-    expect(resultado.consulta).toEqual({ origen: '04104', destino: '60000', fecha: '2026-11-04', limit: 10 });
-    expect(resultado.transbordos).toHaveLength(1);
-  });
-
-  it('si el modelo reintenta con otra ruta, solo quedan las tarjetas de la última', async () => {
-    const tarragona = { id: 'avld:T:2026-11-04', origen: { id: '04104', nombre: 'Camp de Tarragona' } };
-    const barcelona = { id: 'avld:B:2026-11-04', origen: { id: '71801', nombre: 'Barcelona-Sants' } };
-    trenes.buscar
-      .mockResolvedValueOnce({ datos: [tarragona], total: 1 })
-      .mockResolvedValueOnce({ datos: [barcelona], total: 1 });
-    gemini.completar
-      .mockResolvedValueOnce({
-        candidates: [{
-          content: {
-            role: 'model',
-            parts: [{ functionCall: { name: 'buscar_trenes', args: { origen: '04104', destino: '60000', fecha: '2026-11-04' } } }],
-          },
-        }],
-      })
-      .mockResolvedValueOnce({
-        candidates: [{
-          content: {
-            role: 'model',
-            parts: [{ functionCall: { name: 'buscar_trenes', args: { origen: '71801', destino: '60000', fecha: '2026-11-04' } } }],
-          },
-        }],
-      })
-      .mockResolvedValueOnce({
-        candidates: [{ content: { role: 'model', parts: [{ text: 'Hay trenes desde Barcelona.' }] } }],
-      });
-
-    const respuesta = await servicio().responder({ mensaje: 'Tarragona a Madrid el 4' });
-
-    expect(respuesta.trenes).toEqual([barcelona]);
-  });
-
-  it('sin directos ni transbordos marca la ruta como sin servicio', async () => {
-    trenes.buscar.mockResolvedValue({ datos: [], total: 0 });
-    trenes.transbordos.mockResolvedValue({ datos: [], total: 0 });
-    gemini.completar
-      .mockResolvedValueOnce({
-        candidates: [{
-          content: {
-            role: 'model',
-            parts: [{ functionCall: { name: 'buscar_trenes', args: { origen: '04104', destino: '60000', fecha: '2026-11-04' } } }],
-          },
-        }],
-      })
-      .mockResolvedValueOnce({
-        candidates: [{ content: { role: 'model', parts: [{ text: 'No hay ruta ese día.' }] } }],
-      });
-
-    const respuesta = await servicio().responder({ mensaje: 'Tarragona a Madrid el 4' });
-
-    expect(respuesta.trenes).toEqual([]);
-    const mensajes = gemini.completar.mock.calls[1]![0] as {
-      parts: { functionResponse: { response: { resultado: { ruta: string } } } }[];
-    }[];
-    const resultado = mensajes[2]!.parts[0]!.functionResponse.response.resultado;
-    expect(resultado.ruta).toBe('sin_servicio');
   });
 
   it('no devuelve más de 8 trenes a la web', async () => {

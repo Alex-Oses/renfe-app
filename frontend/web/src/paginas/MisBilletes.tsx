@@ -8,7 +8,6 @@ import { agrupar, totalViaje, unirTransbordos, type Viaje } from "@renfe/shared/
 import { TarjetaAbono } from "./billetes/TarjetaAbono";
 import { fecha, hora, euros } from "@renfe/shared/formato/formato";
 import RetrasoVivo from "./billetes/RetrasoVivo";
-import { enlaceBillete } from "./billetes/enlace";
 import "./billetes.css";
 import { ciudadDe } from "@renfe/shared/api/tipos";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
@@ -103,8 +102,8 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
   const n = viaje.billetes.length;
   const idT = `viaje-${viaje.reservaId}`;
   const ultimo = viaje.enlace?.billetes[0].tren ?? tren;
-  const destinoCiudad = ciudadDe(ultimo.destino);
-  const foto = fotoDeRuta(slug(destinoCiudad));
+  const destino = ciudadDe(ultimo.destino);
+  const foto = fotoDeRuta(slug(destino));
   const [qrSvg, setQrSvg] = useState("");
   useEffect(() => {
     if (pasado) return;
@@ -118,15 +117,9 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
     };
   }, [qr, pasado]);
   const hoy = tren.salida.slice(0, 10) === new Date().toISOString().slice(0, 10);
-  const enlace = enlaceBillete(viaje);
 
   return (
     <article className={`ticket${pasado ? " ticket--pasado" : ""}`} aria-labelledby={idT}>
-      <Link
-        className="ticket__enlace"
-        to={enlace}
-        aria-label={`Abrir billete de ${ciudadDe(tren.origen)} a ${destinoCiudad}, ${tren.tipo} ${tren.numero}`}
-      />
       <div className="ticket__foto">
         {foto ? (
           <img src={urlFoto(foto.archivo, 640)} alt="" loading="lazy" decoding="async" title={`Foto: ${foto.autor} (Wikimedia Commons)`} />
@@ -143,7 +136,7 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
         </p>
         <h3 id={idT} className="ticket__ruta">
           {ciudadDe(tren.origen)} <span aria-hidden="true">→</span>
-          <span className="sr-solo"> a </span> {destinoCiudad}
+          <span className="sr-solo"> a </span> {destino}
         </h3>
         {viaje.enlace && (
           <p className="ticket__transbordo">

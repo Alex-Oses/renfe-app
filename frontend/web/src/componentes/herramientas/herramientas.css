@@ -17,13 +17,6 @@
 .herr__form > .boton {
   align-self: end;
 }
-@media (min-width: 40rem) {
-  /* La ayuda ocupa una línea dentro del campo; sin compensarla, el botón (align-self: end) baja
-     hasta esa línea en vez de quedar a la altura del input. En apilado no aplica. */
-  .herr__form > .herr__campo--ayuda ~ .boton {
-    margin-bottom: 1.25rem;
-  }
-}
 .herr__form > .herr__ancho,
 .herr__form > p,
 .herr__form > fieldset {

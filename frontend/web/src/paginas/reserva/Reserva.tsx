@@ -2,9 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { calcularPrecio, obtenerAsientos, obtenerTren, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { soloTramo } from "@renfe/shared/api/adaptador-trenes";
-import { resolverTarifa } from "@renfe/shared/api/tarifas";
-import { haSalido } from "@renfe/shared/api/salidas";
-import type { Asiento, IdDescuento, IdExtra, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
+import type { Asiento, IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva as TReserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
 import { DESCUENTOS, TARIFAS } from "@renfe/shared/api/simulado-precios";
 import { PasoAsientos } from "./PasoAsientos";
 import { PasoViajeros } from "./PasoViajeros";
@@ -31,7 +29,7 @@ export default function Reserva() {
   const n = Math.min(Math.max(Number(params.get("pasajeros")) || 1, 1), 8);
   const ninos = Math.min(Math.max(Number(params.get("ninos")) || 0, 0), n - 1);
   const bebes = Math.max(Number(params.get("bebes")) || 0, 0);
-  const tarifa = resolverTarifa(params.get("tarifa"));
+  const tarifa = (TARIFAS.find((t) => t.id === params.get("tarifa")) ?? TARIFAS[0]).id as IdTarifa;
   const descuento = (DESCUENTOS.find((d) => d.id === params.get("descuento")) ?? DESCUENTOS[0]).id as IdDescuento;
   // Los últimos asientos son de los niños.
   const tipos: TipoViajero[] = Array.from({ length: n }, (_, i) => (i >= n - ninos ? "nino" : "adulto"));
@@ -53,11 +51,6 @@ export default function Reserva() {
     obtenerTren(trenId)
       .then(async (detalle) => {
         const t = soloTramo(detalle, params.get("origen"), params.get("destino"));
-        // Cubre el enlace directo a /reserva/:id de un tren que ya ha salido.
-        if (haSalido(t.salida)) {
-          setError("Ese tren ya ha salido. Vuelve a buscar un horario disponible.");
-          return;
-        }
         setTren(t);
         setAsientos(await obtenerAsientos(t));
       })
@@ -170,7 +163,7 @@ export default function Reserva() {
           </div>
 
           {paso === "asientos" && (
-            <PasoAsientos asientos={asientos} n={n} elegidos={elegidos} onCambio={setElegidos} onSeguir={() => ir("viajeros")} tarifa={tarifa} descuento={descuento} />
+            <PasoAsientos asientos={asientos} n={n} elegidos={elegidos} onCambio={setElegidos} onSeguir={() => ir("viajeros")} />
           )}
           {paso === "viajeros" && (
             <PasoViajeros

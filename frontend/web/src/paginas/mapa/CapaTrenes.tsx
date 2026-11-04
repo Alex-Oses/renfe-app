@@ -116,17 +116,8 @@ export function CapaTrenes({
       const destino = L.latLng(t.lat, t.lon);
       const x = marcas.current.get(t.trenId);
       if (!x) {
-        const m = L.marker(destino, {
-          icon: icono(t, t.rumbo),
-          title: `Tren ${t.tipo} ${t.numero}`,
-          keyboard: false,
-          bubblingMouseEvents: false,
-        }).addTo(mapa);
-        m.on("click", (e) => {
-          // El marcador no es «fondo»: sin esto, el clic podría llegar al mapa y cerrar el detalle.
-          L.DomEvent.stopPropagation(e.originalEvent);
-          elegir.current(t.trenId);
-        });
+        const m = L.marker(destino, { icon: icono(t, t.rumbo), title: `Tren ${t.tipo} ${t.numero}`, keyboard: false }).addTo(mapa);
+        m.on("click", () => elegir.current(t.trenId));
         marcas.current.set(t.trenId, { m, desde: destino, hasta: destino, rumbo: t.rumbo });
       } else {
         x.desde = x.m.getLatLng();

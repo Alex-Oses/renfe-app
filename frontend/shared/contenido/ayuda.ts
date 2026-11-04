@@ -3,8 +3,8 @@ import type { Pagina } from "./tipos";
 // Sección Ayuda (incluye la información legal bajo /ayuda/informacion-legal/...).
 // Datos (teléfonos, plazos, porcentajes) tomados de renfe.com en oct. 2026; textos redactados de nuevo.
 
-const AVISO_LEGAL =
-  "Andén 0 es una demostración sin relación con Renfe Viajeros ni con ninguna empresa del Grupo Renfe. No vende billetes ni recoge datos reales.";
+const AVISO_ACADEMICO =
+  "Este sitio es un proyecto académico de un ciclo formativo (ASIX). No tiene relación con Renfe Viajeros ni con ninguna empresa del Grupo Renfe, no vende billetes y no recoge datos reales.";
 
 export const paginas: Pagina[] = [
   {
@@ -554,7 +554,7 @@ export const paginas: Pagina[] = [
         ],
       },
       { tipo: "tabla", columnas: ["Horario", "Días"], filas: [["08:00 a 00:00", "Lunes a viernes"]] },
-      { tipo: "aviso", nivel: "alerta", texto: "En Andén 0 la videollamada es simulada: no conecta con ningún servicio real." },
+      { tipo: "aviso", nivel: "alerta", texto: "En este proyecto académico la videollamada es simulada: no conecta con ningún servicio real." },
     ],
   },
 
@@ -589,7 +589,7 @@ export const paginas: Pagina[] = [
     resumen: "Qué pasó en el incidente de septiembre de 2026, qué datos pueden estar afectados y qué te recomendamos.",
     seccion: "ayuda",
     bloques: [
-      { tipo: "aviso", nivel: "info", texto: "Resumen informativo de un aviso publicado en renfe.com. En Andén 0 no se ha tratado ningún dato tuyo." },
+      { tipo: "aviso", nivel: "info", texto: "Resumen informativo de un aviso publicado en renfe.com. En este proyecto académico no se ha tratado ningún dato tuyo." },
       {
         tipo: "texto",
         titulo: "Qué ha ocurrido",
@@ -639,7 +639,7 @@ export const paginas: Pagina[] = [
     resumen: "Condiciones de transporte, derechos de los viajeros, privacidad, accesibilidad y aviso legal.",
     seccion: "ayuda",
     bloques: [
-      { tipo: "aviso", nivel: "alerta", texto: AVISO_LEGAL },
+      { tipo: "aviso", nivel: "alerta", texto: AVISO_ACADEMICO },
       {
         tipo: "texto",
         parrafos: ["Aquí resumimos, con nuestras palabras, cómo organiza renfe.com su información legal. Los textos legales oficiales son los publicados por Renfe Viajeros S.M.E., S.A. en su web."],
@@ -661,15 +661,15 @@ export const paginas: Pagina[] = [
   {
     ruta: "/ayuda/informacion-legal/aviso-legal",
     titulo: "Aviso legal",
-    resumen: "Andén 0 es una demostración. No es la web de Renfe.",
+    resumen: "Este sitio es una práctica académica. No es la web de Renfe.",
     seccion: "ayuda",
     bloques: [
-      { tipo: "aviso", nivel: "alerta", texto: AVISO_LEGAL },
+      { tipo: "aviso", nivel: "alerta", texto: AVISO_ACADEMICO },
       {
         tipo: "texto",
         parrafos: [
-          "Lo hemos hecho como demostración técnica con una estructura parecida a la de un operador ferroviario real.",
-          "Las marcas Renfe, AVE, Avlo, Más Renfe y similares pertenecen a sus titulares. Aquí solo aparecen para dar contexto a la demostración, sin ánimo de lucro.",
+          "Lo hemos hecho como ejercicio de clase para practicar el desarrollo de una web con una estructura parecida a la de un operador ferroviario real.",
+          "Las marcas Renfe, AVE, Avlo, Más Renfe y similares pertenecen a sus titulares. Aquí solo aparecen para dar contexto al ejercicio, sin ánimo de lucro.",
           "Los datos de teléfonos, plazos y porcentajes se tomaron de información pública en octubre de 2026 y pueden estar desactualizados. Para viajar, consulta siempre la web oficial.",
           "Los formularios, compras y cuentas de este sitio son simulados. No se cobra nada ni se envían datos a terceros.",
         ],
@@ -679,16 +679,16 @@ export const paginas: Pagina[] = [
   {
     ruta: "/ayuda/informacion-legal/privacidad-cookies",
     titulo: "Privacidad y cookies",
-    resumen: "Qué datos usa Andén 0 (spoiler: ninguno real).",
+    resumen: "Qué datos usa este proyecto académico (spoiler: ninguno real).",
     seccion: "ayuda",
     bloques: [
-      { tipo: "aviso", nivel: "alerta", texto: AVISO_LEGAL },
+      { tipo: "aviso", nivel: "alerta", texto: AVISO_ACADEMICO },
       {
         tipo: "lista",
         titulo: "Cómo tratamos los datos en este proyecto",
         items: [
           "No pidas ni introduzcas datos reales: los formularios son de prueba.",
-          "Lo que escribas puede guardarse solo en tu navegador o en una base de datos de pruebas de la demostración, y se puede borrar en cualquier momento.",
+          "Lo que escribas puede guardarse solo en tu navegador o en una base de datos de pruebas de la práctica, y se puede borrar en cualquier momento.",
           "No vendemos ni cedemos datos y no usamos cookies publicitarias ni de seguimiento.",
           "Solo usamos almacenamiento local para cosas como mantener la sesión simulada o tus preferencias.",
         ],
@@ -736,7 +736,7 @@ export const paginas: Pagina[] = [
     resumen: "Resumen práctico de qué regula el contrato de transporte de viajeros.",
     seccion: "ayuda",
     bloques: [
-      { tipo: "aviso", nivel: "info", texto: "Resumen orientativo de Andén 0. No sustituye a las condiciones generales oficiales de Renfe Viajeros ni a las específicas de Avlo." },
+      { tipo: "aviso", nivel: "info", texto: "Resumen orientativo de un proyecto académico. No sustituye a las condiciones generales oficiales de Renfe Viajeros ni a las específicas de Avlo." },
       {
         tipo: "lista",
         titulo: "Qué suelen regular",

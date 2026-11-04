@@ -1,7 +1,7 @@
 import type { Pagina } from "./tipos";
 
 // Sección Más Renfe (programa de puntos, tarjetas, abonos y promociones).
-// Datos tomados de renfe.com en oct. 2026; textos redactados de nuevo. Andén 0, sin relación con Renfe.
+// Datos tomados de renfe.com en oct. 2026; textos redactados de nuevo. Proyecto académico, sin relación con Renfe.
 
 export const paginas: Pagina[] = [
   {
@@ -150,7 +150,7 @@ export const paginas: Pagina[] = [
           "Los puntos van siempre al titular y se anotan al cierre de cada mes.",
         ],
       },
-      { tipo: "aviso", nivel: "alerta", texto: "En Andén 0 no se puede pedir ninguna tarjeta real." },
+      { tipo: "aviso", nivel: "alerta", texto: "Proyecto académico: aquí no se puede pedir ninguna tarjeta real." },
       { tipo: "cta", texto: "Primero, únete al programa", enlace: "/mas-renfe/que-es", etiqueta: "Darme de alta" },
     ],
   },

@@ -548,7 +548,6 @@ a.nav-grupo__paso:hover {
 /* Billete de tren: foto del destino, cuerpo con datos y QR, y talón perforado con el localizador. */
 .ticket {
   position: relative;
-  cursor: pointer;
   display: grid;
   grid-template-columns: minmax(150px, 30%) 1fr minmax(130px, 17%);
   min-height: 15rem;
@@ -695,21 +694,7 @@ a.nav-grupo__paso:hover {
   list-style: none;
 }
 
-.ticket__enlace {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  border-radius: var(--radio-grande);
-}
-
-.ticket__enlace:focus-visible {
-  outline: 3px solid var(--frambuesa);
-  outline-offset: 3px;
-}
-
 .ticket__viajero {
-  position: relative;
-  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;

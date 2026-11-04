@@ -12,7 +12,7 @@ export function Campo({ etiqueta, error, ayuda, ...input }: Base & InputHTMLAttr
   const id = useId();
   const desc = [ayuda && `${id}-a`, error && `${id}-e`].filter(Boolean).join(" ") || undefined;
   return (
-    <div className={`campo herr__campo${ayuda ? " herr__campo--ayuda" : ""}`}>
+    <div className="campo herr__campo">
       <label htmlFor={id}>{etiqueta}</label>
       <input id={id} aria-invalid={error ? true : undefined} aria-describedby={desc} {...input} />
       {ayuda && <small id={`${id}-a`}>{ayuda}</small>}

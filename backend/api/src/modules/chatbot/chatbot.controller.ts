@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpException, HttpStatus, Logger, Post, Res } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpException, HttpStatus, Post, Res } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiOkResponse,
@@ -12,8 +12,6 @@ import { MensajeChatbotDto } from './dto/mensaje-chatbot.dto.js';
 @ApiTags('chatbot')
 @Controller('chatbot')
 export class ChatbotController {
-  private readonly logger = new Logger(ChatbotController.name);
-
   constructor(private readonly chatbot: ChatbotService) {}
 
   @Post('mensaje')
@@ -43,10 +41,6 @@ export class ChatbotController {
     try {
       enviar('fin', await this.chatbot.responder(datos, (paso) => enviar('paso', paso)));
     } catch (error) {
-      // Sin esto, un fallo del proveedor solo se veía como un evento SSE genérico.
-      this.logger.error(
-        `Fallo en el flujo del chatbot: ${error instanceof Error ? error.message : String(error)}`,
-      );
       enviar('error', {
         mensaje:
           error instanceof HttpException ? error.message : 'El asistente no está disponible ahora mismo.',

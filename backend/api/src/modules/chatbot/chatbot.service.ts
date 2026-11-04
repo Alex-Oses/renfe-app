@@ -154,9 +154,6 @@ export class ChatbotService {
             alPaso?.({ paso: 'consultando', herramienta: nombre });
             const resultado = await this.ejecutarHerramienta(nombre, uso.functionCall.args ?? {});
             if (nombre === 'buscar_trenes') {
-              // Las tarjetas son las del último trayecto consultado: si el modelo reintenta con otra
-              // estación o ciudad, no se mezclan resultados de rutas distintas (ticket 007).
-              trenes.clear();
               for (const tren of (resultado as { datos: Tren[] }).datos) trenes.set(tren.id, tren);
             }
             return { functionResponse: { name: nombre, response: { resultado } } };
@@ -192,7 +189,7 @@ export class ChatbotService {
     });
   }
 
-  private async ejecutarHerramienta(nombre: string, input: Record<string, unknown>): Promise<unknown> {
+  private ejecutarHerramienta(nombre: string, input: Record<string, unknown>): Promise<unknown> {
     switch (nombre) {
       case 'buscar_estaciones':
         return this.estaciones.buscar({
@@ -200,29 +197,13 @@ export class ChatbotService {
           feed: feedOpcional(input.feed),
           limit: limite(input.limit),
         });
-      case 'buscar_trenes': {
-        const consulta = {
+      case 'buscar_trenes':
+        return this.trenes.buscar({
           origen: texto(input.origen, 'origen'),
           destino: texto(input.destino, 'destino'),
           fecha: fecha(input.fecha),
           limit: limite(input.limit),
-        };
-        const directos = await this.trenes.buscar(consulta);
-        if (directos.datos.length > 0) {
-          return { ruta: 'directa', consulta, datos: directos.datos, total: directos.total };
-        }
-        // Sin directos solo se llama a transbordos (3–6 s): así la ruta y las tarjetas salen del
-        // mismo origen/destino pedido, sin que el modelo tenga que inventar una alternativa.
-        const enlace = await this.trenes.transbordos(consulta);
-        return {
-          ruta: enlace.datos.length > 0 ? 'con_transbordo' : 'sin_servicio',
-          consulta,
-          datos: [],
-          total: 0,
-          transbordos: enlace.datos,
-          totalTransbordos: enlace.total,
-        };
-      }
+        });
       case 'detalle_tren':
         return this.trenes.detalle(
           feed(input.feed),

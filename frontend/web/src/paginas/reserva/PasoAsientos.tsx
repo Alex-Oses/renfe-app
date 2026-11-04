@@ -1,6 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
-import type { Asiento, IdDescuento, IdTarifa } from "@renfe/shared/api/tipos";
-import { precioViajero } from "@renfe/shared/api/simulado-precios";
+import type { Asiento } from "@renfe/shared/api/tipos";
 import { euros } from "@renfe/shared/formato/formato";
 
 interface Props {
@@ -9,11 +8,9 @@ interface Props {
   elegidos: string[];
   onCambio: (ids: string[]) => void;
   onSeguir: () => void;
-  tarifa: IdTarifa;
-  descuento: IdDescuento;
 }
 
-export function PasoAsientos({ asientos, n, elegidos, onCambio, onSeguir, tarifa, descuento }: Props) {
+export function PasoAsientos({ asientos, n, elegidos, onCambio, onSeguir }: Props) {
   const coches = [...new Set(asientos.map((a) => a.coche))];
   const [coche, setCoche] = useState(() => (elegidos[0] ? Number(elegidos[0].split("-")[0]) : coches[coches.length - 1]));
   const [aviso, setAviso] = useState("");
@@ -52,9 +49,7 @@ export function PasoAsientos({ asientos, n, elegidos, onCambio, onSeguir, tarifa
   };
 
   const clase = delCoche[0]?.clase;
-  // El mapa enseña el mismo precio por adulto que luego suma el resumen (tarifa y descuento incluidos);
-  // antes enseñaba el precio base y no cuadraba con la vista previa de las tarifas.
-  const precio = precioViajero(delCoche[0]?.precio ?? 0, tarifa, "adulto", descuento);
+  const precio = delCoche[0]?.precio ?? 0;
 
   return (
     <>
@@ -104,7 +99,7 @@ export function PasoAsientos({ asientos, n, elegidos, onCambio, onSeguir, tarifa
       <div id="mapa-coche" role="tabpanel" aria-labelledby={`tab-coche-${coche}`} className="coche">
         <p className="coche__clase">
           <span className={`etiqueta-clase etiqueta-clase--${clase === "Prémium" ? "premium" : clase === "Confort" ? "confort" : "estandar"}`}>{clase}</span>{" "}
-          desde {euros(precio)} por asiento (adulto; niños y descuentos se aplican al pagar)
+          {euros(precio)} por asiento
         </p>
         <div className="coche__mapa" onKeyDown={mover} role="group" aria-label={`Asientos del coche ${coche}`}>
           <div className="coche__fila coche__fila--cabeza" aria-hidden="true">

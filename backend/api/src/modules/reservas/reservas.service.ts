@@ -415,13 +415,6 @@ export class ReservasService {
       throw new NotFoundException('Ese viaje no circula en esa fecha o el trayecto no existe');
     }
 
-    // La fecha sola no basta: un tren que salió esta mañana sigue siendo "hoy". Se valida aquí,
-    // antes de escribir, y cubre también los dos tramos de un transbordo.
-    const salida = intervaloAIso(dto.fecha, viaje.sale);
-    if (Date.parse(salida) <= Date.now()) {
-      throw new BadRequestException('Ese tren ya ha salido: elige otro horario');
-    }
-
     await cliente.query(SQL_PLANTILLA, [
       dto.feed,
       dto.viajeId,
@@ -484,6 +477,7 @@ export class ReservasService {
     ]);
     const asientos = ocupados.sort((a, b) => a.coche - b.coche || a.numero - b.numero);
 
+    const salida = intervaloAIso(dto.fecha, viaje.sale);
     const llegada = intervaloAIso(dto.fecha, viaje.llega);
     const expira = new Date(intervaloAIso(dto.fecha, '26:00:00')).toISOString();
 

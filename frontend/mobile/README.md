@@ -1,4 +1,4 @@
-# @renfe/mobile — App Expo (iOS, Android y web)
+# @renfe/mobile — App Expo (iOS y Android)
 
 Expo SDK 58 con expo-router y TypeScript estricto. La lógica (cliente de la API, simulados, QR,
 tokens de diseño) viene de `@renfe/shared` (ver ADR-005).
@@ -27,7 +27,7 @@ En el móvil **no uses `localhost`**: es el propio teléfono. Pon la IP del PC e
 sirve en modo web (`expo start --web`, puerto 8081, que es el único origen que admite el CORS de la API local).
 
 Expo Go: instala la versión compatible con **SDK 58** (la de la tienda si está al día; si no, la que
-ofrece `expo start` al pulsar `a`/`i`). El resto de la app funciona en Expo Go:
+ofrece `expo start` al pulsar `a`/`i`). Todo funciona en Expo Go:
 
 - Abonos (`/abonos`, `/comprar-abono`, `/abono/[id]` con QR), desde Cuenta.
 - Modo revisor (`/revisor`, cuentas con rol `revisor` o `admin`): lee el QR con `expo-camera`.
@@ -63,22 +63,3 @@ eas build --profile preview --platform android   # APK interno (ver eas.json)
 
 `eas build --profile preview --platform android` saca un APK interno. Perfiles en `eas.json`:
 `development` (dev client), `preview` (APK interno) y `production`.
-
-## APK de prueba (Android)
-
-El APK de prueba se compila en local, sin EAS, para un dispositivo ARM64:
-
-```bash
-pnpm --filter @renfe/mobile exec expo prebuild --platform android --no-install
-cd frontend/mobile/android
-./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
-```
-
-Queda en `android/app/build/outputs/apk/release/app-release.apk`; en la raíz del repo se guarda
-una copia como `renfe-app-arm64.apk`. Es un build **release firmado con la clave de debug**: sirve
-para probar en un móvil ARM64, no para publicar. Las variables `EXPO_PUBLIC_*` se embeben al
-compilar, así que hay que definirlas antes de lanzar Gradle.
-
-En Windows, si Gradle falla por la longitud de la ruta, compila desde una ruta corta (por ejemplo
-`C:
-`) o usa `eas build --profile preview --platform android`.

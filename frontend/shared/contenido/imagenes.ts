@@ -120,68 +120,6 @@ export const fotosSeccion: Record<string, Foto> = {
   avisos: { archivo: "Estacion de Sol - 08 - IngolfBLN.jpg", autor: "IngolfBLN, CC BY-SA 2.0" },
 };
 
-// Experiencias: no se inventan archivos. Se usa una foto del catálogo aprobado y, si el slug no
-// contiene una ciudad, la de su categoría. Así todas las tarjetas tienen una imagen coherente.
-const fotosExperiencias: Record<string, keyof typeof fotos> = {
-  experiencias: "madrid",
-  "todas-las-experiencias": "madrid",
-  "carreras-y-maratones": "valencia",
-  "escapadas-en-tren": "asturias",
-  festivales: "barcelona",
-  "fiestas-populares": "sevilla",
-  "lo-mas-popular": "madrid",
-  museos: "madrid",
-  musicales: "madrid",
-  "ofertas-y-promociones": "madrid",
-  "parques-tematicos": "madrid",
-  "planes-de-fin-de-semana": "madrid",
-  "trenes-tematicos": "valladolid",
-  "viajes-por-europa": "lyon",
-  "viajes-por-meses": "madrid",
-  "trenes-turisticos-lujo": "santander",
-  // Propuestas sin ciudad en la URL.
-  carnavales: "cadiz",
-  "cuesta-de-enero": "madrid",
-  "escapadas-en-familia": "madrid",
-  "mejores-escapadas-rurales": "cazorla",
-  "planes-nochevieja": "madrid",
-  "pueblos-andalucia": "cordoba",
-  "rutas-tren-con-perro": "cercedilla",
-  "viajar-blue-monday": "valencia",
-  "viajar-en-halloween": "toledo",
-  "viajar-en-navidad": "madrid",
-  "viajar-reyes": "madrid",
-  "festival-guitar-bcn": "barcelona",
-  "aste-nagusia-semana-grande": "bilbao",
-  "dia-de-andalucia": "granada",
-  "dia-del-padre": "madrid",
-  fallas: "valencia",
-  "feria-abril": "sevilla",
-  "fiesta-de-la-paloma": "madrid",
-  "fiesta-san-isidro": "madrid",
-  "fiestas-del-pilar": "zaragoza",
-  "la-noche-de-san-juan": "a-coruna",
-  "la-tomatina": "valencia",
-  "san-valentin": "madrid",
-  "sant-jordi": "barcelona",
-  "semana-grande-san-sebastian": "san-sebastian",
-  "semana-grande-vigo": "vigo",
-  "vela-santa-ana": "sevilla",
-  "virgen-blanca": "vitoria",
-  "museos-en-red": "madrid",
-  "parque-atracciones-madrid": "madrid",
-  "parque-warner": "madrid",
-  "parques-atracciones-halloween": "madrid",
-  "escapadas-comunidad-valenciana": "valencia",
-  "viajes-fin-de-semana": "madrid",
-  "trenes-turisticos-castilla-la-mancha": "toledo",
-  "trenes-turisticos-galicia": "santiago",
-  transcantabrico: "santander",
-  "al-andalus": "sevilla",
-  "costa-verde-express": "san-sebastian",
-  "expreso-de-la-robla": "leon",
-};
-
 /** URL a 800 px de un archivo de Commons (o la propia URL si ya lo es). */
 export function urlFoto(archivo: string, ancho = 800): string {
   if (/^https?:/.test(archivo)) return archivo;
@@ -207,24 +145,9 @@ export function fotoDe(slug: string): Foto | undefined {
 // Claves más largas primero: "villanueva-de-cordoba" gana a "cordoba".
 const claves = Object.keys(fotos).sort((a, b) => b.length - a.length);
 
-// La ciudad del slug manda; si no aparece, una foto aprobada de la categoría. Nunca se inventa
-// un archivo ni se enlaza una imagen de derechos desconocidos.
-function fotoDeExperiencia(tramos: string[]): Foto | undefined {
-  if (tramos[0] !== "inspirate" || tramos[1] !== "experiencias") return undefined;
-  const slug = tramos[tramos.length - 1] ?? "";
-  const directa = fotosExperiencias[slug];
-  if (directa) return fotos[directa];
-  const ciudad = claves.find((c) => slug === c || slug.includes(`-${c}`) || slug.startsWith(`${c}-`));
-  if (ciudad) return fotos[ciudad];
-  const categoria = fotosExperiencias[tramos[2] ?? ""];
-  return categoria ? fotos[categoria] : fotos.madrid;
-}
-
 /** Foto asociada a una ruta de contenido por su slug (destino, ruta, estación, núcleo...). */
 export function fotoDeRuta(ruta: string): Foto | undefined {
   const tramos = ruta.split("/").filter(Boolean);
-  const experiencia = fotoDeExperiencia(tramos);
-  if (experiencia) return experiencia;
   if (tramos[0] === "cercanias") {
     // Líneas, estaciones, tarifas... de un mismo núcleo comparten foto de ciudad: manda la sección.
     const seccion = fotosSeccion[tramos[2] ?? ""];

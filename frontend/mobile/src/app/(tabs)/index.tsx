@@ -14,8 +14,6 @@ import { Pantalla } from "@/components/Pantalla";
 import { Pie } from "@/components/Pie";
 import { Aparece, Revela } from "@/components/Revela";
 
-const ScrollAnimada = Animated.ScrollView as unknown as typeof ScrollView;
-
 // El panel de cristal se monta 26 px sobre la escena del tren, como en la web.
 
 const manana = () => {
@@ -129,12 +127,12 @@ export default function Comprar() {
   return (
     <Pantalla scroll={false} contenido={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
       <View style={{ flex: 1 }} onLayout={(e) => setAltoCaja(e.nativeEvent.layout.height)}>
-      <ScrollAnimada
+      <Animated.ScrollView
         ref={desplazable}
         horizontal
         pagingEnabled
         style={styles.desplazable}
-        onScroll={entrada.alScroll as never}
+        onScroll={entrada.alScroll}
         scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -389,9 +387,9 @@ export default function Comprar() {
         </Revela>
 
         <Pie />
-        <Text style={styles.pieTexto}>Renfe · Andén 0 · Precios y reservas simulados.</Text>
+        <Text style={styles.pieTexto}>Renfe · Andén 0 · Proyecto de clase. Precios y reservas simulados.</Text>
         </ScrollView>
-      </ScrollAnimada>
+      </Animated.ScrollView>
       </View>
     </Pantalla>
   );

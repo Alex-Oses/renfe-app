@@ -1,17 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom";
-import { buscarTransbordos, cancelarReserva, comprarReserva } from "@renfe/shared/api/cliente";
-import type { IdDescuento, OpcionTransbordo, Pasajero, TipoViajero, Tren } from "@renfe/shared/api/tipos";
+import { buscarTransbordos } from "@renfe/shared/api/cliente";
 import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
 import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import type { IdDescuento, NuevaReserva, OpcionTransbordo, Pasajero, TipoViajero } from "@renfe/shared/api/tipos";
 import { useSesion } from "../../estado/sesion";
 import { euros, hora } from "@renfe/shared/formato/formato";
+import { ConfirmarPago } from "./ConfirmarPago";
 import "./reserva.css";
 
 const vacio = (): Pasajero => ({ nombre: "", apellidos: "", documento: "", email: "" });
-const comprarTramo = (tren: Tren, pasajeros: Pasajero[], descuento: IdDescuento, bebes: number) =>
-  comprarReserva(tren, { trenId: tren.id, asientos: [], pasajeros, descuento, bebes });
-
 export default function ReservaTransbordo() {
   const { sesion } = useSesion();
   const { pathname, search } = useLocation();
@@ -25,6 +23,7 @@ export default function ReservaTransbordo() {
   const [opcion, setOpcion] = useState<OpcionTransbordo | null>(null);
   const [pasajeros, setPasajeros] = useState<Pasajero[]>(() => Array.from({ length: n }, vacio));
   const [estado, setEstado] = useState<"elige" | "pagando" | "listo">("elige");
+  const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState("");
   const origen = params.get("origen") ?? "";
   const destino = params.get("destino") ?? "";
@@ -58,11 +57,18 @@ export default function ReservaTransbordo() {
       setError("Rellena nombre, apellidos y documento de cada viajero.");
       return;
     }
+    setError("");
+    setConfirmando(true);
+  }
+
+  // Confirmado y con la cara comprobada: se compran los dos tramos.
+  async function comprar() {
+    setConfirmando(false);
     setEstado("pagando");
     setError("");
     try {
-      const conTipo = pasajeros.map((p, i) => ({ ...p, tipo: tipos[i] }));
-      await comprarDosTramos((i) => comprarTramo(opcion!.tramos[i], conTipo, descuento, bebes), cancelarReserva);
+      const datos: NuevaReserva = { trenId: ida.id, asientos: [], pasajeros: pasajeros.map((p, i) => ({ ...p, tipo: tipos[i] })), descuento, bebes };
+      await comprarDosTramos([ida, sigue], datos);
       window.scrollTo(0, 0);
       setEstado("listo");
     } catch (fallo) {
@@ -117,6 +123,7 @@ export default function ReservaTransbordo() {
         {ninos > 0 && ` · ${ninos} ${ninos === 1 ? "niño" : "niños"} con descuento`}
         {bebes > 0 && ` · ${bebes} ${bebes === 1 ? "bebé" : "bebés"} gratis`}
       </p>
+      {confirmando && <ConfirmarPago total={total} alConfirmar={comprar} alCerrar={() => setConfirmando(false)} />}
       <button type="submit" className="boton" disabled={estado === "pagando"}>
         {estado === "pagando" ? "Comprando los dos billetes…" : "Comprar los dos billetes"}
       </button>

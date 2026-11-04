@@ -653,7 +653,10 @@ circula ese día o el trayecto no existe · `503` BD caída.
 Descripción: crea una reserva **pagada** (el pago es simulado: no hay Stripe) y emite **un billete con
 QR firmado por pasajero**. La API genera la plantilla de butacas del viaje y fecha si no existe, asigna
 las libres con `for update skip locked` y calcula el precio simulado y determinista del trayecto.
-Auth: **sí**
+Auth: **sí**, y además **cara recién comprobada**: el token tiene que venir de
+`POST /auth/cara/verificar` hace menos de 10 min (claim `cara_en`, lo comprueba `CaraRecienteGuard`).
+Con un token de contraseña responde **403** «Confirma el pago con tu cara antes de comprar.» (403 y no
+401 para que el cliente no lo tome por sesión caducada). Lo mismo vale para `POST /reservas/transbordo`.
 
 Request:
 

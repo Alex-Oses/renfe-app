@@ -3,6 +3,7 @@ import { comprarReserva } from "@renfe/shared/api/cliente";
 import type { IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva, Tren } from "@renfe/shared/api/tipos";
 import { EXTRAS, precioExtra } from "@renfe/shared/api/simulado-precios";
 import { euros } from "@renfe/shared/formato/formato";
+import { ConfirmarPago } from "./ConfirmarPago";
 
 interface Props {
   tren: Tren;
@@ -23,8 +24,10 @@ export function PasoPago({ tren, asientos, pasajeros, total, importeCargando, ta
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   const pagar = async () => {
+    setConfirmando(false);
     setCargando(true);
     setError("");
     try {
@@ -71,7 +74,7 @@ export function PasoPago({ tren, asientos, pasajeros, total, importeCargando, ta
         <div>
           <h2>Pago en modo prueba</h2>
           <p>
-            Esta web es una demostración. El pago se conectará con Stripe en modo test, así que aquí no se pide ninguna
+            Esta web es un proyecto académico. El pago se conectará con Stripe en modo test, así que aquí no se pide ninguna
             tarjeta y no se cobra nada. Al pulsar el botón se confirma la reserva como si el pago hubiera ido bien.
           </p>
           <p className="pago__importe">
@@ -91,8 +94,10 @@ export function PasoPago({ tren, asientos, pasajeros, total, importeCargando, ta
         </div>
       )}
 
+      {confirmando && <ConfirmarPago total={total} alConfirmar={pagar} alCerrar={() => setConfirmando(false)} />}
+
       <div className="reserva__acciones">
-        <button type="button" className="boton" onClick={pagar} disabled={cargando || importeCargando} aria-busy={cargando || importeCargando}>
+        <button type="button" className="boton" onClick={() => setConfirmando(true)} disabled={cargando || importeCargando} aria-busy={cargando || importeCargando}>
           {cargando ? (
             <>
               <span className="girador" aria-hidden="true" /> Procesando el pago…

@@ -3,7 +3,7 @@ import { horaLocal } from "@renfe/shared/formato/formato";
 import "leaflet/dist/leaflet.css";
 import "./mapa/mapa.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer } from "react-leaflet";
 import { useSearchParams } from "react-router-dom";
 import { posicionesReales, posicionesTrenes, completarRuta, posicionDeTren } from "@renfe/shared/api/cliente";
 import type { PosicionTren, TipoTren } from "@renfe/shared/api/tipos";
@@ -12,16 +12,8 @@ import { useAvisos } from "../estado/avisos";
 import { CapaTrenes, COLOR_TIPO, SIGLA_TIPO, svgTren } from "./mapa/CapaTrenes";
 import { Estaciones, RutaElegida, RutasTodas } from "./mapa/CapasRuta";
 import { etiquetaRetraso, nivelRetraso, progresoDe, proximaDe, repasarParadas, ciudadCorta } from "@renfe/shared/estado/estado-tren";
-import { seleccionTrasClic } from "./mapa/seleccion";
 
 const TIPOS = Object.keys(COLOR_TIPO) as TipoTren[];
-
-// El clic en el fondo del mapa cierra el detalle; los marcadores paran su evento para no
-// disparar también este manejador.
-function ClicFondo({ alCerrar }: { alCerrar: () => void }) {
-  useMapEvents({ click: alCerrar });
-  return null;
-}
 
 function Leyenda() {
   return (
@@ -164,10 +156,6 @@ export default function Mapa() {
     },
     [setParams],
   );
-  const cerrarDetalle = useCallback(
-    () => elegir(seleccionTrasClic({ tipo: "fondo" })),
-    [elegir],
-  );
 
   const visibles = useMemo(() => {
     const q = sinTildes(filtro.trim());
@@ -255,7 +243,6 @@ export default function Mapa() {
           {elegido ? <RutaElegida tren={elegido} /> : <RutasTodas trenes={trenes} />}
           <Estaciones etiquetas={!elegido} />
           <CapaTrenes trenes={marcadores} seleccion={seleccion} siguiendo={siguiendo} reducido={reducido} alElegir={elegir} />
-          {seleccion && <ClicFondo alCerrar={cerrarDetalle} />}
         </MapContainer>
         {cargando && <p className="mapa-aviso cristal">Cargando posiciones…</p>}
         <Leyenda />
@@ -362,7 +349,7 @@ export default function Mapa() {
                   {siguiendo ? "Dejar de seguir" : "Seguir en el mapa"}
                 </button>
               )}
-              <button className="boton boton--secundario" onClick={cerrarDetalle}>
+              <button className="boton boton--secundario" onClick={() => elegir(null)}>
                 Cerrar
               </button>
             </div>

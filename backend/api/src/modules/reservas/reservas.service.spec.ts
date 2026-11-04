@@ -6,7 +6,6 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
-import { vi } from 'vitest';
 import { verificar } from '../../common/qr/firma.js';
 import { BdService } from '../../common/bd/bd.service.js';
 import type { CorreoService } from '../../common/correo/correo.service.js';
@@ -175,24 +174,6 @@ describe('ReservasService.crear', () => {
     await expect(
       servicioCon().crear('usuario-1', dto({ fecha: '2020-01-01' })),
     ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('rechaza un tren que ya ha salido hoy y deja pasar el que sale más tarde', async () => {
-    vi.useFakeTimers();
-    try {
-      vi.setSystemTime(new Date('2026-11-03T12:00:00+01:00'));
-
-      await expect(
-        servicioCon().crear('usuario-1', dto({ fecha: '2026-11-03' })),
-      ).rejects.toThrow('ya ha salido');
-
-      const tarde = { ...VIAJE, sale: '23:00:00', llega: '23:59:00' };
-      await expect(
-        servicioCon({ viaje: tarde }).crear('usuario-1', dto({ fecha: '2026-11-03' })),
-      ).resolves.toBeDefined();
-    } finally {
-      vi.useRealTimers();
-    }
   });
 
   it('rechaza origen y destino iguales', async () => {
