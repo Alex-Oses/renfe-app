@@ -1,6 +1,6 @@
 // Antes de cobrar: primero se confirma el importe y luego la cara del titular de la cuenta.
-// Con la cara ya registrada se verifica contra /auth/cara/verificar; si aún no la tiene, se registra
-// aquí mismo (registrarla ya demuestra que es él quien está delante de la cámara).
+// La API solo cobra con un token salido de /auth/cara/verificar hace menos de 10 min (claim cara_en),
+// así que siempre se verifica; si la cuenta aún no tiene cara, antes se registra con la misma huella.
 import { useEffect, useRef, useState } from "react";
 import { registrarCara, verificarCara } from "@renfe/shared/api/cliente";
 import { euros } from "@renfe/shared/formato/formato";
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function ConfirmarPago({ total, alConfirmar, alCerrar }: Props) {
-  const { sesion, entrar, actualizarUsuario } = useSesion();
+  const { sesion, entrar } = useSesion();
   const dialogo = useRef<HTMLDialogElement>(null);
   const [paso, setPaso] = useState<"confirmar" | "cara">("confirmar");
   const conCara = Boolean(sesion?.usuario.caraRegistrada);
@@ -52,10 +52,9 @@ export function ConfirmarPago({ total, alConfirmar, alCerrar }: Props) {
             // Sin sesión solo se llega en modo simulado (sin API): basta con haber captado la cara.
             if (!sesion) {
               /* nada que comprobar */
-            } else if (conCara) entrar(await verificarCara({ email: sesion.usuario.email, embedding }));
-            else {
-              await registrarCara(embedding);
-              actualizarUsuario({ caraRegistrada: true });
+            } else {
+              if (!conCara) await registrarCara(embedding);
+              entrar(await verificarCara({ email: sesion.usuario.email, embedding }));
             }
             setTimeout(alConfirmar, 700); // deja ver el aviso de éxito
           }}

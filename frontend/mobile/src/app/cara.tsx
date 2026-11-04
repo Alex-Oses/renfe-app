@@ -100,9 +100,12 @@ export default function Cara() {
         activo.current = false;
         setFase("procesando");
         const media = normalizar(huellas[0]!.map((_, i) => huellas.reduce((s, h) => s + h[i]!, 0) / huellas.length));
-        if (pago && sesion?.usuario.caraRegistrada)
+        if (pago && sesion) {
+          // La API solo cobra con un token de cara recién comprobada (claim cara_en): siempre se
+          // verifica, y si la cuenta aún no tiene cara se registra antes con la misma huella.
+          if (!sesion.usuario.caraRegistrada) await registrarCara(media);
           guardarSesion(await verificarCara({ email: sesion.usuario.email, embedding: media }));
-        else if (registrar || (pago && sesion)) {
+        } else if (registrar) {
           await registrarCara(media);
           if (sesion) guardarSesion({ ...sesion, usuario: { ...sesion.usuario, caraRegistrada: true } });
         } else if (!pago) guardarSesion(await verificarCara({ email: email.trim(), embedding: media }));

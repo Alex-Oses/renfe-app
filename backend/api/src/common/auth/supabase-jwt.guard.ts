@@ -33,6 +33,7 @@ export class SupabaseJwtGuard implements CanActivate {
         id: String(payload.sub),
         email: typeof payload.email === 'string' ? payload.email : null,
         rol: leerRol(payload),
+        caraEn: typeof payload.cara_en === 'number' ? payload.cara_en : null,
       };
       return true;
     } catch {

@@ -1,6 +1,6 @@
 // Antes de cobrar: confirmación del importe y luego la cara del titular (pantalla /cara?modo=pago).
 // La pantalla de la cara avisa del resultado con resolverCara; aquí se espera como una promesa.
-// En Expo Go no existe onnxruntime-react-native (hace falta la APK), así que allí se salta la cara.
+// En Expo Go no existe onnxruntime-react-native: sin cara no se paga, hace falta la APK.
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import { router } from "expo-router";
 import { Alert } from "react-native";
@@ -33,8 +33,11 @@ export async function confirmarPagoConCara(total: number): Promise<boolean> {
   );
   if (!si) return false;
   if (enExpoGo) {
-    // shortcut: sin ONNX en Expo Go no hay cara; en la APK (build propio) sí se pide.
-    return preguntar("Cara no disponible en Expo Go", "En la APK aquí se abre la cámara. ¿Sigues sin verificar la cara?", "Seguir");
+    Alert.alert(
+      "Necesitas la app instalada",
+      "Cada pago se confirma con tu cara y Expo Go no puede reconocerla. Instala la APK para comprar billetes.",
+    );
+    return false;
   }
   resolverCara(false); // por si quedó otra petición colgada
   return new Promise<boolean>((ok) => {
