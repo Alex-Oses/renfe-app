@@ -6,6 +6,7 @@ import type { EstadoValidacion, ResultadoValidacion } from "@renfe/shared/api/ti
 import { useSesion } from "../estado/sesion";
 import { leerDeArchivo } from "./revisor/decodificar";
 import { Escaner } from "./revisor/Escaner";
+import { anadirLectura, type Lectura } from "./revisor/historial";
 import "./revisor/revisor.css";
 
 // Cómo se enseña cada resultado: color, título y qué tiene que hacer el revisor.
@@ -39,7 +40,8 @@ export default function Revisor() {
   const [comprobando, setComprobando] = useState(false);
   const [error, setError] = useState("");
   const [codigo, setCodigo] = useState("");
-  const [historial, setHistorial] = useState<ResultadoValidacion[]>([]);
+  const [historial, setHistorial] = useState<Lectura[]>([]);
+  const siguienteLectura = useRef(0);
   const titulo = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -52,7 +54,8 @@ export default function Revisor() {
     try {
       const r = await validarBillete(texto);
       setResultado(r);
-      setHistorial((h) => [r, ...h].slice(0, 20));
+      // Clave propia por lectura: dos lecturas del mismo segundo comparten `validadoEn`.
+      setHistorial((h) => anadirLectura(h, r, siguienteLectura.current++));
       setModo("resultado");
       requestAnimationFrame(() => titulo.current?.focus());
     } catch (e) {
@@ -239,7 +242,7 @@ export default function Revisor() {
           <h2 id="historial-titulo">Últimas lecturas</h2>
           <ol>
             {historial.map((h) => (
-              <li key={h.validadoEn} className={`lectura lectura--${ver(h).tono}`}>
+              <li key={h.lecturaId} className={`lectura lectura--${ver(h).tono}`}>
                 <span>{horaLocal(h.validadoEn)}</span>
                 <strong>{ver(h).titulo}</strong>
                 <span>

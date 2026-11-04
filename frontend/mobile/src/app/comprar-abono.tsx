@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { comprarAbono } from "@renfe/shared/api/cliente";
 import { TIPOS_ABONO, finAbono, hoyIso, infoAbono } from "@renfe/shared/api/simulado-abonos";
-import type { Abono, Estacion, TipoAbono } from "@renfe/shared/api/tipos";
+import type { Estacion, TipoAbono } from "@renfe/shared/api/tipos";
+import { compraConfirmada, compraEnviando, compraFallida, compraInicial, tonoCompra, type ResultadoCompraAbono } from "@renfe/shared/api/resultado-compra";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { CampoBoton } from "@/components/Campo";
@@ -20,26 +21,25 @@ export default function ComprarAbono() {
   const [destino, setDestino] = useState<Estacion | null>(null);
   const [inicio, setInicio] = useState(hoyIso());
   const [hoja, setHoja] = useState<"origen" | "destino" | "fecha" | null>(null);
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState("");
-  const [comprado, setComprado] = useState<Abono | null>(null);
+  const [resultado, setResultado] = useState<ResultadoCompraAbono>(compraInicial);
+  const comprado = resultado.estado === "exito" ? resultado.abono : null;
+  const cargando = resultado.estado === "enviando";
+  const error = resultado.estado === "error" ? resultado.mensaje : "";
   const info = infoAbono(tipo);
 
   const pagar = async () => {
-    if (info.trayecto && (!origen || !destino)) return setError("Elige el origen y el destino del abono.");
-    if (info.trayecto && origen?.id === destino?.id) return setError("El origen y el destino tienen que ser distintos.");
-    setCargando(true);
-    setError("");
+    if (info.trayecto && (!origen || !destino)) return setResultado(compraFallida("Elige el origen y el destino del abono."));
+    if (info.trayecto && origen?.id === destino?.id) {
+      return setResultado(compraFallida("El origen y el destino tienen que ser distintos."));
+    }
+    setResultado(compraEnviando());
     try {
-      setComprado(
-        await comprarAbono(
-          info.trayecto && origen && destino ? { tipo, origenId: origen.id, destinoId: destino.id, inicio } : { tipo, inicio },
-        ),
+      const abono = await comprarAbono(
+        info.trayecto && origen && destino ? { tipo, origenId: origen.id, destinoId: destino.id, inicio } : { tipo, inicio },
       );
+      setResultado(compraConfirmada(abono));
     } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setCargando(false);
+      setResultado(compraFallida((e as Error).message));
     }
   };
 
@@ -48,7 +48,7 @@ export default function ComprarAbono() {
       <Pantalla volver={() => router.back()}>
         <Text style={estilos.h1}>Abono comprado</Text>
         <Aviso
-          tipo="ok"
+          tipo={tonoCompra(resultado)}
           texto={`${comprado.nombre}${comprado.origen ? ` · ${comprado.origen.nombre} – ${comprado.destino?.nombre}` : ""}. Válido del ${aFecha(comprado.inicio)} al ${aFecha(comprado.fin)}.`}
         />
         <Boton
@@ -56,7 +56,7 @@ export default function ComprarAbono() {
           icono="billetes"
           onPress={() => router.replace({ pathname: "/abono/[id]", params: { id: comprado.id } } as never)}
         />
-        <Boton texto="Comprar otro" variante="secundario" onPress={() => setComprado(null)} />
+        <Boton texto="Comprar otro" variante="secundario" onPress={() => setResultado(compraInicial())} />
       </Pantalla>
     );
 
@@ -110,7 +110,8 @@ export default function ComprarAbono() {
 
       <Text style={styles.paso}>3. Pago</Text>
       <Text style={estilos.suave}>Pago en modo prueba: no se pide tarjeta ni se cobra nada.</Text>
-      {error ? <Aviso texto={error} /> : null}
+      {error ? <Aviso tipo={tonoCompra(resultado)} texto={error} /> : null}
+      {cargando ? <Aviso tipo="info" texto="Procesando el pago…" /> : null}
       <Boton texto={`Pagar ${euros(info.precio)} (simulado)`} onPress={pagar} cargando={cargando} desactivado={cargando} />
 
       <SelectorEstacion

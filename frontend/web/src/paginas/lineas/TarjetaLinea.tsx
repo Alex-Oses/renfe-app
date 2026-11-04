@@ -1,12 +1,12 @@
 import { horaLocal } from "@renfe/shared/formato/formato";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { buscarTrenes, posicionesTrenes } from "@renfe/shared/api/cliente";
+import { buscarTrenes, hoyEnMadrid, posicionesTrenes } from "@renfe/shared/api/cliente";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import type { LineaFavorita, PosicionTren, Tren } from "@renfe/shared/api/tipos";
 import { useAvisos } from "../../estado/avisos";
-import { hoyISO } from "../../estado/vigilante";
 import { retrasoDe } from "@renfe/shared/estado/vigilante-reglas";
+import { estadoDeLinea } from "./estado";
 
 const nombre = (id: string) => ESTACIONES.find((e) => e.id === id)?.nombre ?? id;
 
@@ -22,18 +22,29 @@ export function TarjetaLinea({ linea, primera, ultima }: { linea: LineaFavorita;
   const [trenes, setTrenes] = useState<Tren[] | null>(null);
   const [pos, setPos] = useState<PosicionTren[]>([]);
   const [ahora, setAhora] = useState(Date.now());
+  const [error, setError] = useState("");
+  const [reintento, setReintento] = useState(0);
 
   useEffect(() => {
     let vivo = true;
-    buscarTrenes({ origen: linea.origen, destino: linea.destino, fecha: hoyISO() }).then(
-      (t) => vivo && setTrenes(t),
-      () => vivo && setTrenes([]),
+    buscarTrenes({ origen: linea.origen, destino: linea.destino, fecha: hoyEnMadrid() }).then(
+      (t) => {
+        if (!vivo) return;
+        setTrenes(t);
+        setError("");
+      },
+      (e: Error) => {
+        if (!vivo) return;
+        // Un fallo de red no es «no hay trenes»: se queda en error hasta reintentar.
+        setTrenes(null);
+        setError(e.message || "No se han podido cargar los horarios.");
+      },
     );
     posicionesTrenes().then((p) => vivo && setPos(p), () => {});
     return () => {
       vivo = false;
     };
-  }, [linea.origen, linea.destino]);
+  }, [linea.origen, linea.destino, reintento]);
 
   useEffect(() => {
     const t = setInterval(() => setAhora(Date.now()), 10_000);
@@ -41,7 +52,7 @@ export function TarjetaLinea({ linea, primera, ultima }: { linea: LineaFavorita;
   }, []);
 
   const titulo = `${nombre(linea.origen)} a ${nombre(linea.destino)}`;
-  const proximos = (trenes ?? []).filter((t) => Date.parse(t.salida) > ahora).slice(0, 4);
+  const estado = estadoDeLinea({ trenes, error, ahora });
 
   return (
     <article className="linea cristal" aria-label={titulo}>
@@ -63,15 +74,30 @@ export function TarjetaLinea({ linea, primera, ultima }: { linea: LineaFavorita;
         </div>
       </header>
 
-      {trenes === null ? (
+      {estado.tipo === "error" ? (
+        <p className="linea__nada" role="alert">
+          No se han podido cargar los horarios de esta línea.{" "}
+          <button
+            type="button"
+            className="linea__reservar"
+            onClick={() => {
+              setError("");
+              setTrenes(null);
+              setReintento((n) => n + 1);
+            }}
+          >
+            Reintentar
+          </button>
+        </p>
+      ) : estado.tipo === "cargando" ? (
         <p className="cargando">Cargando horarios…</p>
-      ) : proximos.length === 0 ? (
+      ) : estado.tipo === "vacia" ? (
         <p className="linea__nada">
           No quedan trenes hoy en esta línea. <Link to={`/trenes?origen=${linea.origen}&destino=${linea.destino}`}>Buscar otro día</Link>
         </p>
       ) : (
         <ul className="linea__trenes">
-          {proximos.map((t) => {
+          {estado.trenes.map((t) => {
             const retraso = retrasoDe(t, pos);
             return (
               <li key={t.id} className="linea__tren">

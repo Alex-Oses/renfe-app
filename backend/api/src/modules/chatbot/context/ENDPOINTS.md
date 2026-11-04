@@ -17,12 +17,22 @@ necesita los `id`, no los nombres.
 
 ### `buscar_trenes` → `GET /trenes?origen=&destino=&fecha=&limit=`
 
-Viajes **directos** entre dos estaciones para una fecha local `AAAA-MM-DD`. `origen` y `destino` son
-`id` de estación. Devuelve `{ datos: Viaje[], total }` con `feed`, `tripId`, número, línea, tipo de
-servicio, hora de salida y de llegada, duración, parada de origen y de destino, y precio simulado.
+Viajes entre dos estaciones para una fecha local `AAAA-MM-DD`. `origen` y `destino` son `id` de
+estación. Devuelve `{ ruta, consulta, datos, total, transbordos?, totalTransbordos? }`:
 
-Si devuelve `datos: []` es que no hay **ningún viaje directo** entre esas dos estaciones ese día: no
-significa que no haya trenes en toda la ciudad (ver «Cómo elegir la estación»).
+- `ruta`: `directa`, `con_transbordo` o `sin_servicio`.
+- `consulta`: el `origen`, `destino`, `fecha` y `limit` **exactos** que se han pedido.
+- `datos`: viajes directos; es lo que la app pinta como tarjetas. Cada uno trae `feed`, `tripId`,
+número, línea, tipo de servicio, horas, duración, parada de origen y de destino, y precio simulado.
+- `transbordos`: si no hay directos, opciones de dos tramos (cada tramo con su `feed`/`tripId`).
+
+Si `ruta` es `sin_servicio` no hay ni directos ni transbordos **entre las estaciones pedidas** ese
+día: dilo tal cual, sin cambiar de ciudad ni inventar servicios. No significa que no haya trenes en
+toda la ciudad (ver «Cómo elegir la estación»).
+
+La respuesta usa siempre el `origen`/`destino` de `consulta`: si el usuario pidió Tarragona–Madrid,
+las tarjetas y la respuesta son de Tarragona–Madrid, aunque el viaje salga de otra estación de la
+misma ciudad (mira `datos[].origen.nombre`). Nunca sustituyas una punta por otra ciudad.
 
 ### `detalle_tren` → `GET /trenes/{feed}/{tripId}?fecha=`
 
@@ -85,3 +95,6 @@ Una ciudad tiene **varias** estaciones y `buscar_estaciones` las devuelve todas.
 - Redondea lo que sobra (precios, segundos de retraso) y ordena por hora de salida.
 - No rellenes huecos: si un dato no viene en la respuesta, no lo inventes ni lo estimes.
 - Si falta un dato imprescindible (fecha, destino), pregunta solo por ese.
+- Con `ruta: con_transbordo`, di que no hay directo y resume los dos tramos de `transbordos` (horas y
+  estación de cambio); no los presentes como si fueran directos.
+- No afirmes que hay trenes si `ruta: sin_servicio`; ofrece cambiar de fecha o de estación.

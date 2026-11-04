@@ -16,7 +16,7 @@ const escapar = (t: string) =>
 /** Cuerpo HTML sencillo a partir de líneas de texto ya sin escapar. */
 export function htmlDeCorreo(titulo: string, lineas: string[]): string {
   const cuerpo = lineas.map((l) => `<p style="margin:4px 0">${escapar(l)}</p>`).join('');
-  return `<div style="font-family:Arial,sans-serif;color:#222"><h2 style="color:#81005E">${escapar(titulo)}</h2>${cuerpo}<p style="color:#777;font-size:12px">Proyecto de clase: billete y pago simulados.</p></div>`;
+  return `<div style="font-family:Arial,sans-serif;color:#222"><h2 style="color:#81005E">${escapar(titulo)}</h2>${cuerpo}<p style="color:#777;font-size:12px">Andén 0: billete y pago simulados.</p></div>`;
 }
 
 /**
