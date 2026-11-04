@@ -1,17 +1,20 @@
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRef, useState, type ComponentRef } from "react";
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { fotoDeRuta, urlFoto } from "@renfe/shared/contenido/imagenes";
 import { menuPrincipal, nucleosCercanias } from "@renfe/shared/contenido/navegacion";
-import { colores, espaciado, estilos, fuentes, gradientes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
+import { colores, espaciado, estilos, fuentes, paleta, radios, sombras, tipografia, tonos } from "@/tema";
 import { Buscador, type Criterios } from "@/components/Buscador";
 import { Cristal } from "@/components/Cristal";
+import { EntradaTren, useEntradaTren } from "@/components/EntradaTren";
 import { Icono, type NombreIcono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
 import { Pie } from "@/components/Pie";
 import { Aparece, Revela } from "@/components/Revela";
-import { TrenSvg } from "@/components/TrenSvg";
+
+// El panel de cristal se monta 26 px sobre la escena del tren, como en la web.
 
 const manana = () => {
   const d = new Date(Date.now() + 86_400_000);
@@ -74,13 +77,18 @@ const PREGUNTAS = [
 ];
 
 export default function Comprar() {
-  // Entrada del tren en la portada, como el tramo animado de la web (aquí con Animated).
-  const llegada = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.timing(llegada, { toValue: 1, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-  }, [llegada]);
+  // Carrusel de dos páginas: el tren (avanza al deslizar a la izquierda) y la portada con el buscador.
+  const desplazable = useRef<ComponentRef<typeof ScrollView>>(null);
+  const { width: anchoPagina } = useWindowDimensions();
+  // Hueco real entre la cabecera y la barra de pestañas: la escena del tren se mide con él para
+  // que el andén no quede detrás de la barra (ver useEntradaTren).
+  const [altoCaja, setAltoCaja] = useState(0);
+  const entrada = useEntradaTren(altoCaja);
 
   const [abierta, setAbierta] = useState<string | null>(null);
+
+  // «Ir al buscador»: salta al final del tramo, donde ya está el panel (como en la web).
+  const irAlBuscador = () => desplazable.current?.scrollTo({ x: anchoPagina, animated: true });
 
   const buscar = (c: Criterios) => {
     router.push({
@@ -117,276 +125,279 @@ export default function Comprar() {
     });
 
   return (
-    <Pantalla contenido={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
-      <View style={styles.portada}>
-        <LinearGradient colors={gradientes.heroe} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-        <View style={styles.catenaria} pointerEvents="none" />
-        <Animated.Text
-          style={[styles.lema, { opacity: llegada, transform: [{ translateY: llegada.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}
+    <Pantalla scroll={false} contenido={{ paddingHorizontal: 0, paddingTop: 0, gap: 0 }}>
+      <View style={{ flex: 1 }} onLayout={(e) => setAltoCaja(e.nativeEvent.layout.height)}>
+      <Animated.ScrollView
+        ref={desplazable}
+        horizontal
+        pagingEnabled
+        style={styles.desplazable}
+        onScroll={entrada.alScroll}
+        scrollEventThrottle={16}
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <EntradaTren
+          escena={entrada.escena}
+          tramo={entrada.tramo}
+          estatico={entrada.estatico}
+          desplazamiento={entrada.desplazamiento}
+          onIrAlBuscador={irAlBuscador}
+        />
+
+        <ScrollView
+          style={{ width: anchoPagina }}
+          contentContainerStyle={styles.desplazableContenido}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
         >
-          Renfe
-        </Animated.Text>
-        <Animated.View
-          style={[
-            styles.tren,
-            {
-              opacity: llegada,
-              transform: [{ translateX: llegada.interpolate({ inputRange: [0, 1], outputRange: [-70, 0] }) }],
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <TrenSvg ancho={760} />
-        </Animated.View>
-        <View style={styles.anden} pointerEvents="none">
-          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-            <View key={i} style={[styles.raya, { left: `${8 + i * 14}%` }]} />
-          ))}
-        </View>
-        <View style={styles.sombraTren} pointerEvents="none" />
-      </View>
-
-      <Cristal style={{ marginHorizontal: 12, marginTop: -26 }} padding={espaciado[4]} gap={espaciado[3]}>
-        <View style={{ gap: espaciado[1] }}>
-          <Text style={estilos.h1}>Busca tu próximo viaje</Text>
-          <Text style={[estilos.suave, { fontSize: 15, lineHeight: 21 }]}>
-            Trenes de larga y media distancia. Eliges asiento y llevas el billete en el móvil.
-          </Text>
-        </View>
-        <Buscador onBuscar={buscar} />
-      </Cristal>
-
-      <Revela style={styles.seccion}>
-        <Text style={estilos.h2}>Antes de viajar</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 12 }}>
-          {AVISOS.map((a) => (
-            <Pressable
-              key={a.titulo}
-              accessibilityRole="link"
-              accessibilityLabel={`${a.titulo}. ${a.texto}`}
-              onPress={() => contenido(a.ruta)}
-              style={({ pressed }) => [styles.aviso, pressed && styles.pulsado]}
-            >
-              <View style={styles.avisoIcono}>
-                <Icono nombre={a.icono} tamano={21} color={colores.marca} />
-              </View>
-              <Text style={styles.avisoTitulo}>{a.titulo}</Text>
-              <Text style={styles.avisoTexto}>{a.texto}</Text>
-              <Text style={styles.enlace}>Más información</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </Revela>
-
-      <Revela style={styles.seccion} delay={40}>
-        <Text style={estilos.h2}>Destinos destacados</Text>
-        <Text style={estilos.suave}>Precios para viajar mañana, por persona y trayecto.</Text>
-        <View style={styles.rejilla}>
-          {DESTINOS.map((d) => {
-            const foto = fotoDeRuta(d.foto);
-            return (
-              <Pressable
-                key={d.a}
-                accessibilityRole="button"
-                accessibilityLabel={`${d.de} a ${d.a}, desde ${d.desde} euros`}
-                onPress={() => irADestino(d)}
-                style={({ pressed }) => [styles.destino, pressed && { opacity: 0.88, transform: [{ scale: 0.99 }] }]}
-              >
-                <ImageBackground source={foto ? { uri: urlFoto(foto.archivo, 640) } : undefined} style={styles.destinoFoto} imageStyle={{ borderRadius: 16 }}>
-                  <LinearGradient colors={["rgba(40,0,30,0.02)", "rgba(40,0,30,0.78)"]} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
-                  <View style={styles.destinoTexto}>
-                    <Text style={styles.destinoRuta}>
-                      {d.de} → {d.a}
-                    </Text>
-                    <Text style={styles.destinoDato}>{d.duracion} de viaje</Text>
-                    <Text style={styles.destinoPrecio}>
-                      desde <Text style={{ fontFamily: fuentes.negrita, fontSize: 18 }}>{d.desde} €</Text>
-                    </Text>
-                  </View>
-                </ImageBackground>
-              </Pressable>
-            );
-          })}
-        </View>
-      </Revela>
-
-      <Revela style={styles.seccion} delay={60}>
-        <Text style={estilos.h2}>Ofertas para viajar más por menos</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 12 }}>
-          {OFERTAS.map((o) => (
-            <Pressable
-              key={o.titulo}
-              accessibilityRole="link"
-              accessibilityLabel={`${o.titulo}. ${o.texto}`}
-              onPress={() => contenido(o.ruta)}
-              style={({ pressed }) => [pressed && { opacity: 0.88 }]}
-            >
-              <LinearGradient colors={o.colores} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.oferta}>
-                <Text style={styles.ofertaDato}>{o.dato}</Text>
-                <Text style={styles.ofertaTitulo}>{o.titulo}</Text>
-                <Text style={styles.ofertaTexto}>{o.texto}</Text>
-              </LinearGradient>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </Revela>
-
-      <Revela style={styles.seccion} delay={80}>
-        <Text style={estilos.h2}>Rutas para descubrir en tren</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 12 }}>
-          {RUTAS.map((r) => {
-            const foto = fotoDeRuta(r.foto);
-            return (
-              <Pressable
-                key={r.ruta}
-                accessibilityRole="link"
-                accessibilityLabel={`${r.titulo}. ${r.texto}`}
-                onPress={() => contenido(r.ruta)}
-                style={({ pressed }) => [styles.ruta, pressed && { opacity: 0.88 }]}
-              >
-                <ImageBackground source={foto ? { uri: urlFoto(foto.archivo, 640) } : undefined} style={styles.rutaFoto} imageStyle={{ borderRadius: 16 }}>
-                  <LinearGradient colors={["rgba(40,0,30,0.02)", "rgba(40,0,30,0.75)"]} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
-                  <View style={{ padding: espaciado[3], gap: 2 }}>
-                    <Text style={styles.destinoRuta}>{r.titulo}</Text>
-                    <Text style={styles.destinoDato}>{r.texto}</Text>
-                  </View>
-                </ImageBackground>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        <Pressable accessibilityRole="link" onPress={() => contenido("/inspirate/rutas")} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
-          <Text style={styles.enlace}>Ver todas las rutas</Text>
-        </Pressable>
-      </Revela>
-
-      <Revela style={styles.seccion} delay={100}>
-        <Text style={estilos.h2}>Accesos rápidos</Text>
-        <Cristal gap={espaciado[2]}>
-          <Text style={estilos.subtitulo}>Gestiona tu billete</Text>
-          {GESTIONA.map((g) => (
-            <Pressable
-              key={g.ruta}
-              accessibilityRole="link"
-              onPress={() => contenido(g.ruta)}
-              style={({ pressed }) => [styles.fila, pressed && { opacity: 0.6 }]}
-            >
-              <Text style={[estilos.texto, { flex: 1 }]}>{g.texto}</Text>
-              <Icono nombre="delante" tamano={17} color={colores.textoSuave} />
-            </Pressable>
-          ))}
+        <Cristal style={{ marginHorizontal: 12, marginTop: espaciado[3] }} padding={espaciado[4]} gap={espaciado[3]}>
+          <View style={{ gap: espaciado[1] }}>
+            <Text style={estilos.h1}>Busca tu próximo viaje</Text>
+            <Text style={[estilos.suave, { fontSize: 15, lineHeight: 21 }]}>
+              Trenes de larga y media distancia. Eliges asiento y llevas el billete en el móvil.
+            </Text>
+          </View>
+          <Buscador onBuscar={buscar} />
         </Cristal>
-        <Cristal gap={espaciado[2]}>
-          <Text style={estilos.subtitulo}>Cercanías por núcleo</Text>
-          <View style={styles.chips}>
-            {nucleosCercanias.map((n) => (
+
+        <Revela style={styles.seccion}>
+          <Text style={estilos.h2}>Antes de viajar</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 12 }}>
+            {AVISOS.map((a) => (
               <Pressable
-                key={n.ruta}
+                key={a.titulo}
                 accessibilityRole="link"
-                onPress={() => contenido(n.ruta)}
-                style={({ pressed }) => [styles.chip, pressed && { backgroundColor: tonos.rosaFuerte }]}
+                accessibilityLabel={`${a.titulo}. ${a.texto}`}
+                onPress={() => contenido(a.ruta)}
+                style={({ pressed }) => [styles.aviso, pressed && styles.pulsado]}
               >
-                <Text style={styles.chipTexto}>{n.texto}</Text>
+                <View style={styles.avisoIcono}>
+                  <Icono nombre={a.icono} tamano={21} color={colores.marca} />
+                </View>
+                <Text style={styles.avisoTitulo}>{a.titulo}</Text>
+                <Text style={styles.avisoTexto}>{a.texto}</Text>
+                <Text style={styles.enlace}>Más información</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Revela>
+
+        <Revela style={styles.seccion} delay={40}>
+          <Text style={estilos.h2}>Destinos destacados</Text>
+          <Text style={estilos.suave}>Precios para viajar mañana, por persona y trayecto.</Text>
+          <View style={styles.rejilla}>
+            {DESTINOS.map((d) => {
+              const foto = fotoDeRuta(d.foto);
+              return (
+                <Pressable
+                  key={d.a}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${d.de} a ${d.a}, desde ${d.desde} euros`}
+                  onPress={() => irADestino(d)}
+                  style={({ pressed }) => [styles.destino, pressed && { opacity: 0.88, transform: [{ scale: 0.99 }] }]}
+                >
+                  <ImageBackground source={foto ? { uri: urlFoto(foto.archivo, 640) } : undefined} style={styles.destinoFoto} imageStyle={{ borderRadius: 16 }}>
+                    <LinearGradient colors={["rgba(40,0,30,0.02)", "rgba(40,0,30,0.78)"]} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
+                    <View style={styles.destinoTexto}>
+                      <Text style={styles.destinoRuta}>
+                        {d.de} → {d.a}
+                      </Text>
+                      <Text style={styles.destinoDato}>{d.duracion} de viaje</Text>
+                      <Text style={styles.destinoPrecio}>
+                        desde <Text style={{ fontFamily: fuentes.negrita, fontSize: 18 }}>{d.desde} €</Text>
+                      </Text>
+                    </View>
+                  </ImageBackground>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Revela>
+
+        <Revela style={styles.seccion} delay={60}>
+          <Text style={estilos.h2}>Ofertas para viajar más por menos</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 12 }}>
+            {OFERTAS.map((o) => (
+              <Pressable
+                key={o.titulo}
+                accessibilityRole="link"
+                accessibilityLabel={`${o.titulo}. ${o.texto}`}
+                onPress={() => contenido(o.ruta)}
+                style={({ pressed }) => [pressed && { opacity: 0.88 }]}
+              >
+                <LinearGradient colors={o.colores} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.oferta}>
+                  <Text style={styles.ofertaDato}>{o.dato}</Text>
+                  <Text style={styles.ofertaTitulo}>{o.titulo}</Text>
+                  <Text style={styles.ofertaTexto}>{o.texto}</Text>
+                </LinearGradient>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Revela>
+
+        <Revela style={styles.seccion} delay={80}>
+          <Text style={estilos.h2}>Rutas para descubrir en tren</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingRight: 12 }}>
+            {RUTAS.map((r) => {
+              const foto = fotoDeRuta(r.foto);
+              return (
+                <Pressable
+                  key={r.ruta}
+                  accessibilityRole="link"
+                  accessibilityLabel={`${r.titulo}. ${r.texto}`}
+                  onPress={() => contenido(r.ruta)}
+                  style={({ pressed }) => [styles.ruta, pressed && { opacity: 0.88 }]}
+                >
+                  <ImageBackground source={foto ? { uri: urlFoto(foto.archivo, 640) } : undefined} style={styles.rutaFoto} imageStyle={{ borderRadius: 16 }}>
+                    <LinearGradient colors={["rgba(40,0,30,0.02)", "rgba(40,0,30,0.75)"]} style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
+                    <View style={{ padding: espaciado[3], gap: 2 }}>
+                      <Text style={styles.destinoRuta}>{r.titulo}</Text>
+                      <Text style={styles.destinoDato}>{r.texto}</Text>
+                    </View>
+                  </ImageBackground>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <Pressable accessibilityRole="link" onPress={() => contenido("/inspirate/rutas")} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
+            <Text style={styles.enlace}>Ver todas las rutas</Text>
+          </Pressable>
+        </Revela>
+
+        <Revela style={styles.seccion} delay={100}>
+          <Text style={estilos.h2}>Accesos rápidos</Text>
+          <Cristal gap={espaciado[2]}>
+            <Text style={estilos.subtitulo}>Gestiona tu billete</Text>
+            {GESTIONA.map((g) => (
+              <Pressable
+                key={g.ruta}
+                accessibilityRole="link"
+                onPress={() => contenido(g.ruta)}
+                style={({ pressed }) => [styles.fila, pressed && { opacity: 0.6 }]}
+              >
+                <Text style={[estilos.texto, { flex: 1 }]}>{g.texto}</Text>
+                <Icono nombre="delante" tamano={17} color={colores.textoSuave} />
+              </Pressable>
+            ))}
+          </Cristal>
+          <Cristal gap={espaciado[2]}>
+            <Text style={estilos.subtitulo}>Cercanías por núcleo</Text>
+            <View style={styles.chips}>
+              {nucleosCercanias.map((n) => (
+                <Pressable
+                  key={n.ruta}
+                  accessibilityRole="link"
+                  onPress={() => contenido(n.ruta)}
+                  style={({ pressed }) => [styles.chip, pressed && { backgroundColor: tonos.rosaFuerte }]}
+                >
+                  <Text style={styles.chipTexto}>{n.texto}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </Cristal>
+          <Pressable accessibilityRole="link" onPress={() => contenido("/mas-renfe")} style={({ pressed }) => [styles.atajoOscuro, pressed && { opacity: 0.92 }]}>
+            <Text style={styles.atajoTitulo}>Programa de puntos</Text>
+            <Text style={styles.atajoTexto}>Acumula con cada viaje y canjéalos por billetes y ventajas.</Text>
+          </Pressable>
+          <Pressable accessibilityRole="link" onPress={() => contenido("/viajar/informacion-util/aplicaciones")} style={({ pressed }) => [styles.atajo, pressed && { opacity: 0.9 }]}>
+            <Text style={styles.atajoTituloOscuro}>Lleva el viaje en el móvil</Text>
+            <Text style={estilos.suave}>Billetes, avisos y cambios de última hora en la app.</Text>
+          </Pressable>
+        </Revela>
+
+        <Revela style={styles.seccion} delay={120}>
+          <Text style={estilos.h2}>Todo el viaje desde el móvil</Text>
+          <View style={{ gap: 10 }}>
+            {VENTAJAS.map((v) => (
+              <Cristal key={v.titulo} gap={espaciado[2]}>
+                <View style={styles.ventajaIcono}>
+                  <Icono nombre={v.icono} tamano={22} color={colores.marca} />
+                </View>
+                <Text style={estilos.subtitulo}>{v.titulo}</Text>
+                <Text style={estilos.suave}>{v.texto}</Text>
+                <Pressable accessibilityRole="link" onPress={v.onPress} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
+                  <Text style={styles.enlace}>{v.accion}</Text>
+                </Pressable>
+              </Cristal>
+            ))}
+          </View>
+        </Revela>
+
+        <Revela delay={140}>
+          <Pressable accessibilityRole="button" onPress={() => router.navigate("/directo")} style={({ pressed }) => [styles.directo, pressed && { opacity: 0.94 }]}>
+            <View style={{ flex: 1, gap: espaciado[1] }}>
+              <Text style={styles.directoTitulo}>Sigue tu tren en directo</Text>
+              <Text style={styles.directoTexto}>Posición en el mapa, próxima parada y retraso, cada pocos segundos.</Text>
+            </View>
+            <View style={styles.directoBoton}>
+              <Icono nombre="mapa" tamano={19} color={colores.marca} />
+              <Text style={styles.directoBotonTexto}>Ver mapa</Text>
+            </View>
+          </Pressable>
+        </Revela>
+
+        <Revela style={styles.seccion} delay={160}>
+          <Text style={estilos.h2}>Preguntas frecuentes</Text>
+          <View style={{ gap: 6 }}>
+            {PREGUNTAS.map((q) => {
+              const abiertaEsta = abierta === q.p;
+              return (
+                <Pressable
+                  key={q.p}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: abiertaEsta }}
+                  onPress={() => setAbierta(abiertaEsta ? null : q.p)}
+                  style={({ pressed }) => [styles.pregunta, pressed && { backgroundColor: tonos.rosaFuerte }]}
+                >
+                  <View style={styles.fila}>
+                    <Text style={[estilos.textoMedio, { flex: 1 }]}>{q.p}</Text>
+                    <Icono nombre="chevron" tamano={18} color={colores.marca} />
+                  </View>
+                  {abiertaEsta ? (
+                    <Aparece>
+                      <Text style={estilos.suave}>{q.r}</Text>
+                    </Aparece>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </Revela>
+
+        <Revela style={styles.seccion} delay={180}>
+          <Text style={estilos.h2}>Información y ayuda</Text>
+          <View style={styles.infoRejilla}>
+            {[...menuPrincipal, { titulo: "Ayuda", ruta: "/ayuda" }].map((m) => (
+              <Pressable
+                key={m.ruta}
+                accessibilityRole="link"
+                onPress={() => contenido(m.ruta)}
+                style={({ pressed }) => [styles.info, pressed && { opacity: 0.8 }]}
+              >
+                <Text style={styles.avisoTitulo}>{m.titulo}</Text>
+                <Icono nombre="delante" tamano={17} color={colores.marca} />
               </Pressable>
             ))}
           </View>
-        </Cristal>
-        <Pressable accessibilityRole="link" onPress={() => contenido("/mas-renfe")} style={({ pressed }) => [styles.atajoOscuro, pressed && { opacity: 0.92 }]}>
-          <Text style={styles.atajoTitulo}>Programa de puntos</Text>
-          <Text style={styles.atajoTexto}>Acumula con cada viaje y canjéalos por billetes y ventajas.</Text>
-        </Pressable>
-        <Pressable accessibilityRole="link" onPress={() => contenido("/viajar/informacion-util/aplicaciones")} style={({ pressed }) => [styles.atajo, pressed && { opacity: 0.9 }]}>
-          <Text style={styles.atajoTituloOscuro}>Lleva el viaje en el móvil</Text>
-          <Text style={estilos.suave}>Billetes, avisos y cambios de última hora en la app.</Text>
-        </Pressable>
-      </Revela>
+          <Pressable accessibilityRole="link" onPress={() => router.push("/informacion" as never)} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
+            <Text style={styles.enlace}>Ver todas las secciones</Text>
+          </Pressable>
+        </Revela>
 
-      <Revela style={styles.seccion} delay={120}>
-        <Text style={estilos.h2}>Todo el viaje desde el móvil</Text>
-        <View style={{ gap: 10 }}>
-          {VENTAJAS.map((v) => (
-            <Cristal key={v.titulo} gap={espaciado[2]}>
-              <View style={styles.ventajaIcono}>
-                <Icono nombre={v.icono} tamano={22} color={colores.marca} />
-              </View>
-              <Text style={estilos.subtitulo}>{v.titulo}</Text>
-              <Text style={estilos.suave}>{v.texto}</Text>
-              <Pressable accessibilityRole="link" onPress={v.onPress} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
-                <Text style={styles.enlace}>{v.accion}</Text>
-              </Pressable>
-            </Cristal>
-          ))}
-        </View>
-      </Revela>
-
-      <Revela delay={140}>
-        <Pressable accessibilityRole="button" onPress={() => router.navigate("/directo")} style={({ pressed }) => [styles.directo, pressed && { opacity: 0.94 }]}>
-          <View style={{ flex: 1, gap: espaciado[1] }}>
-            <Text style={styles.directoTitulo}>Sigue tu tren en directo</Text>
-            <Text style={styles.directoTexto}>Posición en el mapa, próxima parada y retraso, cada pocos segundos.</Text>
-          </View>
-          <View style={styles.directoBoton}>
-            <Icono nombre="mapa" tamano={19} color={colores.marca} />
-            <Text style={styles.directoBotonTexto}>Ver mapa</Text>
-          </View>
-        </Pressable>
-      </Revela>
-
-      <Revela style={styles.seccion} delay={160}>
-        <Text style={estilos.h2}>Preguntas frecuentes</Text>
-        <View style={{ gap: 6 }}>
-          {PREGUNTAS.map((q) => {
-            const abiertaEsta = abierta === q.p;
-            return (
-              <Pressable
-                key={q.p}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: abiertaEsta }}
-                onPress={() => setAbierta(abiertaEsta ? null : q.p)}
-                style={({ pressed }) => [styles.pregunta, pressed && { backgroundColor: tonos.rosaFuerte }]}
-              >
-                <View style={styles.fila}>
-                  <Text style={[estilos.textoMedio, { flex: 1 }]}>{q.p}</Text>
-                  <Icono nombre="chevron" tamano={18} color={colores.marca} />
-                </View>
-                {abiertaEsta ? (
-                  <Aparece>
-                    <Text style={estilos.suave}>{q.r}</Text>
-                  </Aparece>
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      </Revela>
-
-      <Revela style={styles.seccion} delay={180}>
-        <Text style={estilos.h2}>Información y ayuda</Text>
-        <View style={styles.infoRejilla}>
-          {[...menuPrincipal, { titulo: "Ayuda", ruta: "/ayuda" }].map((m) => (
-            <Pressable
-              key={m.ruta}
-              accessibilityRole="link"
-              onPress={() => contenido(m.ruta)}
-              style={({ pressed }) => [styles.info, pressed && { opacity: 0.8 }]}
-            >
-              <Text style={styles.avisoTitulo}>{m.titulo}</Text>
-              <Icono nombre="delante" tamano={17} color={colores.marca} />
-            </Pressable>
-          ))}
-        </View>
-        <Pressable accessibilityRole="link" onPress={() => router.push("/informacion" as never)} style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
-          <Text style={styles.enlace}>Ver todas las secciones</Text>
-        </Pressable>
-      </Revela>
-
-      <Pie />
-      <Text style={styles.pieTexto}>Renfe · Andén 0 · Proyecto de clase. Precios y reservas simulados.</Text>
+        <Pie />
+        <Text style={styles.pieTexto}>Renfe · Andén 0 · Proyecto de clase. Precios y reservas simulados.</Text>
+        </ScrollView>
+      </Animated.ScrollView>
+      </View>
     </Pantalla>
   );
 }
 
 const styles = StyleSheet.create({
+  desplazable: { flex: 1 },
+  desplazableContenido: { paddingBottom: 132 },
   pulsado: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   fila: { flexDirection: "row", alignItems: "center", minHeight: 40, gap: 8 },
   enlace: { fontFamily: fuentes.seminegrita, fontSize: 13.6, color: colores.marca },
@@ -451,59 +462,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.9)",
     ...sombras[1],
-  },
-  portada: {
-    height: 214,
-    overflow: "hidden",
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  lema: {
-    fontFamily: fuentes.negrita,
-    fontSize: 46,
-    letterSpacing: -2.4,
-    color: paleta.moradoOscuro,
-    textAlign: "center",
-    marginTop: 18,
-    opacity: 0.92,
-  },
-  catenaria: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 112,
-    height: 1.5,
-    backgroundColor: "rgba(70,70,70,0.4)",
-  },
-  tren: {
-    position: "absolute",
-    left: -330,
-    bottom: 22,
-    width: 760,
-    shadowColor: "#460032",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  anden: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 42,
-    backgroundColor: "#dfe5ea",
-    borderTopWidth: 4,
-    borderTopColor: colores.accion,
-  },
-  raya: { position: "absolute", top: 5, bottom: 5, width: 4, backgroundColor: "#cfd6dd" },
-  sombraTren: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 42,
-    height: 10,
-    backgroundColor: "rgba(70,0,50,0.08)",
   },
   seccion: { paddingHorizontal: 12, paddingTop: espaciado[6], gap: espaciado[3] },
   aviso: {

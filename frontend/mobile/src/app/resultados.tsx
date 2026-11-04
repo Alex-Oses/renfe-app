@@ -2,7 +2,7 @@ import { claveTramo } from "@renfe/shared/api/comprar-transbordo";
 import { FRANJAS, duracionMin, minutosDelDia } from "@renfe/shared/billetes/viaje";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { buscarTransbordos, buscarTrenes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import { TARIFAS, precioViajero } from "@renfe/shared/api/simulado-precios";
@@ -10,6 +10,7 @@ import { ciudadDe, type IdDescuento, type IdTarifa, type OpcionTransbordo, type 
 import { Aviso } from "@/components/Aviso";
 import { Buscador, type Criterios } from "@/components/Buscador";
 import { Cristal } from "@/components/Cristal";
+import { Esqueleto } from "@/components/Esqueleto";
 import { Icono } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
 import { textoFecha, textoFechaCorta } from "@/components/Selectores";
@@ -403,7 +404,7 @@ export default function Resultados() {
                                 {euros(precioViajero(t.precioDesde, ta.id))}
                               </Text>
                               <View style={{ gap: 2 }}>
-                                {ta.incluye.slice(0, 2).map((x) => (
+                                {ta.incluye.map((x) => (
                                   <Text key={x} style={styles.tarifaIncluye}>
                                     · {x}
                                   </Text>
@@ -431,9 +432,11 @@ export default function Resultados() {
       ) : null}
 
       {!error && trenes === null ? (
-        <Cristal padding={espaciado[5 as 4]} gap={espaciado[3]} style={{ alignItems: "center" }}>
-          <ActivityIndicator color={colores.marca} size="large" />
-          <Text style={estilos.suave}>Buscando trenes para ese día…</Text>
+        <Cristal padding={espaciado[5 as 4]} gap={espaciado[3]}>
+          {[0, 1, 2].map((i) => (
+            <Esqueleto key={i} alto={64} />
+          ))}
+          <Text style={estilos.suave} accessibilityLiveRegion="polite">Buscando trenes para ese día…</Text>
         </Cristal>
       ) : null}
 
@@ -451,9 +454,9 @@ export default function Resultados() {
       ) : null}
 
       {trenes?.length === 0 && transbordos === null ? (
-        <Cristal padding={espaciado[4]} gap={espaciado[3]} style={{ alignItems: "center" }}>
-          <ActivityIndicator color={colores.marca} />
-          <Text style={estilos.suave}>Buscando opciones con transbordo…</Text>
+        <Cristal padding={espaciado[4]} gap={espaciado[3]}>
+          <Esqueleto alto={64} />
+          <Text style={estilos.suave} accessibilityLiveRegion="polite">Buscando opciones con transbordo…</Text>
         </Cristal>
       ) : null}
 

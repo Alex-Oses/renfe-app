@@ -333,8 +333,8 @@ export default function Cuenta() {
           valor={contrasena}
           alCambiar={setContrasena}
           error={errores.contrasena}
+          conFuerza={creando}
         />
-        {creando ? <Text style={styles.ayuda}>Mínimo 8 caracteres.</Text> : null}
         {errores.general ? <Aviso texto={errores.general} tipo="error" /> : null}
         <Boton
           texto={creando ? "Crear cuenta" : "Entrar"}
@@ -415,7 +415,6 @@ const styles = StyleSheet.create({
   pestanaActiva: { backgroundColor: colores.marca, ...sombras[1] },
   pestanaTexto: { fontFamily: fuentes.seminegrita, fontSize: 14.4, color: colores.textoSuave },
   pestanaTextoActivo: { color: "#fff" },
-  ayuda: { fontFamily: fuentes.normal, fontSize: 12, color: colores.textoSuave, marginTop: -4 },
   demo: {
     flexDirection: "row",
     alignItems: "center",

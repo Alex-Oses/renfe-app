@@ -2,6 +2,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Polygon, Polyline } from "react-native-svg";
 import type { PosicionTren } from "@renfe/shared/api/tipos";
+import { extremos } from "@renfe/shared/estado/estado-tren";
+import { partirRuta } from "@renfe/shared/estado/partir-ruta";
 import { colorTipo, colores, fuentes } from "@/tema";
 import { TrenMarcador } from "./Icono";
 import type { PropsMapa } from "./mapa-tipos";
@@ -73,6 +75,11 @@ const puntos = (lista: [number, number][]) => lista.map(([lat, lon]) => `${x(lon
 
 export function MapaTrenes({ trenes, seleccion, onElegir }: PropsMapa) {
   const elegido = trenes.find((t) => t.trenId === seleccion);
+  // Mismo reparto que la web: lo recorrido en discontinuo y lo que queda con halo blanco.
+  const corte = elegido && elegido.ruta.length > 1 ? partirRuta(elegido.ruta, elegido.lat, elegido.lon) : null;
+  const color = elegido ? colorTipo[elegido.tipo] : colores.marca;
+  const paradas = elegido ? elegido.paradas.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon)) : [];
+  const { salida, llegada } = extremos(paradas);
 
   return (
     <View style={styles.lienzo}>
@@ -122,16 +129,55 @@ export function MapaTrenes({ trenes, seleccion, onElegir }: PropsMapa) {
           />
         ))}
 
-        {elegido && elegido.ruta.length > 1 ? (
+        {corte && corte.hecho.length > 1 ? (
           <Polyline
-            points={puntos(elegido.ruta)}
+            points={puntos(corte.hecho)}
             fill="none"
-            stroke={colorTipo[elegido.tipo]}
+            stroke={color}
+            strokeOpacity={0.35}
             strokeWidth={6}
+            strokeDasharray="6 8"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         ) : null}
+
+        {corte && corte.pendiente.length > 1 ? (
+          <>
+            <Polyline
+              points={puntos(corte.pendiente)}
+              fill="none"
+              stroke="#fff"
+              strokeWidth={11}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <Polyline
+              points={puntos(corte.pendiente)}
+              fill="none"
+              stroke={color}
+              strokeWidth={6}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </>
+        ) : null}
+
+        {paradas.map((p) => {
+          const extremo = p.estacionId === salida?.estacionId || p.estacionId === llegada?.estacionId;
+          return (
+            <Circle
+              key={`parada-${p.estacionId}`}
+              cx={x(p.lon)}
+              cy={y(p.lat)}
+              r={extremo ? 9 : 6}
+              fill={extremo ? color : p.pasada ? "#d9dde2" : "#fff"}
+              stroke={color}
+              strokeWidth={3}
+              opacity={p.pasada && !extremo ? 0.5 : 1}
+            />
+          );
+        })}
       </Svg>
 
       {ESTACIONES.map((e) => (

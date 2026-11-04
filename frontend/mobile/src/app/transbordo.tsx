@@ -4,8 +4,9 @@ import { ActivityIndicator, Text, View } from "react-native";
 import {
   buscarTransbordos,
 } from "@renfe/shared/api/cliente";
-import { comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
-import type { NuevaReserva, OpcionTransbordo, Pasajero, Reserva } from "@renfe/shared/api/tipos";
+import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
+import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
+import type { IdDescuento, NuevaReserva, OpcionTransbordo, Pasajero, Reserva, TipoViajero } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { Campo } from "@/components/Campo";
@@ -28,6 +29,10 @@ export default function Transbordo() {
   // La API admite de 1 a 6 pasajeros por reserva.
   const n = Math.min(Math.max(Number(params.pasajeros) || 1, 1), 6);
   const ninos = Math.min(Math.max(Number(params.ninos) || 0, 0), n - 1);
+  const bebes = Math.max(Number(params.bebes) || 0, 0);
+  const descuento = (DESCUENTOS.find((d) => d.id === params.descuento)?.id ?? "ninguno") as IdDescuento;
+  // Como en la reserva directa: los últimos viajeros son los niños.
+  const tipos: TipoViajero[] = Array.from({ length: n }, (_, i) => (i >= n - ninos ? "nino" : "adulto"));
   const { origen = "", destino = "", fecha = "", a, b } = params;
 
   const [opcion, setOpcion] = useState<OpcionTransbordo | null>(null);
@@ -42,7 +47,7 @@ export default function Transbordo() {
     buscarTransbordos({ origen, destino, fecha }).then(
       (lista) => {
         if (!vivo) return;
-        const elegida = lista.find((o) => o.tramos[0].id === a && o.tramos[1].id === b);
+        const elegida = buscarOpcion(lista, a, b);
         if (elegida) setOpcion(elegida);
         else setError("Esa combinación ya no está disponible. Vuelve a buscar.");
       },
@@ -73,10 +78,10 @@ export default function Transbordo() {
       apellidos: p.apellidos.trim(),
       documento: p.documento.trim().toUpperCase(),
       email: email.trim(),
-      tipo: i >= n - ninos ? "nino" : "adulto",
+      tipo: tipos[i],
     }));
     try {
-      const datos: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros };
+      const datos: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros, descuento, bebes };
       setCompradas(await comprarDosTramos(opcion.tramos, datos));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo completar la compra.");
@@ -117,6 +122,11 @@ export default function Transbordo() {
   }
 
   const [ida, sigue] = opcion.tramos;
+  // Cada tramo se cobra por separado con las mismas reglas; el total es la suma.
+  const total = opcion.tramos.reduce(
+    (s, t) => s + calcularTotal({ precios: Array(n).fill(t.precioDesde), tipos, descuento }).total,
+    0,
+  );
   return (
     <Pantalla volver={() => router.back()}>
       <Cristal padding={espaciado[4]} gap={espaciado[2]}>
@@ -129,6 +139,11 @@ export default function Transbordo() {
         <Text style={[estilos.texto, { color: colores.marca }]}>
           Transbordo en {opcion.transbordo.nombre}, {opcion.esperaMin} min de espera
         </Text>
+        {opcion.cambioEstacion && opcion.transbordoSalida ? (
+          <Text style={[estilos.texto, { color: colores.marca }]}>
+            Cambias de estación: sales desde {opcion.transbordoSalida.nombre}
+          </Text>
+        ) : null}
         <Text style={estilos.texto}>
           {sigue.tipo} {sigue.numero}: {horaLocal(sigue.salida)} a {horaLocal(sigue.llegada)}
         </Text>
@@ -138,7 +153,7 @@ export default function Transbordo() {
         <Cristal key={i} padding={espaciado[4]} gap={espaciado[3]}>
           <Text style={estilos.subtitulo}>
             Viajero {i + 1}
-            {i >= n - ninos ? " (niño)" : ""}
+            {tipos[i] === "nino" ? " (niño)" : ""}
           </Text>
           <Campo etiqueta="Nombre" value={p.nombre} onChangeText={(v) => cambiar(i, "nombre", v)} autoComplete="given-name" />
           <Campo
@@ -167,8 +182,15 @@ export default function Transbordo() {
         />
         <View style={estilos.entre}>
           <Text style={estilos.suaveMedio}>Total (pago simulado)</Text>
-          <Text style={estilos.subtitulo}>{euros(opcion.precio * n)}</Text>
+          <Text style={estilos.subtitulo}>{euros(total)}</Text>
         </View>
+        {ninos > 0 || bebes > 0 ? (
+          <Text style={estilos.suave}>
+            {ninos > 0 ? `${ninos} ${ninos === 1 ? "niño" : "niños"} con descuento` : ""}
+            {ninos > 0 && bebes > 0 ? " · " : ""}
+            {bebes > 0 ? `${bebes} ${bebes === 1 ? "bebé" : "bebés"} gratis, sin asiento` : ""}
+          </Text>
+        ) : null}
         {error ? <Aviso texto={error} /> : null}
         <Boton
           texto={pagando ? "Comprando los dos billetes…" : "Comprar los dos billetes"}

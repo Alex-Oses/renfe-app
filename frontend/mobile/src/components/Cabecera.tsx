@@ -3,6 +3,14 @@ import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  borrarHistorial,
+  marcarLeido,
+  marcarTodosLeidos,
+  pedirPermiso,
+  rutaApp,
+  useAvisos,
+} from "@/avisos/avisos";
 import { avisoDestacado } from "@renfe/shared/contenido/navegacion";
 import { colores, espaciado, fuentes, paleta, tipografia, tonos } from "@/tema";
 import { Cristal } from "./Cristal";
@@ -43,7 +51,8 @@ export function Cabecera({ volver, sinAviso }: { volver?: () => void; sinAviso?:
   const [aviso, setAviso] = useState(leerAviso);
   const [menu, setMenu] = useState(false);
   const [campana, setCampana] = useState(false);
-  const [sinLeer, setSinLeer] = useState(leerCampana);
+  const { avisos, permiso } = useAvisos();
+  const sinLeer = avisos.filter((a) => !a.leido).length;
 
   const cerrarAviso = () => {
     setAviso(false);
@@ -60,15 +69,9 @@ export function Cabecera({ volver, sinAviso }: { volver?: () => void; sinAviso?:
     router.navigate(ruta as never);
   };
 
-  const abrirCampana = () => {
-    setCampana(true);
-    if (!sinLeer) return;
-    setSinLeer(false);
-    try {
-      localStorage.setItem(CLAVE_CAMPANA, "1");
-    } catch {
-      /* sin almacenamiento: se recuerda solo en esta pantalla */
-    }
+  const verAviso = (id: string, enlace: string) => {
+    marcarLeido(id);
+    ir(rutaApp(enlace));
   };
 
   return (
@@ -114,13 +117,17 @@ export function Cabecera({ volver, sinAviso }: { volver?: () => void; sinAviso?:
           <View style={{ flex: 1 }} />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={sinLeer ? "Avisos, sin leer" : "Avisos"}
-            onPress={abrirCampana}
+            accessibilityLabel={sinLeer ? `Avisos, ${sinLeer} sin leer` : "Avisos"}
+            onPress={() => setCampana(true)}
             hitSlop={6}
             style={({ pressed }) => [styles.iconoBoton, pressed && styles.pulsado]}
           >
             <Icono nombre="campana" tamano={23} color={colores.marca} grosor={1.9} />
-            {sinLeer ? <View style={styles.punto} /> : null}
+            {sinLeer ? (
+              <View style={styles.contador}>
+                <Text style={styles.contadorTexto}>{sinLeer > 9 ? "9+" : sinLeer}</Text>
+              </View>
+            ) : null}
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -157,33 +164,56 @@ export function Cabecera({ volver, sinAviso }: { volver?: () => void; sinAviso?:
 
       <Hoja visible={campana} onCerrar={() => setCampana(false)} titulo="Avisos">
         <View style={{ gap: espaciado[3] }}>
-          <Pressable style={styles.aviso} onPress={() => ir("/directo")} accessibilityRole="button">
-            <View style={[styles.avisoIcono, { backgroundColor: tonos.rosaFuerte }]}>
-              <Icono nombre="mapa" tamano={21} color={colores.marca} />
+          {permiso === "undetermined" ? (
+            <Pressable accessibilityRole="button" onPress={() => void pedirPermiso()} style={styles.botonPermiso}>
+              <Icono nombre="campana" tamano={19} color={paleta.blanco} />
+              <Text style={styles.botonPermisoTexto}>Activar notificaciones</Text>
+            </Pressable>
+          ) : null}
+          {permiso === "denied" ? (
+            <View style={[styles.aviso, { backgroundColor: tonos.avisoFondo }]} accessibilityRole="alert">
+              <Icono nombre="aviso" tamano={20} color={tonos.aviso} />
+              <Text style={[styles.avisoTexto, { flex: 1, color: colores.texto }]}>
+                Las notificaciones están bloqueadas. Actívalas en los ajustes del móvil para recibir avisos con la app cerrada.
+              </Text>
             </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.avisoTitulo}>Tu tren, en directo</Text>
-              <Text style={styles.avisoTexto}>Mira dónde va y si lleva retraso antes de salir de casa.</Text>
+          ) : null}
+          {avisos.length ? (
+            <View style={styles.acciones}>
+              <Pressable accessibilityRole="button" onPress={marcarTodosLeidos} disabled={!sinLeer} hitSlop={6}>
+                <Text style={[styles.accionTexto, !sinLeer && { opacity: 0.45 }]}>Marcar todo leído</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" onPress={borrarHistorial} hitSlop={6}>
+                <Text style={styles.accionTexto}>Borrar historial</Text>
+              </Pressable>
             </View>
-          </Pressable>
-          <Pressable style={styles.aviso} onPress={() => ir("/billetes")} accessibilityRole="button">
-            <View style={[styles.avisoIcono, { backgroundColor: "#e6f0fb" }]}>
-              <Icono nombre="billetes" tamano={21} color="#1f5fa8" />
+          ) : (
+            <Text style={[styles.avisoTexto, { textAlign: "center", paddingVertical: espaciado[4] }]}>
+              Sin avisos. Te avisaremos de retrasos y cambios en tus billetes y líneas.
+            </Text>
+          )}
+          {avisos.map((a) => (
+            <View key={a.id} style={[styles.aviso, a.leido && { opacity: 0.7 }]}>
+              <View style={[styles.avisoIcono, { backgroundColor: a.tipo === "retraso" ? tonos.avisoFondo : tonos.rosaFuerte }]}>
+                <Icono nombre={a.tipo === "retraso" ? "aviso" : "tren"} tamano={21} color={a.tipo === "retraso" ? tonos.aviso : colores.marca} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.avisoTitulo}>
+                  {a.leido ? "" : "● "}
+                  {a.titulo}
+                </Text>
+                <Text style={styles.avisoTexto}>{a.texto}</Text>
+                <Text style={styles.avisoHora}>
+                  {new Date(a.creado).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </Text>
+              </View>
+              {a.enlace ? (
+                <Pressable accessibilityRole="button" accessibilityLabel={`Ver: ${a.titulo}`} onPress={() => verAviso(a.id, a.enlace!)} hitSlop={6}>
+                  <Text style={styles.accionTexto}>Ver</Text>
+                </Pressable>
+              ) : null}
             </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.avisoTitulo}>Billetes a mano</Text>
-              <Text style={styles.avisoTexto}>Enseña el QR desde el móvil, sin imprimir nada.</Text>
-            </View>
-          </Pressable>
-          <View style={styles.aviso}>
-            <View style={[styles.avisoIcono, { backgroundColor: tonos.avisoFondo }]}>
-              <Icono nombre="aviso" tamano={21} color={tonos.aviso} />
-            </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.avisoTitulo}>Antes de salir</Text>
-              <Text style={styles.avisoTexto}>{avisoDestacado.texto}</Text>
-            </View>
-          </View>
+          ))}
         </View>
       </Hoja>
     </View>
@@ -244,17 +274,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   pulsado: { backgroundColor: "rgba(129,0,94,0.10)" },
-  punto: {
+  contador: {
     position: "absolute",
-    top: 10,
-    right: 12,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    top: 5,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colores.accion,
     borderWidth: 1.5,
     borderColor: paleta.blanco,
   },
+  contadorTexto: { fontFamily: fuentes.negrita, fontSize: 10, color: paleta.blanco },
   opcion: {
     flexDirection: "row",
     alignItems: "center",
@@ -301,5 +335,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avisoTitulo: { fontFamily: fuentes.seminegrita, fontSize: 15, color: colores.titulo },
+  avisoHora: { fontFamily: fuentes.medio, fontSize: 12, color: colores.textoSuave },
+  acciones: { flexDirection: "row", justifyContent: "space-between" },
+  accionTexto: { fontFamily: fuentes.seminegrita, fontSize: 14, color: colores.marca },
+  botonPermiso: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: espaciado[2],
+    minHeight: 46,
+    borderRadius: 23,
+    backgroundColor: colores.marca,
+  },
+  botonPermisoTexto: { fontFamily: fuentes.seminegrita, fontSize: 15, color: paleta.blanco },
   avisoTexto: { fontFamily: fuentes.normal, fontSize: 13.4, color: colores.textoSuave, lineHeight: 18.5 },
 });

@@ -1,8 +1,8 @@
 // Páginas informativas (Viajar, Ayuda, Cercanías...) con los mismos datos y bloques que la web.
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from "react-native";
 import { buscarPagina, hijasDe } from "@renfe/shared/contenido";
 import { fotoDeRuta, urlFoto, type Foto } from "@renfe/shared/contenido/imagenes";
 import { menuPrincipal } from "@renfe/shared/contenido/navegacion";
@@ -156,6 +156,8 @@ export default function PaginaContenidoMovil() {
   const camino = "/" + (Array.isArray(ruta) ? ruta : [ruta]).filter(Boolean).join("/");
   const volver = () => (router.canGoBack() ? router.back() : router.replace("/"));
   const pagina = buscarPagina(camino);
+  const scroll = useRef<ScrollViewInstance>(null);
+  const posiciones = useRef<Record<number, number>>({});
   const menu = menuPrincipal.find((m) => m.ruta === camino);
 
   if (!pagina && !menu)
@@ -174,9 +176,13 @@ export default function PaginaContenidoMovil() {
   const titulo = pagina?.titulo ?? menu!.titulo;
   const portada = pagina ? fotoDe(pagina, pagina.ruta) : fotoDeRuta(camino);
   const hijas = hijasDe(camino);
+  // Índice «En esta página»: bloques con título; se guarda la Y de cada uno al medirse.
+  const indice = (pagina?.bloques ?? []).flatMap((b, i) => ("titulo" in b && b.titulo ? [{ i, titulo: b.titulo }] : []));
 
   return (
-    <Pantalla volver={volver}>
+    // Pantalla sin scroll propio para poder usar scrollTo con nuestra ScrollView (mismo relleno que Pantalla).
+    <Pantalla volver={volver} scroll={false}>
+      <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={styles.cuerpo} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       <Text style={estilos.suave} numberOfLines={1}>
         Inicio ›{" "}
         {camino
@@ -196,13 +202,32 @@ export default function PaginaContenidoMovil() {
         </View>
       </Cristal>
 
+      {indice.length > 1 ? (
+        <Cristal gap={espaciado[2]}>
+          <Text style={estilos.subtitulo} accessibilityRole="header">En esta página</Text>
+          {indice.map((x) => (
+            <Pressable
+              key={x.i}
+              accessibilityRole="link"
+              onPress={() => scroll.current?.scrollTo({ y: Math.max(0, (posiciones.current[x.i] ?? 0) - 8), animated: true })}
+              hitSlop={6}
+              style={({ pressed }) => [{ paddingVertical: 4 }, pressed && { opacity: 0.6 }]}
+            >
+              <Text style={[estilos.textoMedio, { color: colores.marca }]}>{x.titulo}</Text>
+            </Pressable>
+          ))}
+        </Cristal>
+      ) : null}
+
       {pagina?.bloques.map((b, i) => {
         const t = "titulo" in b ? b.titulo : undefined;
         return (
-          <Cristal key={i} gap={espaciado[3]}>
-            {t ? <Text style={estilos.h2} accessibilityRole="header">{t}</Text> : null}
-            <Contenido b={b} ruta={camino} />
-          </Cristal>
+          <View key={i} onLayout={(e) => (posiciones.current[i] = e.nativeEvent.layout.y)}>
+            <Cristal gap={espaciado[3]}>
+              {t ? <Text style={estilos.h2} accessibilityRole="header">{t}</Text> : null}
+              <Contenido b={b} ruta={camino} />
+            </Cristal>
+          </View>
         );
       })}
 
@@ -222,11 +247,13 @@ export default function PaginaContenidoMovil() {
           {hijas.map((h) => <TarjetaEnlace key={h.ruta} t={{ titulo: h.titulo, texto: h.resumen, enlace: h.ruta }} />)}
         </Cristal>
       ) : null}
+      </ScrollView>
     </Pantalla>
   );
 }
 
 const styles = StyleSheet.create({
+  cuerpo: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 132, gap: 12 },
   tarjeta: { backgroundColor: "rgba(255,255,255,0.78)", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: colores.borde },
   tarjetaFoto: { height: 140, backgroundColor: tonos.moradoSuave },
   portada: { height: 180, backgroundColor: tonos.moradoSuave },

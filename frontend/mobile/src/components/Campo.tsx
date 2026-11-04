@@ -65,9 +65,22 @@ export function CampoBoton({
   );
 }
 
+// 0..4: longitud, mayúsculas y minúsculas, números, símbolos (igual que la web).
+function fuerzaContrasena(c: string): number {
+  if (!c) return 0;
+  let n = c.length >= 8 ? 1 : 0;
+  if (c.length >= 12) n++;
+  if (/[a-z]/.test(c) && /[A-Z]/.test(c)) n++;
+  if (/\d/.test(c) && /[^A-Za-z0-9]/.test(c)) n++;
+  return Math.max(1, Math.min(4, n));
+}
+const NOMBRES = ["", "Débil", "Mejorable", "Buena", "Muy buena"];
+const COLORES_FUERZA = ["", colores.error, "#e8a33d", "#5aa864", "#2e8b57"];
+
 // Campo de contraseña con el ojo para enseñarla, igual que en Acceder de la web.
-export function CampoClave(props: { etiqueta: string; valor: string; alCambiar: (v: string) => void; error?: string }) {
+export function CampoClave(props: { etiqueta: string; valor: string; alCambiar: (v: string) => void; error?: string; conFuerza?: boolean }) {
   const [visible, setVisible] = useState(false);
+  const nivel = fuerzaContrasena(props.valor);
   return (
     <View style={{ gap: espaciado[2] }}>
       <Text style={styles.etiqueta}>{props.etiqueta}</Text>
@@ -91,6 +104,18 @@ export function CampoClave(props: { etiqueta: string; valor: string; alCambiar: 
           <Icono nombre={visible ? "ojoCerrado" : "ojo"} tamano={21} color={colores.textoSuave} />
         </Pressable>
       </View>
+      {props.conFuerza ? (
+        <>
+          <View style={{ flexDirection: "row", gap: 4 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            {[1, 2, 3, 4].map((n) => (
+              <View key={n} style={[styles.barra, n <= nivel && { backgroundColor: COLORES_FUERZA[nivel] }]} />
+            ))}
+          </View>
+          <Text style={styles.ayuda} accessibilityLiveRegion="polite">
+            {props.valor ? `Seguridad: ${NOMBRES[nivel]}. ` : ""}Al menos 8 caracteres; mejor con números y símbolos.
+          </Text>
+        </>
+      ) : null}
       {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
     </View>
   );
@@ -113,5 +138,7 @@ const styles = StyleSheet.create({
   fila: { flexDirection: "row", alignItems: "center", gap: espaciado[2] },
   valor: { fontFamily: fuentes.normal, fontSize: tipografia.tamanos.base, color: colores.texto },
   placeholder: { color: "#8a8a8a" },
+  barra: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colores.borde },
+  ayuda: { fontFamily: fuentes.normal, fontSize: 12.8, color: colores.textoSuave },
   error: { fontFamily: fuentes.medio, fontSize: 12.8, color: colores.error },
 });

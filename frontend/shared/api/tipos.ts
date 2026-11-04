@@ -460,11 +460,11 @@ export interface BilleteApi {
   asiento: string; // "12A"
   clase: string; // "Turista" | "Confort"
   precio: number;
+  extras?: IdExtra[]; // de la reserva: se repiten en cada billete
+  extrasReserva?: number; // euros de esos extras, una vez por reserva
   emitido: string;
   expira: string;
   qr: string; // RNF1.…
-  extras?: IdExtra[]; // de la reserva: se repiten en cada billete
-  extrasReserva?: number; // euros de la reserva, una vez por reserva
 }
 
 export interface TransbordoApi {
