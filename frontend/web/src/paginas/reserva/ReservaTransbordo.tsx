@@ -6,6 +6,7 @@ import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transb
 import type { IdDescuento, NuevaReserva, OpcionTransbordo, Pasajero, TipoViajero } from "@renfe/shared/api/tipos";
 import { useSesion } from "../../estado/sesion";
 import { euros, hora } from "@renfe/shared/formato/formato";
+import { ConfirmarPago } from "./ConfirmarPago";
 import "./reserva.css";
 
 const vacio = (): Pasajero => ({ nombre: "", apellidos: "", documento: "", email: "" });
@@ -22,6 +23,7 @@ export default function ReservaTransbordo() {
   const [opcion, setOpcion] = useState<OpcionTransbordo | null>(null);
   const [pasajeros, setPasajeros] = useState<Pasajero[]>(() => Array.from({ length: n }, vacio));
   const [estado, setEstado] = useState<"elige" | "pagando" | "listo">("elige");
+  const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState("");
   const origen = params.get("origen") ?? "";
   const destino = params.get("destino") ?? "";
@@ -55,6 +57,13 @@ export default function ReservaTransbordo() {
       setError("Rellena nombre, apellidos y documento de cada viajero.");
       return;
     }
+    setError("");
+    setConfirmando(true);
+  }
+
+  // Confirmado y con la cara comprobada: se compran los dos tramos.
+  async function comprar() {
+    setConfirmando(false);
     setEstado("pagando");
     setError("");
     try {
@@ -114,6 +123,7 @@ export default function ReservaTransbordo() {
         {ninos > 0 && ` · ${ninos} ${ninos === 1 ? "niño" : "niños"} con descuento`}
         {bebes > 0 && ` · ${bebes} ${bebes === 1 ? "bebé" : "bebés"} gratis`}
       </p>
+      {confirmando && <ConfirmarPago total={total} alConfirmar={comprar} alCerrar={() => setConfirmando(false)} />}
       <button type="submit" className="boton" disabled={estado === "pagando"}>
         {estado === "pagando" ? "Comprando los dos billetes…" : "Comprar los dos billetes"}
       </button>
