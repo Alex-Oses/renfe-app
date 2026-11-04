@@ -7,6 +7,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type 
 import { calcularPrecio, comprarReserva, obtenerAsientos, obtenerTren } from "@renfe/shared/api/cliente";
 import { confirmarPagoConCara } from "@/confirmarPago";
 import { DESCUENTOS, EXTRAS, TARIFAS, calcularTotal, precioExtra } from "@renfe/shared/api/simulado-precios";
+import { haSalido } from "@renfe/shared/api/salidas";
+import { resolverTarifa } from "@renfe/shared/api/tarifas";
 import {
   ciudadDe,
   type Asiento,
@@ -53,11 +55,13 @@ export default function Pasajero() {
   const bebes = Math.max(Number(params.bebes) || 0, 0);
   const adultos = Math.max(n - ninos, 1);
   const descuento = (DESCUENTOS.find((d) => d.id === params.descuento)?.id ?? "ninguno") as IdDescuento;
-  const tarifaInicial = (TARIFAS.find((t) => t.id === params.tarifa)?.id ?? "basico") as IdTarifa;
+  const tarifaInicial = resolverTarifa(params.tarifa);
 
   const [tren, setTren] = useState<Tren | null>(null);
   const [asientos, setAsientos] = useState<Asiento[] | null>(null);
   const [tarifa, setTarifa] = useState<IdTarifa>(tarifaInicial);
+  // Al volver a entrar con otro ?tarifa= la tarifa elegida sigue a la URL.
+  useEffect(() => setTarifa(resolverTarifa(params.tarifa)), [params.tarifa]);
   const [datos, setDatos] = useState<DatosViajero[]>(() => Array.from({ length: n }, vacio));
   const [email, setEmail] = useState("");
   const [extras, setExtras] = useState<IdExtra[]>([]);
@@ -82,6 +86,11 @@ export default function Pasajero() {
       .then(
         ([t, a]) => {
           if (!vivo) return;
+          if (haSalido(t.salida)) {
+            setError("Ese tren ya ha salido: elige otro horario.");
+            setCargando(false);
+            return;
+          }
           setTren(t);
           setAsientos(a);
           setCargando(false);
@@ -166,6 +175,10 @@ export default function Pasajero() {
 
   const pagar = async () => {
     if (!tren) return;
+    if (haSalido(tren.salida)) {
+      setError("Ese tren ya ha salido: elige otro horario.");
+      return;
+    }
     if (!validar()) {
       setError("");
       irA(elegidos.length !== n ? 0 : 1);

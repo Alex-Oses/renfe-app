@@ -1,6 +1,8 @@
 // Único punto de acceso a la API. Sin VITE_API_URL se usan datos simulados.
 // Cada función corresponde a un endpoint de obsidian/02-contratos-api/endpoints.md.
 import { sinTildes } from "../formato/texto";
+import { haSalido } from "./salidas";
+import { transbordoViable } from "./transbordos";
 import type {
   TipoTren,
   Abono,
@@ -414,7 +416,11 @@ export async function buscarTransbordos(b: BusquedaTrenes): Promise<OpcionTransb
   const opciones = await datos<Omit<OpcionTransbordo, "tramos"> & { tramos: [TrenApi, TrenApi] }>(
     `/trenes/transbordos?${new URLSearchParams({ ...b })}`,
   );
-  return opciones.map((o) => ({ ...o, tramos: [aTren(o.tramos[0]), aTren(o.tramos[1])] }));
+  // La API ya filtra por margen; se recalcula aquí (mismos márgenes del contrato) para que un
+  // cambio en el SQL o en los datos no ofrezca una conexión imposible.
+  return opciones
+    .map((o) => ({ ...o, tramos: [aTren(o.tramos[0]), aTren(o.tramos[1])] as [Tren, Tren] }))
+    .filter((o) => transbordoViable(o));
 }
 
 // GET /trenes/:feed/:tripId?fecha=  (detalle: paradas, horas y retraso por parada)
@@ -435,6 +441,8 @@ export async function obtenerAsientos(tren: Tren): Promise<Asiento[]> {
 // POST /reservas
 // Crea la reserva ya pagada (el pago es simulado) con las butacas elegidas; sin ellas (transbordo) las asigna la API.
 export async function crearReserva(tren: Tren, r: NuevaReserva): Promise<Reserva> {
+  // Un tren que ya ha salido no se compra; protege también el modo simulado, sin servidor.
+  if (haSalido(tren.salida)) throw new Error("Ese tren ya ha salido: elige otro horario.");
   if (!BASE) return simular(() => reservas.crearReserva(r), 600);
   const creada = await pedir<ReservaApi>("/reservas", "POST", cuerpoReserva(tren, r));
   return reservaDeApi(creada, tren, r);
