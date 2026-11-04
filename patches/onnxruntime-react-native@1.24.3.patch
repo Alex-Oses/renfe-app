@@ -1,8 +1,18 @@
 diff --git a/android/build.gradle b/android/build.gradle
-index 41b43599a9af6ef1c170047d39db1f3baa6ca682..4a7a2c12569d48990d9e745bd6a2376f95d89c1e 100644
+index 41b43599a9af6ef1c170047d39db1f3baa6ca682..33b864339ee0a0fa92c434e542d1856c1eb64f69 100644
 --- a/android/build.gradle
 +++ b/android/build.gradle
-@@ -247,10 +247,7 @@ dependencies {
+@@ -116,6 +116,9 @@ android {
+   externalNativeBuild {
+     cmake {
+       path "CMakeLists.txt"
++      // En Windows la ruta del repo + los .cpp de ../cpp pasan de MAX_PATH (260) y ninja
++      // no puede crear las carpetas de objetos: un staging dir corto lo evita.
++      buildStagingDirectory = new File(System.getProperty("user.home"), ".ort-cxx")
+     }
+   }
+ 
+@@ -247,10 +250,7 @@ dependencies {
      extractLibs "com.microsoft.onnxruntime:onnxruntime-android:latest.integration@aar"
    }
  

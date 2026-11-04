@@ -1,7 +1,7 @@
 ---
-actualizado: 2026-10-26
+actualizado: 2026-11-03
 autor: Rubén (con OpenCode)
-estado: borrador
+estado: actualizado
 tags: [arquitectura, docs]
 ---
 
@@ -15,52 +15,47 @@ tags: [arquitectura, docs]
 ```
                      ┌──────────────────────────────┐
                      │  RENFE · datos abiertos      │
-                     │  GTFS 2 ZIP · GTFS-RT 4 JSON │
+                     │  GTFS estático · GTFS-RT     │
                      │  licencia CC BY 4.0          │
                      └──────────────┬───────────────┘
-                                    │ HTTPS · solo el worker
-                                    ▼
-                    ┌────────────────────────────────┐
-                    │  gtfs-worker (Node)            │
-                    │  cron 04:00 · poll 30 s        │
-                    └──────────────┬─────────────────┘
-                                   │ COPY / upsert
-                                   ▼
-      ┌────────────────────────────────────────────────┐
-      │  Supabase                                      │
-      │  Postgres: gtfs_* (~2,1 M filas), rt_* (540)   │
-      │  Auth · pgvector · Realtime                    │
-      └───────┬───────────────────────────┬────────────┘
-              │ SQL                       │ Realtime (WSS)
-              ▼                           │
-   ┌──────────────────────────────┐       │
-   │  API NestJS :3000            │       │
-   │  auth · trenes · reservas    │       │
-   │  pagos · billetes · chatbot  │       │
-   └──┬────────┬───────────┬──────┘       │
-      │        │           │              │
-      │HTTPS   │HTTPS      │HTTPS         │
-      ▼        ▼           ▼              │
-  face-svc  Stripe     Gemini API          │
-  :8001     (test)     (chatbot)         │
-                                         │
-              ┌──────────────────────────▼─────────┐
-              │  App Expo (iOS · Android · web)    │
-              │  viajero + revisor                 │
-              │  consume: API (HTTPS+JWT)          │
-              │           + Realtime (WSS)         │
-              └────────────────────────────────────┘
+                                    │
+                 ┌──────────────────┴─────────────────┐
+                 │ GTFS estático                      │ GTFS-RT
+                 ▼                                    ▼
+      ┌────────────────────────┐          ┌──────────────────────┐
+      │ gtfs-worker (Node)     │          │ API /posiciones      │
+      │ import AVE/LD (manual) │          │ caché en memoria 30 s│
+      └───────────┬────────────┘          └──────────┬───────────┘
+                  │ COPY/upsert                      │
+                  ▼                                  │
+      ┌────────────────────────┐                     │
+      │ Supabase Postgres/Auth │                     │
+      │ pgvector               │                     │
+      └───────────┬────────────┘                     │
+                  │ SQL                              │
+                  ▼                                  ▼
+      ┌─────────────────────────────────────────────────┐
+      │ API NestJS :3000                                │
+      │ auth · trenes · reservas · billetes · abonos    │
+      │ chatbot · /posiciones                           │
+      └───┬──────────────┬───────────────────┬──────────┘
+          │HTTPS         │HTTPS              │HTTPS + JWT
+          ▼              ▼                   ▼
+      Stripe         Gemini API         Web Vite + app Expo
+      (previsto)     (chatbot)          @renfe/shared
 ```
 
 Piezas y responsabilidad:
 
 | Pieza                                      | Responsable | Qué hace                                        | Qué NO hace                           |
 | ------------------------------------------ | ----------- | ----------------------------------------------- | ------------------------------------- |
-| `frontend/mobile` (Expo)                   | Alex        | UI viajero y revisor; calcula el vector facial en el dispositivo | No habla con Renfe ni con Postgres    |
-| `backend/api` (NestJS)                     | Rubén       | Una sola superficie REST para la app            | No descarga GTFS ni firma pagos       |
-| `backend/gtfs-worker` (Node)               | Marina      | Única entrada de datos de Renfe                 | No atiende peticiones de usuarios     |
-| Supabase (Postgres/Auth/pgvector/Realtime) | Marina      | Datos, sesiones, embeddings, decisión del login facial, push de posiciones | No expone tablas de negocio a la app  |
-| Stripe (test)                              | Kevin       | Cobro simulado                                  | La tarjeta nunca pasa por nuestra API |
+| `frontend/web` (React + Vite)              | Alex        | Web de viajero, cuenta, abonos, mapa, revisor y contenido | No habla con Renfe ni con Postgres    |
+| `frontend/mobile` (Expo)                   | Alex        | App viajero/revisor; calcula el vector facial en el dispositivo | No habla con Renfe ni con Postgres    |
+| `frontend/shared`                          | Alex        | Cliente, tipos, simulados y contenido común | No tiene UI ni acceso directo a la BD |
+| `backend/api` (NestJS)                     | Rubén       | REST para la app; cachea GTFS-RT en `/posiciones` | No importa GTFS estático ni cobra     |
+| `backend/gtfs-worker` (Node)               | Marina      | Importa el GTFS estático de AVE/LD              | No toca GTFS-RT ni atiende usuarios   |
+| Supabase (Postgres/Auth/pgvector)          | Marina      | Datos, sesiones, embeddings y decisión del login facial | No expone tablas de negocio a la app  |
+| Stripe (test, previsto)                    | Kevin       | Pago de prueba cuando se conecte                | No está conectado en la demo actual   |
 | Gemini API                                 | Rubén       | Chatbot con *tool use*                          | No tiene acceso directo a la BD       |
 
 ## 2. Fuentes de datos reales
@@ -83,7 +78,7 @@ Comportamiento observado de los endpoints GTFS-RT:
 - **Sin CORS** (`Access-Control-Allow-Origin` ausente) → la build **web** de Expo no puede llamarlos.
 - **Sin compresión** → cada petición viaja en crudo.
 - `Cache-Control: max-age=30, public` → ellos esperan un sondeo cada 30 s.
-- No publican límite de peticiones: el worker debe reintentar con *backoff* y no perder la última copia válida.
+- No publican límite de peticiones: la API reintenta con *backoff* y conserva la última copia válida.
 
 **No existe** API pública de búsqueda con precios, disponibilidad, reserva ni pago. Los endpoints internos
 de `renfe.com` y su app no están documentados y su uso va contra sus condiciones: **no se usan**.
@@ -94,26 +89,25 @@ de `renfe.com` y su app no están documentados y su uso va contra sus condicione
 |---|---|
 | Estaciones, rutas, horarios (GTFS) | Precios |
 | Posiciones, retrasos e incidencias (GTFS-RT) | Asientos y ocupación |
-| | Reservas y pagos (Stripe test) |
+| | Reservas y pagos (simulados; Stripe test previsto) |
 
 ## 4. Ingesta (gtfs-worker)
 
 ```
-        DIARIO 04:00                              CADA 30 s
-        ─────────────                             ───────────
-   descarga 2 ZIP (16 MB)                    GET 4 JSON (~440 KB)
-          │                                          │
-   parsea ~2,1 M filas CSV                   normaliza (quita la fecha
-          │                                   del tripId de AVE/LD)
-   COPY a gtfs_* (30-60 s)                          │
-          │                                   upsert rt_* (540 filas)
-          ▼                                          ▼
-   estaciones, rutas, viajes,                posiciones, retrasos,
-   horarios, calendario                      incidencias
-                                                     │
-                                                     └─▶ Postgres dispara
-                                                         Realtime al móvil
+        IMPORT MANUAL
+        ─────────────
+   descarga ZIP AVE/LD + estaciones.csv
+          │
+   parsea ~70 k horarios del feed
+          │
+   COPY/upsert a gtfs_* (30-60 s)
+          ▼
+   estaciones, rutas, viajes, horarios, calendario
 ```
+
+El worker solo importa GTFS estático de AVE/LD; Cercanías y el cron diario quedan fuera del sprint.
+**No** sondea GTFS-RT: de eso se encarga la API (`/posiciones`), que cachea las cuatro fuentes en
+memoria.
 
 Reglas del worker:
 
@@ -129,7 +123,7 @@ Reglas del worker:
 ```
  App                    API NestJS                        Postgres
   │  GET /trenes?origen=60000&destino=60001&fecha=2026-11-02
-  │  Authorization: Bearer <jwt Supabase>
+  │  Authorization: Bearer <jwt de la API>
   ├──────────────────────▶│
   │                       │ 1. AuthGuard: firma y expiración del JWT
   │                       │ 2. DTO: fecha válida, origen ≠ destino
@@ -150,31 +144,33 @@ Si Renfe está caída, esta petición sigue funcionando: solo se pierden los ret
 ### 5.2 Comprar, QR y validar
 
 ```
-1  POST /reservas         → API bloquea asientos (simulados) → reserva "pendiente"
-2  POST /pagos/intent     → API → Stripe: PaymentIntent test → devuelve client_secret
-3  App paga con el SDK    → App ──▶ Stripe   (la tarjeta NUNCA pasa por nuestra API)
-4  Stripe → webhook       → POST /pagos/webhook (firma HMAC) → API marca "pagada"
-                                                              y emite billete con QR Ed25519
-5  GET /billetes          → app pinta el QR
-6  POST /billetes/validar → revisor escanea → API verifica firma + estado en BD → "usado"
+1  POST /reservas         → API crea la reserva pagada simulada y sus billetes
+2  La API firma un QR Ed25519 por pasajero (sin Stripe en la demo)
+3  GET /billetes          → app pinta el QR
+4  POST /billetes/validar → revisor escanea → API verifica firma + estado en BD → "usado"
+
+El flujo Stripe (PaymentIntent + webhook) sigue previsto en modo test, pero no está conectado en la demo.
 ```
 
 ### 5.3 Tiempo real
 
 ```
-gtfs-worker ──upsert──▶ rt_posiciones ──▶ Supabase Realtime ──WSS──▶ mapa del móvil
-                        (540 trenes / 30 s)      (solo lo que cambia)
+API /posiciones ──lee/cachea 30 s──▶ GTFS-RT de Renfe
+       ▲
+       │ GET (HTTPS)
+  web y app (mapa)
 ```
 
-El móvil no pide nada: recibe. Ir directo a Renfe costaría ~24 MB/hora por usuario.
+La entrega usa caché en memoria de la API, no el worker con Realtime (decisión del 27/10). Ir
+directo a Renfe desde cada cliente costaría ~24 MB/hora por usuario.
 
 ### 5.4 Login facial y chatbot
 
 ```
-Login facial   dispositivo: Human (detección, antispoof, malla) + ArcFace → vector de 512
+Login facial   dispositivo: web (Human + ArcFace) o app (SCRFD + ArcFace ONNX) → vector de 512
                POST /auth/cara/verificar → API → verificar_cara() en Postgres
                → similitud coseno ≥ umbral de config_cara → JWT de la API
-               (la foto no sale del dispositivo y no se guarda nunca; ver ADR-005)
+               (la foto no sale del dispositivo y no se guarda nunca; ver ADR-007)
 
 Chatbot        POST /chatbot/mensaje → API → Gemini API (function calling)
                → Gemini consulta herramientas internas → respuesta en lenguaje natural
@@ -182,14 +178,13 @@ Chatbot        POST /chatbot/mensaje → API → Gemini API (function calling)
 
 ## 6. Reglas de arquitectura (no negociables)
 
-1. **Una sola entrada de datos Renfe: el worker.** Ni la app ni la API llaman a Renfe en caliente.
-2. **La app solo conoce** `EXPO_PUBLIC_API_URL` y el canal de Realtime. Nada de Postgres, Stripe
-   secreto ni Renfe.
+1. **Datos Renfe:** el worker importa GTFS estático y la API cachea GTFS-RT; la app no llama a Renfe.
+2. **La app solo conoce** su URL de API. Nada de Postgres, Stripe secreto ni Renfe.
 3. **El contrato manda.** Endpoint, tabla o evento nuevo → se escribe en `obsidian/02-contratos-api/`
    *antes* del código.
-4. **Postgres es la única memoria.** Sin estado de negocio en memoria del proceso.
-5. **La tarjeta no toca el backend.** Stripe Elements/SDK en la app; la API solo maneja `PaymentIntent`
-   y webhooks.
+4. **Postgres es la memoria de negocio.** Las posiciones GTFS-RT pueden cachearse en la API.
+5. **La tarjeta no toca el backend.** Cuando se conecte Stripe, la API solo manejará `PaymentIntent`
+   y webhooks; la demo actual no cobra.
 6. **Nada de secretos en el vault ni en el repo.** Solo `.env.example`.
 7. **Precios, asientos y pagos son simulados.** Cualquier pantalla que los enseñe debe decirlo.
 
@@ -215,7 +210,7 @@ Chatbot        POST /chatbot/mensaje → API → Gemini API (function calling)
 | Vuelta de GTFS-RT | 4 peticiones ≈ 440 KB cada 30 s |
 | Trenes en vivo | ~540 (348 Cercanías + 192 AVE/LD) |
 | Coste de ir directo a Renfe desde la app | ~24 MB/hora por usuario, sin compresión y sin CORS en web |
-| Caché | No hace falta Redis: Postgres indexado basta para esta escala |
+| Caché | La API guarda GTFS-RT 30 s en memoria; no hace falta Redis ni una tabla de posiciones |
 
 ## 9. Decisiones abiertas
 
@@ -229,7 +224,9 @@ Chatbot        POST /chatbot/mensaje → API → Gemini API (function calling)
 Ninguna de estas está cerrada salvo la de tiempo real, que se resolvió el 27/10 a favor de la caché
 en memoria para la entrega. Si se decide otra, va a `obsidian/03-decisiones/` (ADR-002).
 
-## 10. Alcance por sprint
+## 10. Alcance inicial por sprint (histórico)
+
+> Plan de la entrega inicial; el estado real, con sus límites, está en el README raíz y en los READMEs de área.
 
 | Pieza | Quién | Estimación |
 |---|---|---|
