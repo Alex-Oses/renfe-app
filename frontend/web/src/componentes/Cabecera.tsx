@@ -11,6 +11,7 @@ const ENLACES = [
   { a: "/mapa", texto: "Trenes en directo" },
   { a: "/billetes", texto: "Mis billetes" },
   { a: "/lineas", texto: "Mis líneas" },
+  { a: "/app", texto: "App" },
 ];
 
 // Ayuda entra en el mega-menú como un menú más, partida en dos columnas.

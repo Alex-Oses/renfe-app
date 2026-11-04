@@ -1,6 +1,7 @@
 // Piezas compartidas por los widgets: campo accesible, búsqueda de reserva y confirmación.
 import { useId, useState, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { buscarReservaPorLocalizador, usaDatosSimulados } from "@renfe/shared/api/cliente";
+import { reservaPorLocalizador as reservaSimuladaPorLocalizador } from "@renfe/shared/api/simulado-reservas";
 import type { Reserva } from "@renfe/shared/api/tipos";
 import { expediente } from "./logica";
 import "./herramientas.css";
@@ -54,14 +55,8 @@ export const espera = (ms = 400) => new Promise((r) => setTimeout(r, ms));
 export const LOCALIZADOR = /^(R-)?[A-Z0-9]{6}$/i;
 export const emailValido = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 
-// shortcut: lee el almacén de simulado-reservas (clave "anden-reservas") porque no exporta búsqueda por localizador; usar la API cuando exista GET /reservas?localizador=.
 export function reservaPorLocalizador(loc: string): Reserva | undefined {
-  try {
-    const a = JSON.parse(localStorage.getItem("anden-reservas") ?? "null") as { reservas: Reserva[] } | null;
-    return a?.reservas.find((r) => r.localizador === loc.trim().toUpperCase());
-  } catch {
-    return undefined;
-  }
+  return reservaSimuladaPorLocalizador(loc);
 }
 
 /** Formulario de localizador (y email opcional) que entrega la reserva encontrada. */

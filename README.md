@@ -1,8 +1,10 @@
-# 🚆 Renfe App — Monorepo del equipo
+# 🚆 Andén 0 — Monorepo del equipo
 
-App tipo Renfe hecha en equipo: búsqueda de trenes por fecha, reserva y pago (simulado con Stripe test), billetes QR validados contra la base de datos, login con reconocimiento facial, mapa en tiempo real y chatbot con IA.
+Demo funcional de una app tipo Renfe: monorepo con web React/Vite, app Expo, lógica compartida, API, catálogo/horarios GTFS, chatbot, cuenta, reservas simuladas y reconocimiento facial.
 
-> **Estado actual:** esqueleto. Hay estructura, configuraciones de ejemplo y documentación, pero **ninguna funcionalidad implementada todavía**. Cada carpeta tiene un `README.md` que explica qué irá ahí y quién es responsable.
+No es un esqueleto: hay pantallas, endpoints, datos GTFS reales y pruebas automatizadas en varias áreas. Que una función exista en el repositorio no significa que esté desplegada o lista para producción.
+
+> **Estado y límites:** ya hay funcionalidades y pruebas en varias áreas, pero su disponibilidad depende de la configuración, los datos y la plataforma. No equivale a un servicio de venta real: Renfe no publica API de reservas ni precios; reservas, asientos y pagos del proyecto son simulados. El reconocimiento facial usa código nativo y requiere compilar la app móvil.
 
 ---
 
@@ -12,7 +14,7 @@ El repositorio está dividido en **tres zonas que no se mezclan**:
 
 | Carpeta | Qué es | Responsable |
 |---|---|---|
-| [`frontend/`](frontend/README.md) | 📱 App móvil/web (Expo + React Native). Todo lo que ve el usuario. | **Alex** |
+| [`frontend/`](frontend/README.md) | 🖥️ Web React/Vite + app Expo/React Native + `shared` (cliente, tipos, simulados y contenido). Todo lo que ve el usuario. | **Alex** |
 | [`backend/`](backend/README.md) | ⚙️ API (NestJS), base de datos (Supabase) y worker de datos Renfe (GTFS). | **Rubén** (API), **Marina** (BD + GTFS), **Kevin** (Stripe) |
 | [`obsidian/`](obsidian/README.md) | 🧠 Vault de Obsidian: memoria compartida del equipo y de las IAs (estado, contratos de API, decisiones, handoffs). | **Todos** (lo mantiene Marina como Scrum Master) |
 
@@ -27,13 +29,15 @@ Además, en la raíz:
 | `.claude/` | Config de Claude Code: hook de inicio que lee el vault y comando `/handoff`. |
 | `.opencode/` | Comandos de OpenCode (`/handoff`, `/estado`). |
 | `scripts/` | Scripts del monorepo (p. ej. `agent-context.mjs`, que resume el vault para las IAs). |
-| `docker-compose.yml` | Levanta todos los servicios en local (placeholder). |
-| `.github/` | Plantillas de PR/issues, CODEOWNERS y CI (placeholder). |
+| `docker-compose.yml` | Configura PostgreSQL, API y el worker GTFS de ejecución manual. |
+| `.github/` | Plantillas, CODEOWNERS y workflows de CI/PR. |
 
 ```
 renfe-app/
 ├── frontend/
-│   └── mobile/            # App Expo (viajero + revisor)
+│   ├── web/               # Web React + Vite
+│   ├── mobile/            # App Expo (viajero + revisor)
+│   └── shared/            # Cliente, tipos, simulados y contenido común
 ├── backend/
 │   ├── api/               # API NestJS (Rubén)
 │   ├── database/          # Supabase: migraciones, seeds, políticas (Marina)

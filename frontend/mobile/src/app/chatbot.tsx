@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { useRef, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { aTren, nombreDeTren } from "@renfe/shared/api/adaptador-trenes";
-import { enviarMensajeChatbot } from "@renfe/shared/api/cliente";
+import { enviarMensajeChatbotFlujo, type PasoChatbot } from "@renfe/shared/api/cliente";
 import type { RespuestaChatbot, TrenApi } from "@renfe/shared/api/tipos";
 import { Boton } from "@/components/Boton";
 import { Cristal } from "@/components/Cristal";
@@ -22,6 +22,20 @@ const SALUDO: Mensaje = {
   autor: "asistente",
   texto: "¡Hola! Puedo ayudarte a encontrar trenes, estaciones y horarios.",
 };
+
+// Lo que se lee mientras la IA trabaja (igual que la web): el nombre interno de la herramienta no le dice nada.
+const HERRAMIENTAS: Record<string, string> = {
+  buscar_estaciones: "Buscando estaciones (API)",
+  buscar_trenes: "Mirando trenes (API)",
+  detalle_tren: "Consultando paradas (API)",
+  consultar_posiciones: "Consultando posiciones (API)",
+  posicion_tren: "Localizando el tren (API)",
+};
+
+function etiquetaPaso(paso: PasoChatbot): string {
+  if (paso.paso === "consultando") return HERRAMIENTAS[paso.herramienta] ?? "Consultando la API";
+  return paso.paso === "analizando" ? "Analizando tu pregunta" : "Razonando con los datos";
+}
 
 const duracion = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")} min`;
 
@@ -84,6 +98,7 @@ export default function Chatbot() {
   const [texto, setTexto] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pasos, setPasos] = useState<string[]>([]);
   const [conversationId, setConversationId] = useState<string>();
   const siguienteId = useRef(1);
 
@@ -92,10 +107,15 @@ export default function Chatbot() {
     if (!mensaje || cargando) return;
     setTexto("");
     setError(null);
+    setPasos([]);
     setMensajes((actuales) => [...actuales, { id: siguienteId.current++, autor: "usuario", texto: mensaje }]);
     setCargando(true);
     try {
-      const respuesta: RespuestaChatbot = await enviarMensajeChatbot(mensaje, conversationId);
+      const respuesta: RespuestaChatbot = await enviarMensajeChatbotFlujo(mensaje, conversationId, (paso) => {
+        const etiqueta = etiquetaPaso(paso);
+        // Varias consultas seguidas repiten «razonando»: no se pinta dos veces lo mismo.
+        setPasos((actuales) => (actuales.at(-1) === etiqueta ? actuales : [...actuales, etiqueta]));
+      });
       setConversationId(respuesta.conversationId);
       setMensajes((actuales) => [
         ...actuales,
@@ -147,8 +167,14 @@ export default function Chatbot() {
         ListFooterComponent={
           <>
             {cargando ? (
-              <View style={[styles.burbuja, styles.asistente]}>
-                <Text style={estilos.suave}>Analizando tu pregunta…</Text>
+              <View style={[styles.burbuja, styles.asistente]} accessibilityLiveRegion="polite">
+                {(pasos.length ? pasos : ["Analizando tu pregunta"]).map((paso, i, todos) => (
+                  <Text key={i} style={i === todos.length - 1 ? styles.pasoActivo : estilos.suave}>
+                    {i === todos.length - 1 ? "› " : "✓ "}
+                    {paso}
+                    {i === todos.length - 1 ? "…" : ""}
+                  </Text>
+                ))}
               </View>
             ) : null}
             {error ? <Text style={estilos.error}>{error}</Text> : null}
@@ -196,6 +222,7 @@ const styles = StyleSheet.create({
   trenPrecio: { fontFamily: fuentes.negrita, color: colores.titulo },
   trenHoras: { fontFamily: fuentes.medio, color: colores.texto, fontSize: 14 },
   verTren: { fontFamily: fuentes.seminegrita, color: colores.accion, fontSize: 13, marginTop: 4 },
+  pasoActivo: { fontFamily: fuentes.seminegrita, color: colores.texto, fontSize: 14 },
   compositor: { flexDirection: "row", alignItems: "flex-end", marginBottom: 2 },
   entrada: { flex: 1, maxHeight: 90, minHeight: 42, fontFamily: fuentes.normal, fontSize: 16, color: colores.texto, paddingHorizontal: 8, paddingVertical: 9 },
 });

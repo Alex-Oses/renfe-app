@@ -147,6 +147,29 @@ describe('ReservasService.crear', () => {
     expect(reserva.billetes[1]!.asiento).toBe('1B');
   });
 
+  // Con coordenadas el precio simulado deja de ser NaN y los importes se pueden comparar.
+  const VIAJE_MEDIDO = {
+    ...VIAJE,
+    lat_o: 40.4065,
+    lon_o: -3.6895,
+    lat_d: 41.6585,
+    lon_d: -0.8804,
+  };
+
+  it('aplica tarifa, descuento y extras en el servidor y devuelve el desglose', async () => {
+    const sinNada = await servicioCon({ viaje: VIAJE_MEDIDO }).crear('usuario-1', dto());
+    const completa = await servicioCon({ viaje: VIAJE_MEDIDO }).crear(
+      'usuario-1',
+      dto({ tarifa: 'premium', descuento: 'joven', extras: ['equipaje'] }),
+    );
+
+    // 54,90 € de asiento × 1,9 (premium) × 0,7 (joven, −30 %) = 73,02 € + 15 € de equipaje.
+    expect(completa.billetes[0]!.precio).toBe(73.02);
+    expect(completa.desglose).toEqual({ billetes: 73.02, extras: 15, total: 88.02 });
+    expect(completa.total).toBe(88.02);
+    expect(completa.total).toBeGreaterThan(sinNada.total);
+  });
+
   it('rechaza fechas pasadas sin tocar la BD', async () => {
     await expect(
       servicioCon().crear('usuario-1', dto({ fecha: '2020-01-01' })),
@@ -181,5 +204,68 @@ describe('ReservasService.crear', () => {
     await expect(
       servicioCon({ fallo: new Error('BD caída') }).crear('usuario-1', dto()),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+});
+
+describe('ReservasService.crearTransbordo', () => {
+  const transbordo = () =>
+    ({
+      tramos: [
+        {
+          feed: 'avld',
+          viajeId: '3097L23537C1',
+          fecha: '2099-01-15',
+          origenId: '60000',
+          destinoId: '04040',
+        },
+        {
+          feed: 'avld',
+          viajeId: '0207L23538C1',
+          fecha: '2099-01-15',
+          origenId: '04040',
+          destinoId: '08001',
+        },
+      ],
+      pasajeros: [{ nombre: 'Lucía Pérez Gómez', documento: '12345678Z' }],
+    }) as never;
+
+  it('si el segundo tramo falla no queda la primera reserva (una sola transacción)', async () => {
+    const cliente = crearCliente();
+    const sinDeshacer: string[] = []; // reservas escritas que sobreviven a la transacción
+    const tramosVistos: string[] = []; // viajeId de cada tramo, en orden
+    let viajes = 0;
+
+    const servicio = new ReservasService(
+      {
+        transaccion: async (fn: (c: unknown) => Promise<unknown>) => {
+          const dentro = {
+            query: async (sql: string, valores: unknown[] = []) => {
+              if (sql.includes('from viajes v')) {
+                viajes += 1;
+                tramosVistos.push(String(valores[1]));
+                if (viajes === 2) return { rows: [] }; // el segundo tren no circula
+              }
+              if (sql.includes('insert into reservas')) sinDeshacer.push(String(valores[6]));
+              return cliente.query(sql, valores);
+            },
+          };
+          try {
+            return await fn(dentro);
+          } catch (error) {
+            sinDeshacer.length = 0; // rollback
+            throw error;
+          }
+        },
+      } as unknown as BdService,
+      { get: () => CLAVE } as unknown as ConfigService,
+      { enviar: async () => undefined } as unknown as CorreoService,
+    );
+
+    await expect(servicio.crearTransbordo('usuario-1', transbordo())).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    // El primer tramo llegó a insertar su reserva, pero el rollback la deshace.
+    expect(sinDeshacer).toEqual([]);
+    expect(tramosVistos).toEqual(['3097L23537C1', '0207L23538C1']);
   });
 });

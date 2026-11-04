@@ -10,6 +10,7 @@
   "scripts": {
     "prepare": "husky",
     "dev:mobile": "pnpm --filter @renfe/mobile dev",
+    "tunel:mobile": "pnpm --filter @renfe/mobile tunel",
     "dev:web": "pnpm --filter @renfe/web dev",
     "dev:api": "pnpm --filter @renfe/api dev",
     "dev:worker": "pnpm --filter @renfe/gtfs-worker dev",
@@ -40,5 +41,10 @@
     "@commitlint/config-conventional": "^19.5.0",
     "husky": "^9.1.6",
     "supabase": "^2.122.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "onnxruntime-react-native@1.24.3": "patches/onnxruntime-react-native@1.24.3.patch"
+    }
   }
 }

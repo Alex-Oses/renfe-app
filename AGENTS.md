@@ -4,9 +4,9 @@ Este fichero lo leen automáticamente OpenCode, Codex, Claude Code (vía `CLAUDE
 
 ## 1. Qué es este repo
 
-Monorepo pnpm de una app tipo Renfe hecha por un equipo de 4 personas con Scrum. Está dividido en tres zonas:
+Monorepo pnpm de una demo funcional tipo Renfe hecha por un equipo de 4 personas con Scrum. No es un esqueleto: ya hay web, app Expo, API, datos GTFS, flujos de cuenta/reserva y pruebas, aunque su disponibilidad depende del entorno. Está dividido en tres zonas:
 
-- `frontend/` → app Expo / React Native (responsable: Alex).
+- `frontend/` → web React/Vite, app Expo / React Native y `@renfe/shared` (responsable: Alex).
 - `backend/` → API NestJS (Rubén, con el login facial dentro), Supabase (Marina), worker GTFS (Marina).
 - `obsidian/` → **vault de Obsidian, memoria compartida entre humanos e IAs.**
 
@@ -81,8 +81,8 @@ Comandos: `/rama` (empezar tarea), `/pr` (commits + handoff + push + PR), `/hand
 ## 4. Convenciones de código
 
 - Gestor de paquetes: **pnpm** (nunca npm ni yarn). Node 22.
-- TypeScript estricto en frontend, API y worker. No hay servicio facial aparte ni código Python: el
-  vector lo calcula el dispositivo y decide Postgres (ADR-007).
+- TypeScript estricto en web, app, `shared`, API y worker. No hay servicio facial aparte ni código
+  Python: el vector lo calcula el dispositivo y decide Postgres (ADR-007).
 - Variables de entorno: añade la clave a `.env.example` (sin valor real). Nunca subas `.env`.
 
 ## 5. Límites
@@ -90,7 +90,7 @@ Comandos: `/rama` (empezar tarea), `/pr` (commits + handoff + push + PR), `/hand
 - Asientos, precios, reservas y pagos son **simulados** (Renfe solo publica GTFS/GTFS-RT). Stripe siempre en **modo test**.
 - Reconocimiento facial: solo se guardan embeddings, nunca fotos.
 - No cambies la config de CI, hooks ni protección de ramas sin que lo pida Kevin.
-- Esto es un esqueleto: no inventes funcionalidades que no estén en el sprint actual.
+- El estado de implementación evoluciona y la documentación puede quedarse atrás. Antes de proponer una función, inspecciona el código, sus pruebas y el README del área; reproduce el problema si es posible. Que una función exista en código no demuestra que esté desplegada o lista para producción. Respeta el alcance explícito de cada ticket y no inventes comportamiento fuera de él.
 
 ## 6. Mapa rápido
 

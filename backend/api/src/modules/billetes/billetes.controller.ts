@@ -29,7 +29,7 @@ export class BilletesController {
   @UseGuards(SupabaseJwtGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Mis billetes, del más nuevo al más viejo' })
-  @ApiOkResponse({ description: '`{ datos: Billete[], total }`' })
+  @ApiOkResponse({ description: '`{ datos: Billete[], total, transbordos: [{ desde, hasta }] }`' })
   @ApiUnauthorizedResponse({ description: 'Token ausente o inválido' })
   @ApiServiceUnavailableResponse({ description: 'La base de datos no está disponible' })
   listar(@Req() peticion: PeticionConUsuario) {

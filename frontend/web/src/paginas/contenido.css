@@ -393,3 +393,34 @@
 .tarjeta__foto {
   margin: calc(var(--esp-6) * -1) calc(var(--esp-6) * -1) var(--esp-4);
 }
+
+/* Página «App» (DescargarApp.tsx) */
+.app-descarga__rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+  margin-block: 1.5rem;
+}
+.app-descarga__rejilla .tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.app-descarga__pasos {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.app-descarga__nota {
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+.etiqueta-proceso {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: #fff3d6;
+  color: #7a4b00;
+  font-weight: 600;
+  font-size: 0.9rem;
+}

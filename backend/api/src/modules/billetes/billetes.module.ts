@@ -5,5 +5,6 @@ import { BilletesService } from './billetes.service.js';
 @Module({
   controllers: [BilletesController],
   providers: [BilletesService],
+  exports: [BilletesService],
 })
 export class BilletesModule {}

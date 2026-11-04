@@ -12,17 +12,20 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { configurarApi, vigilarApi } from "@renfe/shared/api/cliente";
 import { AvisoRespaldo } from "@/AvisoRespaldo";
+import { Emergentes } from "@/avisos/Emergentes";
 import { restaurarSesion } from "@/sesion";
 import { colores, fuentes } from "@/tema";
 import { Vigilante } from "@/Vigilante";
 
 export { ErrorBoundary } from "expo-router";
 
-// Sin EXPO_PUBLIC_API_URL, datos simulados; el mapa tira de la API de Render por defecto.
+// Sin EXPO_PUBLIC_API_URL, datos simulados. Si la principal (el Docker por Funnel) cae, la app pasa
+// sola a la API de Render y vuelve cuando se recupera; el mapa tira de Render por defecto.
+const RENDER = "https://renfe-api.onrender.com";
 configurarApi({
   api: process.env.EXPO_PUBLIC_API_URL,
-  respaldo: process.env.EXPO_PUBLIC_API_RESPALDO_URL,
-  posiciones: process.env.EXPO_PUBLIC_POSICIONES_URL || "https://renfe-api.onrender.com",
+  respaldo: process.env.EXPO_PUBLIC_API_RESPALDO_URL || RENDER,
+  posiciones: process.env.EXPO_PUBLIC_POSICIONES_URL || RENDER,
 });
 vigilarApi();
 
@@ -64,11 +67,13 @@ export default function RootLayout() {
         <Stack.Screen name="comprar-abono" options={{ headerShown: false }} />
         <Stack.Screen name="abono/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="revisor" options={{ headerShown: false }} />
+        <Stack.Screen name="admin" options={{ headerShown: false }} />
         <Stack.Screen name="chatbot" options={{ headerShown: false }} />
         <Stack.Screen name="informacion" options={{ headerShown: false }} />
         <Stack.Screen name="contenido/[...ruta]" options={{ headerShown: false }} />
         <Stack.Screen name="cara" options={{ title: "Entrar con tu cara" }} />
       </Stack>
+      <Emergentes />
     </>
   );
 }

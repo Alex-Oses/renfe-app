@@ -22,9 +22,15 @@ import {
 import { PREFIJO_BILLETE, firmar } from '../../common/qr/firma.js';
 import { BdService } from '../../common/bd/bd.service.js';
 import { kmTrayecto, precioSimulado } from '../../common/simulado/precio.js';
+import {
+  calcularDesglose,
+  precioViajero,
+  type Desglose,
+} from '../../common/simulado/precios.js';
 import { CorreoService, htmlDeCorreo } from '../../common/correo/correo.service.js';
 import { SERVICIO_ACTIVO } from '../../common/gtfs/sql.js';
 import type { CrearReservaDto } from './dto/crear-reserva.dto.js';
+import type { CrearTransbordoDto } from './dto/crear-transbordo.dto.js';
 
 export interface ReservaCancelada {
   localizador: string;
@@ -72,6 +78,7 @@ export interface ReservaCreada {
   localizador: string;
   estado: 'pagada';
   total: number;
+  desglose: Desglose;
   creada: string;
   billetes: BilleteEmitido[];
 }
@@ -156,8 +163,8 @@ const SQL_PLANTILLA = `
 // Sin Stripe: la reserva nace pagada (el pago es simulado).
 const SQL_RESERVA = `
   insert into reservas (usuario_id, feed, viaje_id, fecha_servicio, origen_id, destino_id,
-                        referencia, estado, importe_centimos)
-  values ($1, $2, $3, $4::date, $5, $6, $7, 'pagada', $8)
+                        referencia, estado, importe_centimos, extras, extras_centimos)
+  values ($1, $2, $3, $4::date, $5, $6, $7, 'pagada', $8, $9, $10)
   returning id, referencia, creada_en
 `;
 
@@ -227,6 +234,57 @@ export class ReservasService {
       );
       void this.avisarCompra(usuarioId, creada, dto);
       return creada;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new ServiceUnavailableException('La base de datos no está disponible');
+    }
+  }
+
+  // Los dos tramos van en una sola transacción: si el segundo falla, el rollback
+  // deshace también el primero (no hay medio viaje cobrado).
+  async crearTransbordo(
+    usuarioId: string,
+    dto: CrearTransbordoDto,
+  ): Promise<{ reservas: ReservaCreada[]; total: number }> {
+    const tramos: CrearReservaDto[] = dto.tramos.map((tramo) => ({
+      feed: tramo.feed,
+      viajeId: tramo.viajeId,
+      fecha: tramo.fecha,
+      origenId: tramo.origenId,
+      destinoId: tramo.destinoId,
+      asientos: tramo.asientos,
+      pasajeros: dto.pasajeros,
+      tarifa: dto.tarifa,
+      descuento: dto.descuento,
+      extras: dto.extras,
+    }));
+
+    for (const tramo of tramos) {
+      if (tramo.origenId === tramo.destinoId) {
+        throw new BadRequestException('El origen y el destino no pueden ser la misma estación');
+      }
+      if (tramo.fecha < hoyMadrid()) {
+        throw new BadRequestException('La fecha del viaje ya ha pasado');
+      }
+    }
+
+    // Se lee antes de abrir la transacción: sin clave no hay QR que emitir.
+    const clave = this.config.get<string>('QR_SIGNING_PRIVATE_KEY');
+    if (!clave) {
+      throw new ServiceUnavailableException('La API no tiene configurada QR_SIGNING_PRIVATE_KEY');
+    }
+
+    try {
+      const reservas = await this.bd.transaccion(async (cliente) => {
+        const creadas: ReservaCreada[] = [];
+        for (const tramo of tramos) {
+          creadas.push(await this.crearEn(cliente, usuarioId, tramo, clave));
+        }
+        return creadas;
+      });
+      tramos.forEach((tramo, i) => void this.avisarCompra(usuarioId, reservas[i]!, tramo));
+      const total = reservas.reduce((suma, reserva) => suma + reserva.total, 0);
+      return { reservas, total: Math.round(total * 100) / 100 };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new ServiceUnavailableException('La base de datos no está disponible');
@@ -304,6 +362,7 @@ export class ReservasService {
           (b, i) =>
             `${dto.pasajeros[i]!.nombre}: coche ${b.coche}, asiento ${b.asiento}, ${b.clase}, ${euros(b.precio)}`,
         ),
+        ...(dto.extras?.length ? [`Extras: ${[...new Set(dto.extras)].join(', ')}`] : []),
         `Total pagado: ${euros(r.total)}`,
       ];
       await this.correo.enviar({
@@ -364,14 +423,21 @@ export class ReservasService {
     ]);
 
     const plazas = dto.pasajeros.length;
-    const precioCentimos = Math.round(
-      precioSimulado(
-        viaje.tipo_servicio,
-        kmTrayecto(viaje.lat_o, viaje.lon_o, viaje.lat_d, viaje.lon_d),
-        `${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`,
-      ) * 100,
+    const precioAsiento = precioSimulado(
+      viaje.tipo_servicio,
+      kmTrayecto(viaje.lat_o, viaje.lon_o, viaje.lat_d, viaje.lon_d),
+      `${dto.feed}:${dto.viajeId}:${dto.fecha}:${dto.origenId}:${dto.destinoId}`,
     );
-    const totalCentimos = precioCentimos * plazas;
+    const desglose = calcularDesglose({
+      precioAsiento,
+      tipos: dto.pasajeros.map((p) => p.tipo ?? 'adulto'),
+      tarifa: dto.tarifa,
+      descuento: dto.descuento,
+      extras: dto.extras,
+    });
+    const totalCentimos = Math.round(desglose.total * 100);
+    const extras = [...new Set(dto.extras ?? [])];
+    const extrasCentimos = Math.round(desglose.extras * 100);
 
     const { rows: reservas } = await cliente.query<FilaReserva>(SQL_RESERVA, [
       usuarioId,
@@ -382,6 +448,8 @@ export class ReservasService {
       dto.destinoId,
       `R-${referencia()}`,
       totalCentimos,
+      extras,
+      extrasCentimos,
     ]);
     const reserva = reservas[0]!;
 
@@ -416,6 +484,9 @@ export class ReservasService {
     const billetes: BilleteEmitido[] = [];
     for (const [indice, asiento] of asientos.entries()) {
       const pasajero = dto.pasajeros[indice]!;
+      const precioBillete = Math.round(
+        precioViajero(precioAsiento, dto.tarifa, pasajero.tipo ?? 'adulto', dto.descuento) * 100,
+      );
       const id = randomUUID();
       const asientoEtiqueta = etiquetaAsiento(asiento.numero);
       const qr = firmar(
@@ -453,7 +524,7 @@ export class ReservasService {
         asiento.coche,
         asientoEtiqueta,
         asiento.clase,
-        precioCentimos,
+        precioBillete,
         qr,
         expira,
       ]);
@@ -464,7 +535,7 @@ export class ReservasService {
         coche: asiento.coche,
         asiento: asientoEtiqueta,
         clase: claseVisible(asiento.clase),
-        precio: precioCentimos / 100,
+        precio: precioBillete / 100,
       });
     }
 
@@ -473,6 +544,7 @@ export class ReservasService {
       localizador: reserva.referencia,
       estado: 'pagada',
       total: totalCentimos / 100,
+      desglose,
       creada: instanteAIso(reserva.creada_en),
       billetes,
     };

@@ -76,6 +76,12 @@ if (Get-PuertosReservados) {
   if ($reservados) { throw "Siguen reservados: $reservados. Reinicia el PC o lanza esto otra vez." }
 }
 
+# Firma de los QR de billetes y abonos (Ed25519, la misma que docker-compose.local.yml). Sin una
+# clave válida la API no arranca. Si ya viene definida en el entorno, se respeta.
+if (-not $env:QR_SIGNING_PRIVATE_KEY) {
+  $env:QR_SIGNING_PRIVATE_KEY = 'MC4CAQAwBQYDK2VwBCIEIEfkxPo3ZeRXgyJSHJfbBISWsT6gvSw2n1z5ZklWUCDe'
+}
+
 $opciones = @('--solo-api')
 if (-not $Importar) { $opciones += '--sin-importar' }
 node scripts/levantar-local.mjs @opciones

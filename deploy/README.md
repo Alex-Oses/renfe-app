@@ -7,9 +7,9 @@ de un túnel.
 Decisión y alternativas: [[ADR-009-despliegue-servidor]](../../obsidian/03-decisiones/ADR-009-despliegue-servidor.md).
 Auditoría del servidor: [[infraestructura-servidor]](../../obsidian/05-areas/infraestructura-servidor.md).
 
-> **Estado:** los ficheros están escritos y `docker compose config` valida, pero **las imágenes no se
-> han construido ni se ha levantado nada**: en el portátil de desarrollo no hay daemon de Docker. La
-> primera construcción real es en el servidor.
+> **Estado:** los ficheros están escritos y `docker compose config` valida (con las variables
+> obligatorias en `.env`), pero **las imágenes no se han construido ni se ha levantado nada**: en el
+> portátil de desarrollo no hay daemon de Docker. La primera construcción real es en el servidor.
 
 ## Antes de empezar
 
@@ -23,6 +23,8 @@ Auditoría del servidor: [[infraestructura-servidor]](../../obsidian/05-areas/in
   | `JWT_SECRET` | Firma y verifica los tokens de sesión. Obligatoria, 32+ caracteres |
   | `DATABASE_URL_DOCKER` | Solo si la BD **no** es la del compose (ver § Con una BD que ya existe) |
   | `API_PUBLICO` | Puerto del host donde escucha la API. Por defecto `3010` |
+  | `GEMINI_API_KEY` | Chatbot. Opcional: vacía, `/chatbot` responde `503` y el resto sigue funcionando |
+  | `GEMINI_MODEL` | Modelo de Gemini. Vacía = `gemini-3.5-flash-lite` |
 
 - Puertos del host libres: `3010` (API) y los que use Supabase si ya está instalado. La auditoría del
   28/10 vio ocupados el 3000, 54321–54327 y 8083.
@@ -37,6 +39,22 @@ curl -s http://127.0.0.1:3010/health
 
 `/health` tiene que decir `"baseDatos": "ok"`. Si dice `"no configurada"`, el `DATABASE_URL` que llegó
 a la API no es el que crees: `docker compose exec api printenv DATABASE_URL`.
+
+### Chatbot
+
+`env_file: .env` pasa `GEMINI_API_KEY` y `GEMINI_MODEL` al contenedor; no hace falta duplicarlas en
+`environment:`. Comprobación **sin imprimir la clave**:
+
+```bash
+docker compose exec api printenv GEMINI_MODEL
+docker compose exec api sh -c 'test -n "$GEMINI_API_KEY" && echo clave presente || echo clave vacía'
+docker compose logs api | grep -i chatbot
+```
+
+Sin clave la API arranca y avisa en el log; `POST /chatbot/mensaje` devuelve `503` con «El chatbot no
+está configurado». Con una clave inválida o un modelo que no existe, el log dice el HTTP y el mensaje
+del proveedor (la clave nunca se escribe) y el cliente recibe qué revisar (`GEMINI_API_KEY`,
+`GEMINI_MODEL`, cuota).
 
 La API escucha en `127.0.0.1`, no en `0.0.0.0`, a propósito: para el navegador hace falta un proxy
 delante (§ Exponer al exterior).
