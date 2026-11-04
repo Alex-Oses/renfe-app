@@ -1,4 +1,8 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { BdService } from '../../common/bd/bd.service.js';
 import type { BuscarEstacionesDto } from './dto/buscar-estaciones.dto.js';
 
@@ -44,6 +48,19 @@ const SQL_BUSCAR = `
    limit $3
 `;
 
+const SQL_ESTACION = `
+  select e.id,
+         e.nombre,
+         e.ciudad,
+         e.lat,
+         e.lon,
+         coalesce(array_agg(distinct ef.feed) filter (where ef.feed is not null), '{}') as feeds
+    from estaciones e
+    left join estacion_feeds ef on ef.estacion_id = e.id
+   where e.id = $1
+   group by e.id
+`;
+
 @Injectable()
 export class EstacionesService {
   constructor(private readonly bd: BdService) {}
@@ -73,6 +90,30 @@ export class EstacionesService {
         feeds: fila.feeds,
       })),
       total: filas.length > 0 ? Number(filas[0].total) : 0,
+    };
+  }
+
+  async porId(id: string): Promise<Estacion> {
+    let fila: Omit<FilaEstacion, 'total'> | undefined;
+    try {
+      ({ rows: [fila] } = await this.bd.consultar<Omit<FilaEstacion, 'total'>>(
+        SQL_ESTACION,
+        [id],
+      ));
+    } catch {
+      throw new ServiceUnavailableException('La base de datos no está disponible');
+    }
+    if (!fila) {
+      throw new NotFoundException('Estación no encontrada');
+    }
+
+    return {
+      id: fila.id,
+      nombre: fila.nombre,
+      ciudad: fila.ciudad ?? '',
+      lat: fila.lat,
+      lon: fila.lon,
+      feeds: fila.feeds,
     };
   }
 }

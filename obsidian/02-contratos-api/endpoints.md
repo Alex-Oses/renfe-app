@@ -236,6 +236,28 @@ filtro por feed, `feeds[]` vacío, `ciudad` nula y `total` con límite. Ese test
 repo** porque la dependencia tumba el preview de Vercel, y Vercel no es nuestra área. Queda
 pendiente verlo contra el Supabase de verdad cuando existan las migraciones.
 
+## GET /estaciones/:id — añadido (Rubén, 2026-11-03)
+
+Descripción: una estación por su `id` (**el mismo `id` de GTFS que viaja en `origen.id` y
+`destino.id`**). Sirve para pintar el nombre cuando la web abre `/trenes?origen=<id>` en una pestaña
+nueva y solo tiene el id.
+Auth: **no**
+
+Response 200:
+
+```json
+{
+  "id": "60000",
+  "nombre": "Madrid-Puerta de Atocha",
+  "ciudad": "Madrid",
+  "lat": 40.4066,
+  "lon": -3.6906,
+  "feeds": ["avld", "cercanias"]
+}
+```
+
+Errores: `404` esa estación no existe · `503` si la BD no responde.
+
 ## GET /trenes
 
 Descripción: viajes **directos** entre dos estaciones (o sus ciudades) para una fecha de servicio.
@@ -583,6 +605,48 @@ seis campos van a `null` como antes. Detalles:
 todavía los mapea (`rumbo: p.rumbo ?? 0`) y quitarlos no arregla nada. Quedan como obsoletos; se
 pueden borrar cuando la web deje de leerlos.
 
+## POST /precios/calcular — añadido (Rubén, 2026-11-03)
+
+Descripción: importe de una selección **antes** de reservar, para que web y app no lo calculen en
+el cliente. Es el mismo cálculo que hace `POST /reservas`, así que el total que se enseña y el que se
+cobra coinciden.
+Auth: **no**
+
+Request:
+
+```json
+{
+  "feed": "avld",
+  "viajeId": "3097L23537C1",
+  "fecha": "2026-11-02",
+  "origenId": "60000",
+  "destinoId": "04040",
+  "pasajeros": [{ "tipo": "adulto" }, { "tipo": "nino" }],
+  "tarifa": "elige",
+  "descuento": "joven",
+  "extras": ["equipaje", "seguro"]
+}
+```
+
+`pasajeros` va de 1 a 6 y solo cuenta el `tipo` (`adulto` \| `nino` \| `bebe`; sin tipo = `adulto`).
+`tarifa`, `descuento` y `extras` son opcionales; sin ellas, básico, sin descuento y sin extras.
+
+Response 200:
+
+```json
+{
+  "precioAsiento": 45.0,
+  "desglose": { "billetes": 84.38, "extras": 20.0, "total": 104.38 }
+}
+```
+
+`precioAsiento` es el precio base de una butaca (el mismo `precioDesde` de la búsqueda).
+`billetes` ya lleva tarifa, descuento y tipo de viajero; `extras` se cobra una vez por reserva o por
+viajero según el extra.
+
+Errores: `400` pasajeros fuera de rango o tarifa/descuento/extra desconocidos · `404` el viaje no
+circula ese día o el trayecto no existe · `503` BD caída.
+
 ## POST /reservas
 
 Descripción: crea una reserva **pagada** (el pago es simulado: no hay Stripe) y emite **un billete con
@@ -600,8 +664,11 @@ Request:
   "origenId": "60000",
   "destinoId": "04040",
   "pasajeros": [
-    { "nombre": "Lucía Pérez Gómez", "documento": "12345678Z" }
-  ]
+    { "nombre": "Lucía Pérez Gómez", "documento": "12345678Z", "tipo": "adulto" }
+  ],
+  "tarifa": "elige",
+  "descuento": "joven",
+  "extras": ["equipaje", "seguro"]
 }
 ```
 
@@ -616,6 +683,10 @@ menú va incluido en `premium`). Se guardan en `reservas.extras` / `extras_centi
 `GET /billetes` devuelve en cada billete `extras` y `extrasReserva` (euros, uno por reserva). Los bebés no los ve la API. La butaca la elige la API (primeras libres por
 coche y número); el `documento` solo se enmascara en el QR (`••••678Z`).
 
+`tipo`, `tarifa`, `descuento` y `extras` son **opcionales** (`adulto`, `basico`, `ninguno` y sin
+extras por defecto); los importes los aplica la API con las mismas tablas que
+`POST /precios/calcular`. El `precio` de cada billete ya lleva tarifa, descuento y tipo.
+
 Response 201:
 
 ```json
@@ -624,6 +695,7 @@ Response 201:
   "localizador": "R-7K3M9Q",
   "estado": "pagada",
   "total": 45.0,
+  "desglose": { "billetes": 45.0, "extras": 0, "total": 45.0 },
   "creada": "2026-10-29T10:00:00+01:00",
   "billetes": [
     {
@@ -642,6 +714,63 @@ Notas: `estado` es siempre `pagada` mientras el pago sea simulado. La reserva, l
 billetes se escriben en **una transacción**: si falla algo, no queda nada a medias. `expira_en` del
 billete es la fecha de servicio + 26 h.
 
+## POST /reservas/transbordo — añadido (Rubén, 2026-11-03)
+
+Descripción: compra **los dos tramos de un transbordo en una sola transacción**. Si el segundo tramo
+falla (sin butacas, viaje inexistente, precio fuera de rango), **no queda ninguna reserva**: no hay
+medio viaje cobrado. Sustituye a la compensación que hace hoy el cliente (comprar el tramo 1 y
+cancelarlo si falla el 2).
+Auth: **sí**
+
+Request:
+
+```json
+{
+  "tramos": [
+    {
+      "feed": "avld", "viajeId": "3097L23537C1", "fecha": "2026-11-02",
+      "origenId": "60000", "destinoId": "04040", "asientos": ["1-2A"]
+    },
+    {
+      "feed": "avld", "viajeId": "0207L23538C1", "fecha": "2026-11-02",
+      "origenId": "04040", "destinoId": "08001", "asientos": ["2-5C"]
+    }
+  ],
+  "pasajeros": [{ "nombre": "Lucía Pérez Gómez", "documento": "12345678Z", "tipo": "adulto" }],
+  "tarifa": "elige",
+  "descuento": "joven",
+  "extras": ["equipaje"]
+}
+```
+
+`tramos` va **exactamente a 2**, cada uno con los mismos campos que `POST /reservas`.
+`pasajeros`, `tarifa`, `descuento` y `extras` son **comunes a los dos tramos** (mismo viajero, misma
+tarifa y mismos extras; no se cobra dos veces un extra que es por reserva).
+
+Response 201:
+
+```json
+{
+  "reservas": [
+    { "id": "9b2f…", "localizador": "R-7K3M9Q", "estado": "pagada", "total": 45.0,
+      "desglose": { "billetes": 45.0, "extras": 0, "total": 45.0 },
+      "creada": "2026-11-03T10:00:00+01:00", "billetes": [ { "id": "1c4a…", "qr": "RNF1…" } ] },
+    { "id": "a81c…", "localizador": "R-2W9P4T", "estado": "pagada", "total": 38.5,
+      "desglose": { "billetes": 38.5, "extras": 0, "total": 38.5 },
+      "creada": "2026-11-03T10:00:00+01:00", "billetes": [ { "id": "5d2e…", "qr": "RNF1…" } ] }
+  ],
+  "total": 83.5
+}
+```
+
+Errores: `400` fecha pasada, origen = destino en un tramo o `tramos` con un número distinto de 2 ·
+`401` sin token · `404` el viaje no circula ese día o el trayecto no existe · `409` no quedan butacas
+en algún tramo · `503` BD caída o sin clave de QR.
+
+Notas: los dos tramos se emiten con QR firmado, como en `POST /reservas`, y se manda un correo por
+cada uno. La API **no valida** que un tramo empiece donde acaba el otro: hay transbordos con cambio
+de estación dentro de la misma ciudad y la regla de qué es un transbordo la resuelve `GET /billetes`.
+
 ## POST /reservas/:localizador/cancelar — añadido (Alex, 2026-10-30)
 
 Auth: **sí**, solo el dueño. Sin cuerpo. Pasa la reserva a `cancelada` y sus billetes a `anulado`.
@@ -657,6 +786,43 @@ Penalización simulada por clase: Confort 30 %, Turista 100 %.
 La consulta por localizador se hace filtrando `GET /billetes`. Tras comprar o cancelar, la API manda
 un correo al usuario (sin bloquear la respuesta si falla). `precio` y `precioDesde` dependen del producto
 y de la distancia del trayecto, y coinciden entre búsqueda y compra.
+
+## GET /reservas?localizador=R-7K3M9Q — añadido (Rubén, 2026-11-03)
+
+Descripción: una reserva **propia** por su localizador, sin descargar todos los billetes. Sustituye
+al atajo de la web que busca en el almacén simulado del navegador (`comun.tsx:57`).
+Auth: **sí**, solo las del usuario con sesión
+
+Request (query): `localizador` (obligatorio; acepta con o sin el prefijo `R-`).
+
+Response 200:
+
+```json
+{
+  "localizador": "R-7K3M9Q",
+  "total": 45.0,
+  "billetes": [
+    {
+      "id": "1c4a…", "estado": "valido", "feed": "avld", "viajeId": "0207012026-11-02",
+      "tipo": "AVE", "numero": "02070",
+      "salida": "2026-11-02T07:15:00+01:00", "llegada": "2026-11-02T09:40:00+01:00",
+      "origen": { "id": "60000", "nombre": "Madrid-Puerta de Atocha" },
+      "destino": { "id": "04040", "nombre": "Zaragoza-Delicias" },
+      "coche": 3, "asiento": "12A", "clase": "Turista", "precio": 45.0,
+      "emitido": "2026-11-03T10:00:00+01:00", "expira": "2026-11-04T02:00:00+01:00",
+      "qr": "RNF1.eyJ2IjoxLCJpZCI6…"
+    }
+  ]
+}
+```
+
+Los billetes llevan **los mismos campos que una entrada de `GET /billetes`**. `total` es la suma de
+sus `precio`. No hay `desglose` (no se guarda por reserva) ni `id` de reserva: la reserva se
+identifica por el localizador. El estado de la reserva se lee en el `estado` de sus billetes
+(`anulado` si se canceló).
+
+Errores: `400` localizador con formato inválido · `401` sin token · `404` no existe o es de otro
+usuario · `503` BD caída.
 
 ## GET /billetes
 
@@ -682,7 +848,8 @@ Response 200:
       "qr": "RNF1.eyJ2IjoxLCJpZCI6…"
     }
   ],
-  "total": 1
+  "total": 2,
+  "transbordos": [{ "desde": "R-7K3M9Q", "hasta": "R-8F2L1P" }]
 }
 ```
 
@@ -690,6 +857,12 @@ Errores: `401` sin token · `503` BD caída. `estado` es el de `billetes` (`vali
 `anulado` | `caducado`). `numero` puede ser `null`.
 `feed` y `viajeId` (añadidos el 29/10, Alex) identifican el viaje: la web los cruza con `/posiciones`
 para avisar del retraso real del tren del billete.
+
+`transbordos` (**añadido el 03/11, Rubén**): la API ya resuelve qué reservas forman un viaje con
+transbordo, así que el cliente solo ordena y pinta, no decide nada. Dos reservas son un transbordo si
+tienen el mismo número de billetes, una acaba donde empieza la otra, la espera entre la llegada y la
+salida va de 15 min a 3 h y se emitieron con menos de 15 min de diferencia. Una reserva puede estar
+como `desde` de un par y como `hasta` de otro (viajes de tres tramos).
 
 ## GET /billetes/:id/qr
 

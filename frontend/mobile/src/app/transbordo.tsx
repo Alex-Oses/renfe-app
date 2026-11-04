@@ -1,10 +1,12 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
-import { buscarTransbordos, cancelarReserva, comprarReserva, obtenerAsientos } from "@renfe/shared/api/cliente";
+import {
+  buscarTransbordos,
+} from "@renfe/shared/api/cliente";
 import { buscarOpcion, comprarDosTramos } from "@renfe/shared/api/comprar-transbordo";
 import { DESCUENTOS, calcularTotal } from "@renfe/shared/api/simulado-precios";
-import type { IdDescuento, OpcionTransbordo, Pasajero, Reserva, TipoViajero, Tren } from "@renfe/shared/api/tipos";
+import type { IdDescuento, NuevaReserva, OpcionTransbordo, Pasajero, Reserva, TipoViajero } from "@renfe/shared/api/tipos";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
 import { Campo } from "@/components/Campo";
@@ -21,13 +23,6 @@ interface DatosViajero {
 const vacio = (): DatosViajero => ({ nombre: "", apellidos: "", documento: "" });
 const validarDocumento = (v: string) => /^[A-Za-z0-9]{6,12}$/.test(v.trim());
 const validarEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v.trim());
-
-// Mismo flujo de compra que /pasajero (reserva + intento + pago simulado), una vez por tren.
-async function comprarTramo(tren: Tren, pasajeros: Pasajero[], descuento: IdDescuento, bebes: number): Promise<Reserva> {
-  const libres = (await obtenerAsientos(tren)).filter((a) => a.libre).slice(0, pasajeros.length);
-  if (libres.length < pasajeros.length) throw new Error(`No quedan plazas suficientes en el ${tren.tipo} ${tren.numero}.`);
-  return comprarReserva(tren, { trenId: tren.id, asientos: libres.map((a) => a.id), pasajeros, descuento, bebes });
-}
 
 export default function Transbordo() {
   const params = useLocalSearchParams<Record<string, string>>();
@@ -86,9 +81,8 @@ export default function Transbordo() {
       tipo: tipos[i],
     }));
     try {
-      setCompradas(
-        await comprarDosTramos((i) => comprarTramo(opcion.tramos[i], pasajeros, descuento, bebes), cancelarReserva),
-      );
+      const datos: NuevaReserva = { trenId: opcion.tramos[0].id, asientos: [], pasajeros, descuento, bebes };
+      setCompradas(await comprarDosTramos(opcion.tramos, datos));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo completar la compra.");
     } finally {

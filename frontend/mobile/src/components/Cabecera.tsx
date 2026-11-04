@@ -18,10 +18,20 @@ import { Hoja } from "./Hoja";
 import { Icono, type NombreIcono } from "./Icono";
 
 const CLAVE_AVISO = "anden-aviso";
+const CLAVE_CAMPANA = "anden-campana-leida";
 
 const leerAviso = () => {
   try {
     return localStorage.getItem(CLAVE_AVISO) !== "0";
+  } catch {
+    return true;
+  }
+};
+
+// El punto de la campana avisa de que hay avisos sin mirar: desaparece al abrir el panel.
+const leerCampana = () => {
+  try {
+    return localStorage.getItem(CLAVE_CAMPANA) !== "1";
   } catch {
     return true;
   }

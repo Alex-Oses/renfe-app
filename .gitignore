@@ -26,6 +26,8 @@ backend/database/supabase/.branches/
 backend/gtfs-worker/data/
 
 # Obsidian: se versionan las notas, no el estado personal de cada uno
+# Configuración de Obsidian abierta sobre la raíz del repo (no es la del vault).
+/.obsidian/
 obsidian/.obsidian/workspace*.json
 obsidian/.obsidian/cache
 obsidian/.obsidian/plugins/*/data.json
