@@ -2,6 +2,7 @@
 // El APK sale de EAS (perfil preview) y se sube como asset «renfe.apk» de un release de GitHub;
 // /releases/latest/download/ siempre apunta al último, así el enlace no cambia entre versiones.
 import { Link } from "react-router-dom";
+import { TrenSvg } from "./inicio/TrenSvg";
 import "./contenido.css";
 
 export const URL_APK = "https://github.com/Alex-Oses/renfe-app/releases/latest/download/renfe.apk";
@@ -19,8 +20,12 @@ export default function DescargarApp() {
         <section className="tarjeta cristal" aria-labelledby="app-android">
           <h2 id="app-android">Android</h2>
           <p>Descarga el APK e instálalo. Android te pedirá permitir apps de esta fuente la primera vez.</p>
-          <a className="boton" href={URL_APK} download>
-            Descargar para Android (APK)
+          <a className="boton app-descarga__boton" href={URL_APK} download>
+            {/* El mismo tren que recorre la portada donde se compra el billete. */}
+            <span className="app-descarga__tren" aria-hidden="true">
+              <TrenSvg />
+            </span>
+            <span className="app-descarga__texto">Descargar para Android (APK)</span>
           </a>
           <ol className="app-descarga__pasos">
             <li>Abre el archivo descargado.</li>
