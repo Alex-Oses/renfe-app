@@ -2,6 +2,10 @@
 .lineas__intro { color: var(--gris); margin-top: 0; }
 
 .lineas__form {
+  /* El formulario y las tarjetas crean contexto de apilado con `backdrop-filter`; sin esto, el
+     panel de sugerencias queda debajo del estado vacío o de las tarjetas que vienen después. */
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   gap: var(--esp-3);

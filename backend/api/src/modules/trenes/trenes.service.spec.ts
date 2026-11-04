@@ -73,6 +73,15 @@ describe('TrenesService.transbordos', () => {
     expect(sqlUsado).toContain("interval '30 minutes'");
     expect(sqlUsado).toContain('not exists');
   });
+
+  it('descarta enlaces por debajo del margen o con más de 3 h de espera', async () => {
+    const a = { ...fila, destino_id: '04040', destino_nombre: 'Zaragoza', sale: '07:00:00', llega: '08:30:00' };
+    const b = (sale: string) => ({ ...fila, viaje_id: `v-${sale}`, origen_id: '04040', origen_nombre: 'Zaragoza', sale, llega: '10:15:00' });
+
+    expect((await servicioBd([{ a, b: b('08:40:00') }]).transbordos(dto())).datos).toHaveLength(0);
+    expect((await servicioBd([{ a, b: b('08:45:00') }]).transbordos(dto())).datos).toHaveLength(1);
+    expect((await servicioBd([{ a, b: b('11:31:00') }]).transbordos(dto())).datos).toHaveLength(0);
+  });
 });
 
 describe('TrenesService', () => {
