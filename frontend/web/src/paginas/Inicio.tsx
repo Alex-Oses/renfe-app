@@ -163,7 +163,7 @@ export function Inicio() {
             <h3>Programa de puntos</h3>
             <p>Acumula con cada viaje y canjéalos por billetes y ventajas.</p>
           </Link>
-          <Link className="atajo cristal cristal--pulsable" to="/viajar/informacion-util/aplicaciones">
+          <Link className="atajo cristal cristal--pulsable" to="/app">
             <h3>Lleva el viaje en el móvil</h3>
             <p>Billetes, avisos y cambios de última hora en la app.</p>
           </Link>
