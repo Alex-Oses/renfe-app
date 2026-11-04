@@ -58,3 +58,8 @@ export const totalViaje = (v: Viaje): number =>
       0,
     ) * 100,
   ) / 100;
+
+// Un viaje acaba cuando llega su último tren (el del transbordo, si lo hay). Compara instantes, no
+// textos: la llegada viene con el offset de Madrid y toISOString() va en UTC.
+export const haTerminado = (viaje: Viaje, ahora = Date.now()) =>
+  Date.parse((viaje.enlace ?? viaje).billetes[0]!.tren.llegada) < ahora;
