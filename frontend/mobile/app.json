@@ -48,6 +48,15 @@
           "resizeMode": "contain",
           "backgroundColor": "#eff3f6"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "extraProguardRules": "-keep class androidx.work.** { *; }\n-keep class androidx.room.** { *; }\n-keepclassmembers class * extends androidx.room.RoomDatabase { <init>(); }\n-dontwarn androidx.work.**\n-dontwarn androidx.room.**"
+          }
+        }
       ]
     ],
     "experiments": {
