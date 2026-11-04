@@ -130,7 +130,8 @@ export class CaraService {
       throw new ServiceUnavailableException('La API no tiene configurado JWT_SECRET');
     }
 
-    return new SignJWT({ email, app_metadata: { rol } })
+    // cara_en: prueba de que la cara se acaba de comprobar; la exige CaraRecienteGuard para pagar.
+    return new SignJWT({ email, app_metadata: { rol }, cara_en: Math.floor(Date.now() / 1000) })
       .setProtectedHeader({ alg: 'HS256' })
       .setSubject(id)
       .setIssuedAt()

@@ -15,6 +15,10 @@ services:
       API_PORT: "3000"
       MAILPIT_URL: http://host.docker.internal:54324 # bandeja local: http://localhost:54324
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081}
+      # Clave Ed25519 con la que la API firma los QR de billetes y abonos. En .env había texto
+      # de relleno desde el #130 y la API no arrancaba. Es la clave de desarrollo: en el
+      # servidor (Render) va en las variables del panel, no aquí.
+      QR_SIGNING_PRIVATE_KEY: MC4CAQAwBQYDK2VwBCIEIEfkxPo3ZeRXgyJSHJfbBISWsT6gvSw2n1z5ZklWUCDe
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

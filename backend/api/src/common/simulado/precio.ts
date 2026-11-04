@@ -37,3 +37,39 @@ export function precioSimulado(tipoServicio: string | null, km: number, clave: s
   const demanda = 0.85 + (semilla(`${clave}:precio`) % 3001) / 10000;
   return Math.round(base * demanda * 20) / 20;
 }
+
+// Mismas reglas que la web (frontend/shared/api/simulado-precios.ts): tarifa por factor, niño 40 % y la
+// tarjeta no se acumula con el niño (gana el mayor).
+export const TIPOS_VIAJERO = ['adulto', 'nino'] as const;
+export type TipoViajero = (typeof TIPOS_VIAJERO)[number];
+export const FACTOR_TARIFA: Record<string, number> = { basico: 1, elige: 1.25, 'elige-confort': 1.5, premium: 1.9 };
+export const PCT_DESCUENTO: Record<string, number> = {
+  ninguno: 0,
+  joven: 30,
+  dorada: 40,
+  'fn-general': 20,
+  'fn-especial': 50,
+};
+export const PCT_NINO = 40;
+
+export function centimosViajero(base: number, tipo = 'adulto', tarifa = 'basico', descuento = 'ninguno'): number {
+  const pct = Math.max(tipo === 'nino' ? PCT_NINO : 0, PCT_DESCUENTO[descuento] ?? 0);
+  return Math.round(base * (FACTOR_TARIFA[tarifa] ?? 1) * (1 - pct / 100));
+}
+
+// Extras: los que van por viajero se cobran una vez por butaca; el menú ya va incluido en Prémium.
+export const EXTRAS: Record<string, { centimos: number; porViajero: boolean }> = {
+  equipaje: { centimos: 1500, porViajero: false },
+  mascota: { centimos: 2500, porViajero: false },
+  bici: { centimos: 1000, porViajero: false },
+  comida: { centimos: 1200, porViajero: true },
+  seguro: { centimos: 250, porViajero: true },
+};
+
+export function centimosExtras(ids: readonly string[], viajeros: number, tarifa = 'basico'): number {
+  return [...new Set(ids)].reduce((suma, id) => {
+    const e = EXTRAS[id];
+    if (!e || (id === 'comida' && tarifa === 'premium')) return suma;
+    return suma + (e.porViajero ? e.centimos * viajeros : e.centimos);
+  }, 0);
+}

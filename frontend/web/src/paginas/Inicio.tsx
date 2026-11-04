@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { nucleosCercanias } from "@renfe/shared/contenido/navegacion";
-import { fotos } from "@renfe/shared/contenido/imagenes";
+import { fotoDe } from "@renfe/shared/contenido/imagenes";
 import { Foto } from "../componentes/Foto";
 import { EntradaTren } from "./inicio/EntradaTren";
 import "./inicio/inicio.css";
@@ -124,7 +124,7 @@ export function Inicio() {
           {RUTAS.map((r, i) => (
             <li key={r.a}>
               <Link className={`ruta ruta--${i}`} to={r.a}>
-                <Foto foto={fotos[r.f]} alt="" categoria="inspirate" clase="ruta__foto" />
+                <Foto foto={fotoDe(r.f)!} alt="" categoria="inspirate" clase="ruta__foto" />
                 <h3>{r.t}</h3>
                 <p>{r.d}</p>
               </Link>
@@ -163,7 +163,7 @@ export function Inicio() {
             <h3>Programa de puntos</h3>
             <p>Acumula con cada viaje y canjéalos por billetes y ventajas.</p>
           </Link>
-          <Link className="atajo cristal cristal--pulsable" to="/viajar/informacion-util/aplicaciones">
+          <Link className="atajo cristal cristal--pulsable" to="/app">
             <h3>Lleva el viaje en el móvil</h3>
             <p>Billetes, avisos y cambios de última hora en la app.</p>
           </Link>
@@ -177,7 +177,7 @@ export function Inicio() {
           {DESTINOS.map((d) => (
             <li key={d.origen + d.destino}>
               <Link className="destino" to={`/trenes?${new URLSearchParams({ origen: d.origen, destino: d.destino, fecha: manana })}`}>
-                <Foto foto={fotos[d.f]} alt={`Vista de ${d.a}`} categoria="inspirate" clase="destino__foto" />
+                <Foto foto={fotoDe(d.f)!} alt={`Vista de ${d.a}`} categoria="inspirate" clase="destino__foto" />
                 <span className="destino__ruta">
                   {d.de} <span aria-hidden="true">→</span>
                   <span className="sr"> a </span> {d.a}

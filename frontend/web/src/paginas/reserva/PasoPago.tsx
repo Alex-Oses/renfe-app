@@ -1,19 +1,16 @@
 import { useState } from "react";
-import {
-  confirmarPagoSimulado,
-  crearIntentoPago,
-  crearReserva,
-  usaDatosSimulados,
-} from "@renfe/shared/api/cliente";
+import { comprarReserva } from "@renfe/shared/api/cliente";
 import type { IdDescuento, IdExtra, IdTarifa, Pasajero, Reserva, Tren } from "@renfe/shared/api/tipos";
 import { EXTRAS, precioExtra } from "@renfe/shared/api/simulado-precios";
 import { euros } from "@renfe/shared/formato/formato";
+import { ConfirmarPago } from "./ConfirmarPago";
 
 interface Props {
   tren: Tren;
   asientos: string[];
   pasajeros: Pasajero[];
   total: number;
+  importeCargando: boolean;
   tarifa: IdTarifa;
   descuento: IdDescuento;
   bebes: number;
@@ -23,24 +20,21 @@ interface Props {
   onAsientoOcupado: () => void;
 }
 
-export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, bebes, extras, onExtras, onPagada, onAsientoOcupado }: Props) {
+export function PasoPago({ tren, asientos, pasajeros, total, importeCargando, tarifa, descuento, bebes, extras, onExtras, onPagada, onAsientoOcupado }: Props) {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   const pagar = async () => {
+    setConfirmando(false);
     setCargando(true);
     setError("");
     try {
-      const r = await crearReserva(tren, { trenId: tren.id, asientos, pasajeros, tarifa, descuento, extras, bebes });
+      const r = await comprarReserva(tren, { trenId: tren.id, asientos, pasajeros, tarifa, descuento, extras, bebes });
       // Con la API real POST /reservas ya crea la reserva pagada y sus billetes; sin API hay que
       // pasar por el intento de pago y la confirmación simulados.
-      if (usaDatosSimulados) {
-        await crearIntentoPago(r.id);
-        onPagada(await confirmarPagoSimulado(r.id));
-      } else {
-        onPagada(r);
-      }
+      onPagada(r);
     } catch (e) {
       const m = (e as Error).message;
       setOcupado(/butaca|ocupad/i.test(m));
@@ -84,7 +78,7 @@ export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, 
             tarjeta y no se cobra nada. Al pulsar el botón se confirma la reserva como si el pago hubiera ido bien.
           </p>
           <p className="pago__importe">
-            Importe: <strong>{euros(total)}</strong>
+            Importe: <strong>{importeCargando ? "Calculando…" : euros(total)}</strong>
           </p>
         </div>
       </div>
@@ -100,14 +94,16 @@ export function PasoPago({ tren, asientos, pasajeros, total, tarifa, descuento, 
         </div>
       )}
 
+      {confirmando && <ConfirmarPago total={total} alConfirmar={pagar} alCerrar={() => setConfirmando(false)} />}
+
       <div className="reserva__acciones">
-        <button type="button" className="boton" onClick={pagar} disabled={cargando} aria-busy={cargando}>
+        <button type="button" className="boton" onClick={() => setConfirmando(true)} disabled={cargando || importeCargando} aria-busy={cargando || importeCargando}>
           {cargando ? (
             <>
               <span className="girador" aria-hidden="true" /> Procesando el pago…
             </>
           ) : (
-            `Pagar ${euros(total)} (simulado)`
+            importeCargando ? "Calculando importe…" : `Pagar ${euros(total)} (simulado)`
           )}
         </button>
       </div>

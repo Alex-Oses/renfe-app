@@ -34,7 +34,9 @@ export default function Acceder() {
   const [conCara, setConCara] = useState(false);
 
   useEffect(() => {
-    if (sesion) navegar(destino, { replace: true });
+    if (!sesion) return;
+    // Sin cara registrada no se puede pagar: se pide justo después de crear la cuenta (o de entrar).
+    navegar(sesion.usuario.caraRegistrada ? destino : `/registrar-cara?volver=${encodeURIComponent(destino)}`, { replace: true });
   }, [sesion, destino, navegar]);
 
   function cambiar(p: Pestana) {

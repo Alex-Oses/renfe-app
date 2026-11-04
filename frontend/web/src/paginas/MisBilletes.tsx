@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { misAbonos, misBilletes, usaDatosSimulados } from "@renfe/shared/api/cliente";
 import type { Abono, Billete } from "@renfe/shared/api/tipos";
-import { agrupar, unirTransbordos, type Viaje } from "@renfe/shared/billetes/agrupar";
+import { agrupar, totalViaje, unirTransbordos, type Viaje } from "@renfe/shared/billetes/agrupar";
 import { TarjetaAbono } from "./billetes/TarjetaAbono";
 import { fecha, hora, euros } from "@renfe/shared/formato/formato";
 import RetrasoVivo from "./billetes/RetrasoVivo";
@@ -190,7 +190,7 @@ function TarjetaViaje({ viaje, pasado }: { viaje: Viaje; pasado?: boolean }) {
         <span className="ticket__loc">{localizador}</span>
         {viaje.enlace && <span className="ticket__loc">{viaje.enlace.billetes[0].localizador}</span>}
         <span className="ticket__etiqueta">
-          Total {euros([...viaje.billetes, ...(viaje.enlace?.billetes ?? [])].reduce((suma, b) => suma + b.asiento.precio, 0))}
+          Total {euros(totalViaje(viaje))}
         </span>
         <svg className="ticket__barras" viewBox={`0 0 ${localizador.length * 12} 40`} preserveAspectRatio="none" aria-hidden="true">
           {barras(localizador).map((b) => (

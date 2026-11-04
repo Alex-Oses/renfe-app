@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpException,
   Injectable,
   NotFoundException,
@@ -20,6 +21,7 @@ import {
   verificar,
 } from '../../common/qr/firma.js';
 import type { ValidarBilleteDto } from './dto/validar-billete.dto.js';
+import { transbordosDe, type EnlaceTransbordo } from './transbordos.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -40,6 +42,9 @@ export interface Billete {
   asiento: string;
   clase: string;
   precio: number;
+  /** Extras de la reserva y su importe; se repiten en cada billete de la misma reserva. */
+  extras: string[];
+  extrasReserva: number;
   emitido: string;
   expira: string;
   qr: string;
@@ -98,6 +103,8 @@ interface FilaBillete {
   asiento: string;
   clase: string;
   precio_centimos: number;
+  extras: string[];
+  extras_centimos: number;
   qr: string;
   emitido_en: Date;
   expira_en: Date;
@@ -141,6 +148,8 @@ const SELECT_BILLETE = `
          b.asiento,
          b.clase,
          b.precio_centimos,
+         r.extras,
+         r.extras_centimos,
          b.qr,
          b.emitido_en,
          b.expira_en,
@@ -181,6 +190,7 @@ const SELECT_BILLETE = `
 const SQL_BILLETES = `
   ${SELECT_BILLETE}
    where b.usuario_id = $1
+     and ($2::text is null or r.referencia = $2)
    order by b.emitido_en desc
 `;
 
@@ -230,13 +240,37 @@ export class BilletesService {
     private readonly config: ConfigService,
   ) {}
 
-  async listar(usuarioId: string): Promise<{ datos: Billete[]; total: number }> {
-    const filas = await this.consultar<FilaBillete>(SQL_BILLETES, [usuarioId]);
-    return { datos: filas.map((fila) => this.aBillete(fila)), total: filas.length };
+  async listar(
+    usuarioId: string,
+    localizador?: string,
+  ): Promise<{ datos: Billete[]; total: number; transbordos: EnlaceTransbordo[] }> {
+    const filas = await this.consultar<FilaBillete>(SQL_BILLETES, [
+      usuarioId,
+      localizador ?? null,
+    ]);
+    const datos = filas.map((fila) => this.aBillete(fila));
+    return { datos, total: datos.length, transbordos: transbordosDe(datos) };
   }
 
-  async qr(usuarioId: string, id: string): Promise<{ id: string; qr: string }> {
-    if (!UUID.test(id)) throw new NotFoundException('Billete no encontrado');
+  /** Una reserva propia por su localizador, con los mismos billetes que devuelve `listar`. */
+  async reservaPorLocalizador(
+    usuarioId: string,
+    localizador: string,
+  ): Promise<{ localizador: string; total: number; billetes: Billete[] }> {
+    const limpio = localizador.trim().toUpperCase();
+    const buscado = limpio.startsWith('R-') ? limpio : `R-${limpio}`;
+    if (!/^R-[A-Z0-9]{6}$/.test(buscado)) {
+      throw new BadRequestException('El localizador no tiene un formato válido');
+    }
+
+    const { datos } = await this.listar(usuarioId, buscado);
+    if (datos.length === 0) throw new NotFoundException('Reserva no encontrada');
+
+    const total = Math.round(datos.reduce((suma, b) => suma + b.precio, 0) * 100) / 100;
+    return { localizador: buscado, total, billetes: datos };
+  }
+
+  async qr(usuarioId: string, id: string): Promise<{ id: string; qr: string }> {    if (!UUID.test(id)) throw new NotFoundException('Billete no encontrado');
 
     const [fila] = await this.consultar<{ qr: string }>(SQL_QR, [id, usuarioId]);
     if (!fila) throw new NotFoundException('Billete no encontrado');
@@ -417,6 +451,8 @@ export class BilletesService {
       asiento: fila.asiento,
       clase: claseVisible(fila.clase),
       precio: fila.precio_centimos / 100,
+      extras: fila.extras ?? [],
+      extrasReserva: (fila.extras_centimos ?? 0) / 100,
       emitido: instanteAIso(fila.emitido_en),
       expira: instanteAIso(fila.expira_en),
       qr: fila.qr,

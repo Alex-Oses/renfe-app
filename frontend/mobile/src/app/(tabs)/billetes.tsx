@@ -10,6 +10,7 @@ import { Boton } from "@/components/Boton";
 import { IconoBilleteGrande } from "@/components/Icono";
 import { Pantalla } from "@/components/Pantalla";
 import { TarjetaBillete } from "@/components/TarjetaBillete";
+import { leerSesion, restaurarSesion } from "@/sesion";
 import { colores, espaciado, estilos, fuentes, tipografia } from "@/tema";
 
 // Los billetes de una misma compra se enseñan juntos, como en la web (MisBilletes.tsx).
@@ -19,8 +20,21 @@ export default function Billetes() {
 
   const [abonos, setAbonos] = useState<Abono[]>([]);
 
+  // Sin sesión no se llama a la API: /billetes pide token y devolvería «falta el bearer token».
+  const [sinSesion, setSinSesion] = useState(false);
+
   const cargar = useCallback(() => {
     setError("");
+    // El token vive en memoria: si el módulo se ha recargado (Metro, cambio a la API de respaldo)
+    // se recupera de la sesión guardada antes de pedir los billetes.
+    restaurarSesion();
+    if (!leerSesion()) {
+      setSinSesion(true);
+      setBilletes([]);
+      setAbonos([]);
+      return;
+    }
+    setSinSesion(false);
     misBilletes().then(setBilletes, (e: Error) => setError(e.message));
     // Los abonos son un extra de la pantalla: si fallan, los billetes se siguen viendo (como la web).
     misAbonos().then(setAbonos, () => setAbonos([]));
@@ -72,7 +86,15 @@ export default function Billetes() {
         </View>
       ) : null}
 
-      {error && billetes === null ? (
+      {sinSesion ? (
+        <View style={styles.vacio}>
+          <Text style={styles.vacioTitulo}>Entra en tu cuenta</Text>
+          <Text style={styles.vacioTexto}>
+            Tus billetes van con tu sesión. Inicia sesión y vuelve a esta pestaña para verlos.
+          </Text>
+          <Boton texto="Entrar" icono="cuenta" onPress={() => router.navigate("/cuenta")} />
+        </View>
+      ) : error && billetes === null ? (
         <>
           <Aviso texto={error} tipo="error" />
           <Boton texto="Reintentar" icono="refrescar" onPress={reintentar} />

@@ -6,11 +6,12 @@
   "main": "expo-router/entry",
   "scripts": {
     "dev": "expo start",
+    "tunel": "node scripts/tunel.mjs",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/fotos/matematica.test.mjs"
+    "test": "node --experimental-strip-types --test src/fotos/matematica.test.mjs src/herramientas/logica.test.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/instrument-sans": "^0.4.2",
@@ -24,10 +25,12 @@
     "expo-crypto": "~58.0.7",
     "expo-file-system": "^58.0.13",
     "expo-font": "~58.0.10",
+    "expo-image-picker": "~58.0.10",
     "expo-linear-gradient": "~58.0.3",
     "expo-linking": "~58.0.14",
     "expo-notifications": "~58.1.7",
     "expo-router": "~58.0.27",
+    "expo-sharing": "~58.0.21",
     "expo-splash-screen": "~58.0.11",
     "expo-sqlite": "~58.0.14",
     "expo-status-bar": "~58.0.4",
@@ -44,6 +47,7 @@
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
     "react-native-svg": "15.16.0",
+    "react-native-view-shot": "6.1.1",
     "react-native-web": "~0.21.4",
     "react-native-worklets": "0.13.0"
   },

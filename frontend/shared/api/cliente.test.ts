@@ -11,6 +11,7 @@ import {
   usaApiRespaldo,
   alSesionInvalida,
   misBilletes,
+  verificarCara,
   SESION_CADUCADA,
   usarToken,
 } from "./cliente";
@@ -276,6 +277,18 @@ describe("sesión caducada", () => {
     expect(aviso).toHaveBeenCalledTimes(1);
     await misBilletes().catch(() => {});
     expect(llamadas[1].init?.headers).not.toHaveProperty("Authorization");
+    quitar();
+  });
+
+  it("una cara que no coincide no cierra la sesión", async () => {
+    configurarApi({ api: "http://api" });
+    usarToken("vigente");
+    const aviso = vi.fn();
+    const quitar = alSesionInvalida(aviso);
+    api(() => new Response(JSON.stringify({ message: "La cara no coincide" }), { status: 401 }));
+
+    await expect(verificarCara({ email: "a@b.es", embedding: Array(512).fill(0.01) })).rejects.toThrow("La cara no coincide");
+    expect(aviso).not.toHaveBeenCalled();
     quitar();
   });
 

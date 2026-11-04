@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#81005E"/>
+  <!-- Frontal de tren: cabina, ventanilla, faros y raíles -->
+  <path d="M20 14h24a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H20a6 6 0 0 1-6-6V20a6 6 0 0 1 6-6z" fill="#fff"/>
+  <rect x="19" y="19" width="26" height="12" rx="3" fill="#81005E"/>
+  <circle cx="23" cy="39" r="3" fill="#81005E"/>
+  <circle cx="41" cy="39" r="3" fill="#81005E"/>
+  <path d="M22 46l-6 8M42 46l6 8" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+</svg>
