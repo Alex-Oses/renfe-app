@@ -32,15 +32,9 @@ export default function DescargarApp() {
         <section className="tarjeta cristal" aria-labelledby="app-ios">
           <h2 id="app-ios">iPhone y iPad</h2>
           <p>
-            iOS no permite instalar archivos APK y la app aún no está en el App Store. Mientras tanto, usa la web como si
-            fuera una app:
+            <span className="etiqueta-proceso">En proceso</span>
           </p>
-          <ol className="app-descarga__pasos">
-            <li>Abre esta web en Safari.</li>
-            <li>
-              Pulsa <strong>Compartir</strong> y luego <strong>Añadir a pantalla de inicio</strong>.
-            </li>
-          </ol>
+          <p>La app para iOS está en preparación. Mientras tanto, puedes comprar desde la web en Safari.</p>
           <Link className="boton boton--secundario" to="/">
             Comprar desde la web
           </Link>
