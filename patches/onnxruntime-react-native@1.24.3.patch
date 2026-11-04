@@ -1,0 +1,25 @@
+diff --git a/android/build.gradle b/android/build.gradle
+index 41b43599a9af6ef1c170047d39db1f3baa6ca682..9f4dc3f8f8bfb7e7c6e546f1404cac8d0e870f36 100644
+--- a/android/build.gradle
++++ b/android/build.gradle
+@@ -116,6 +116,10 @@ android {
+   externalNativeBuild {
+     cmake {
+       path "CMakeLists.txt"
++      // Windows: la ruta del repo + los .cpp de ../cpp generan rutas de objeto de mas
++      // de 260 caracteres y ninja no puede crear sus carpetas. Un staging dir corto
++      // (C:\Users\<usuario>\.ort-cxx) lo evita sin tocar el resto del build.
++      buildStagingDirectory = new File(System.getProperty("user.home"), ".ort-cxx")
+     }
+   }
+ 
+@@ -247,7 +251,8 @@ dependencies {
+     extractLibs "com.microsoft.onnxruntime:onnxruntime-android:latest.integration@aar"
+   }
+ 
+-  if (VersionNumber.parse(REACT_NATIVE_VERSION) < VersionNumber.parse("0.71")) {
++  def reactNativeVersion = REACT_NATIVE_VERSION.tokenize('.').take(2).collect { it as int }
++  if ((reactNativeVersion[0] * 100 + reactNativeVersion[1]) < 71) {
+     extractLibs "com.facebook.fbjni:fbjni:+:headers"
+     extractLibs "com.facebook.fbjni:fbjni:+"
+   }
