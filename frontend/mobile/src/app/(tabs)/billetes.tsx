@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { misAbonos, misBilletes } from "@renfe/shared/api/cliente";
 import type { Abono, Billete } from "@renfe/shared/api/tipos";
-import { agrupar, unirTransbordos } from "@renfe/shared/billetes/agrupar";
+import { agrupar, haTerminado, unirTransbordos } from "@renfe/shared/billetes/agrupar";
 import { TarjetaAbono } from "@/components/TarjetaAbono";
 import { Aviso } from "@/components/Aviso";
 import { Boton } from "@/components/Boton";
@@ -55,8 +55,8 @@ export default function Billetes() {
   const ahora = Date.now();
   // Los dos tramos de un transbordo van en una sola tarjeta.
   const viajes = unirTransbordos(agrupar(billetes ?? []));
-  const proximos = viajes.filter((v) => Date.parse(v.billetes[0].tren.llegada) >= ahora);
-  const pasados = viajes.filter((v) => Date.parse(v.billetes[0].tren.llegada) < ahora).reverse();
+  const proximos = viajes.filter((v) => !haTerminado(v, ahora));
+  const pasados = viajes.filter((v) => haTerminado(v, ahora)).reverse();
 
   const abrir = (b: Billete) => router.push({ pathname: "/billete/[id]", params: { id: b.id } });
   const abrirAbono = (a: Abono) => router.push({ pathname: "/abono/[id]", params: { id: a.id } } as never);

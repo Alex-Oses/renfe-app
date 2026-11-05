@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Billete } from "../api/tipos";
-import { agrupar, totalViaje, unirTransbordos, type Viaje } from "./agrupar";
+import { agrupar, haTerminado, totalViaje, unirTransbordos, type Viaje } from "./agrupar";
 
 const b = (id: string, reservaId: string, salida: string) => ({ id, reservaId, tren: { salida } }) as unknown as Billete;
 
@@ -45,5 +45,18 @@ describe("totalViaje", () => {
     const b = (precio: number, extrasReserva = 0) => ({ asiento: { precio }, extrasReserva }) as unknown as Billete;
     const v: Viaje = { reservaId: "A", billetes: [b(30, 25), b(20, 25)], enlace: { reservaId: "B", billetes: [b(10), b(5)] } };
     expect(totalViaje(v)).toBe(90);
+  });
+});
+
+describe("haTerminado", () => {
+  const v = (llegada: string): Viaje => ({ reservaId: "A", billetes: [{ tren: { llegada } } as unknown as Billete] });
+  it("compara instantes con offset, no texto", () => {
+    // 10:30 en Madrid son las 09:30 UTC: a las 10:00 UTC ya ha llegado.
+    expect(haTerminado(v("2026-11-04T10:30:00+01:00"), Date.parse("2026-11-04T10:00:00Z"))).toBe(true);
+    expect(haTerminado(v("2026-11-04T10:30:00+01:00"), Date.parse("2026-11-04T09:00:00Z"))).toBe(false);
+  });
+  it("un transbordo no termina hasta que llega el segundo tren", () => {
+    const viaje = { ...v("2026-11-04T10:00:00+01:00"), enlace: v("2026-11-04T13:00:00+01:00") };
+    expect(haTerminado(viaje, Date.parse("2026-11-04T10:00:00Z"))).toBe(false);
   });
 });
