@@ -11,6 +11,8 @@ WORKDIR /repo
 # Manifiestos primero: si no cambian, esta capa se reutiliza y el install no
 # se repite. `--filter` instala solo las dependencias de la API (no Expo).
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# pnpm hashea los patchedDependencies del package.json raíz aunque no los instale.
+COPY patches patches
 COPY backend/api/package.json backend/api/
 COPY backend/gtfs-worker/package.json backend/gtfs-worker/
 RUN pnpm install --frozen-lockfile --filter @renfe/api --prod=false
