@@ -2,6 +2,7 @@
 // floats y solo esa huella viaja a la API (ADR-007). Sin navegador ni WebView: la imagen no sale
 // del teléfono. Al usar onnxruntime-react-native hace falta build propio, no Expo Go.
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { SaveFormat, manipulateAsync } from "expo-image-manipulator";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
@@ -28,7 +29,11 @@ const pausa = () => new Promise((r) => setTimeout(r, PAUSA_MS));
 async function capturar(ref: CameraView | null) {
   try {
     const foto = await ref?.takePictureAsync({ quality: 0.5 });
-    return foto?.uri ? await fotoDeJpeg(foto.uri) : null;
+    if (!foto?.uri) return null;
+    // A resolución completa (12-50 MP) jpeg-js decodifica cientos de MB en JS en cada vuelta y Android
+    // mata la app por memoria. Los modelos trabajan a 640 px como mucho: se reduce antes.
+    const reducida = await manipulateAsync(foto.uri, [{ resize: { width: 640 } }], { compress: 0.8, format: SaveFormat.JPEG });
+    return await fotoDeJpeg(reducida.uri);
   } catch {
     return null; // la cámara aún no está lista: se reintenta en la siguiente vuelta
   }

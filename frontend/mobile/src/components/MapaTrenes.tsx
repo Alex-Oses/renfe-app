@@ -1,275 +1,176 @@
-import { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
+import { useEffect, useMemo, useRef, type ComponentType, type Ref } from "react";
+import { StyleSheet, useWindowDimensions } from "react-native";
+import { WebView, type WebViewMessageEvent, type WebViewProps } from "react-native-webview";
 import { ESTACIONES } from "@renfe/shared/api/simulado";
 import type { ParadaRuta, PosicionTren } from "@renfe/shared/api/tipos";
 import { extremos } from "@renfe/shared/estado/estado-tren";
 import { partirRuta, type PuntoRuta } from "@renfe/shared/estado/partir-ruta";
-import { colorTipo, colores, fuentes } from "@/tema";
-import { SimboloEstacion } from "./mapa/SimboloEstacion";
-import { TrenAnimado } from "./mapa/TrenAnimado";
+import { colorTipo, colores } from "@/tema";
 import { useReducirMovimiento } from "./mapa/movimiento";
 import type { PropsMapa } from "./mapa-tipos";
 
-// Centro de la península; el usuario hace zoom donde quiera.
-const ESPANA = { latitude: 40.2, longitude: -3.7, latitudeDelta: 9.4, longitudeDelta: 9.4 };
+// Mapa nativo: Leaflet + OpenStreetMap dentro de un WebView, como la web. Antes era
+// react-native-maps, que en Android usa Google Maps y sin clave de API cerraba la APK al abrir
+// el mapa (en Expo Go no pasaba porque trae su propia clave).
 
-// Por debajo de este ancho de mapa (grados) se ve de cerca: salen los nombres de las ciudades.
-const DELTA_CERCA = 4;
+// shortcut: los tipos de clase de react-native-webview 14 no casan con @types/react 19 (props: never); quitar al subir de versión.
+const Web = WebView as unknown as ComponentType<WebViewProps & { ref?: Ref<WebView> }>;
 
 const dibujable = (p: ParadaRuta) => Number.isFinite(p.lat) && Number.isFinite(p.lon);
 
-// Puntos con los que se encuadra el tren elegido: su recorrido si lo hay y, si no, su posición.
+// Puntos del recorrido del tren elegido: su ruta si la hay y, si no, sus paradas.
 function puntosDe(t: PosicionTren): PuntoRuta[] {
-  const puntos =
-    t.ruta.length > 1
-      ? t.ruta
-      : t.paradas.filter(dibujable).map((p): PuntoRuta => [p.lat, p.lon]);
+  const puntos = t.ruta.length > 1 ? t.ruta : t.paradas.filter(dibujable).map((p): PuntoRuta => [p.lat, p.lon]);
   return puntos.length ? puntos : [[t.lat, t.lon]];
 }
 
-// Mapa nativo: OpenStreetMap/Apple Maps con un tren dibujado por cada posición real.
-// El marcador del tren elegido lleva un anillo y, como en la web, su recorrido se pinta encima:
-// lo ya recorrido en trazo discontinuo y lo que queda con un halo blanco y el color del tipo.
+// Estaciones con la etiqueta de ciudad solo en la primera de cada ciudad (como la web).
+const ESTACIONES_MAPA = ESTACIONES.map((e, i) => ({
+  n: e.nombre,
+  la: e.lat,
+  lo: e.lon,
+  c: ESTACIONES.findIndex((x) => x.ciudad === e.ciudad) === i ? e.ciudad : "",
+}));
+
+const HTML = `<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+html,body,#m{margin:0;height:100%;background:#eff3f6}
+.leaflet-control-attribution{font-size:9px}
+.ciudad{font:600 10px sans-serif;color:#464646;background:rgba(255,255,255,.85);border:0;box-shadow:none;padding:0 3px;border-radius:4px}
+.ciudad:before{display:none}
+.et{font:600 10.5px sans-serif;color:#1d1d1b;background:rgba(255,255,255,.88);border:0;box-shadow:none;padding:1px 4px;border-radius:5px}
+.et:before{display:none}
+.pasada{opacity:.55}
+</style></head><body><div id="m"></div><script>
+var enviar=function(o){window.ReactNativeWebView.postMessage(JSON.stringify(o))};
+var lienzo=L.canvas({tolerance:10});
+var mapa=L.map('m',{zoomControl:false,renderer:lienzo}).setView([40.2,-3.7],5);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(mapa);
+var capaEst=L.layerGroup().addTo(mapa),capaRuta=L.layerGroup().addTo(mapa),capaTrenes=L.layerGroup().addTo(mapa);
+var ciudades=[];
+var siguiendo=false,centrado='',tapado=300,reducir=false,estado=null;
+mapa.on('dragstart',function(){if(siguiendo)enviar({t:'soltar'})});
+mapa.on('zoomend',function(){var cerca=mapa.getZoom()>=7;ciudades.forEach(function(m){cerca?m.openTooltip():m.closeTooltip()})});
+window.estaciones=function(lista){lista.forEach(function(e){
+  var m=L.circleMarker([e.la,e.lo],{radius:4,color:'#fff',weight:1.5,fillColor:'#81005e',fillOpacity:1}).bindPopup(e.n).addTo(capaEst);
+  if(e.c){m.bindTooltip(e.c,{permanent:true,direction:'top',className:'ciudad',offset:[0,-4]});m.closeTooltip();ciudades.push(m)}
+})};
+function centrar(la,lo,animar){
+  var p=mapa.project([la,lo]).add([0,tapado/2]);
+  mapa.panTo(mapa.unproject(p),{animate:animar&&!reducir,duration:animar?.45:0});
+}
+window.actualizar=function(s){
+  estado=s;siguiendo=s.siguiendo;tapado=s.tapado;reducir=s.reducir;
+  capaTrenes.clearLayers();capaRuta.clearLayers();
+  var r=s.ruta;
+  if(r){
+    if(r.hecho.length>1)L.polyline(r.hecho,{color:r.color,weight:4,dashArray:'6 6'}).addTo(capaRuta);
+    if(r.pendiente.length>1){L.polyline(r.pendiente,{color:'#fff',weight:9}).addTo(capaRuta);L.polyline(r.pendiente,{color:r.color,weight:5}).addTo(capaRuta)}
+    r.paradas.forEach(function(p){
+      L.circleMarker([p.la,p.lo],{radius:5,color:r.color,weight:3,fillColor:p.pasada?'#d9dde2':'#fff',fillOpacity:1,opacity:p.pasada?.5:1})
+        .bindTooltip(p.n,{permanent:true,direction:'right',className:'et'+(p.pasada?' pasada':''),offset:[6,0]}).addTo(capaRuta);
+    });
+    r.extremos.forEach(function(p){
+      L.circleMarker([p.la,p.lo],{radius:7,color:r.color,weight:3,fillColor:r.color,fillOpacity:1})
+        .bindTooltip(p.n,{permanent:true,direction:'right',className:'et',offset:[8,0]}).addTo(capaRuta);
+    });
+  }
+  s.trenes.forEach(function(t){
+    var activo=t.id===s.seleccion;
+    if(activo)L.circleMarker([t.la,t.lo],{radius:16,color:'${colores.accion}',weight:3,fillColor:'rgba(214,45,97,.10)',fillOpacity:1,interactive:false}).addTo(capaTrenes);
+    L.circleMarker([t.la,t.lo],{radius:activo?10:7,color:'#fff',weight:2,fillColor:t.c,fillOpacity:1})
+      .on('click',function(){enviar({t:'elegir',id:t.id})}).addTo(capaTrenes);
+  });
+  var e=s.trenes.find(function(t){return t.id===s.seleccion});
+  if(!e){centrado='';return}
+  if(siguiendo)mapa.panTo([e.la,e.lo],{animate:!reducir,duration:1.2});
+  else if(centrado!==e.id){centrado=e.id;centrar(e.la,e.lo,true)}
+};
+enviar({t:'listo'});
+</script></body></html>`;
+
 export function MapaTrenes({ trenes, seleccion, onElegir, espacioInferior = 300, siguiendo = false, onSoltar }: PropsMapa) {
-  const mapa = useRef<MapView>(null);
-  const { height: altoPantalla, width: anchoPantalla } = useWindowDimensions();
-  // Región visible: sirve para pasar de grados a píxeles (buscar el tren tocado y centrar sin que
-  // la hoja lo tape). En un ref para no repintar el mapa en cada movimiento.
-  const regionActual = useRef(ESPANA);
-  const elegido = trenes.find((t) => t.trenId === seleccion);
+  const web = useRef<WebView>(null);
+  const listo = useRef(false);
+  const { height: altoPantalla } = useWindowDimensions();
   const reducir = useReducirMovimiento();
-  const [cerca, setCerca] = useState(false);
+  // Los callbacks en un ref: el WebView no se vuelve a montar al cambiar de función.
+  const callbacks = useRef({ onElegir, onSoltar, trenes });
+  callbacks.current = { onElegir, onSoltar, trenes };
 
-  // Seguir en el mapa: la cámara acompaña cada lectura del elegido (como CapaTrenes.tsx de la web).
-  const seguidoLat = elegido?.lat;
-  const seguidoLon = elegido?.lon;
-  useEffect(() => {
-    if (!siguiendo || seguidoLat === undefined || seguidoLon === undefined) return;
-    mapa.current?.animateCamera(
-      { center: { latitude: seguidoLat, longitude: seguidoLon } },
-      { duration: reducir ? 0 : 1200 },
-    );
-  }, [siguiendo, seguidoLat, seguidoLon, reducir]);
-
-  // Al elegir un tren se centra la cámara en él, sin tocar el zoom (antes se encuadraba el recorrido
-  // entero y el mapa saltaba de escala). El centro se sube medio hueco de la hoja para que el tren
-  // quede en la mitad de lo que se ve, no en la mitad de la pantalla, donde lo taparía el panel.
-  const centrado = useRef("");
-  useEffect(() => {
-    if (!elegido) {
-      centrado.current = "";
-      return;
+  const estado = useMemo(() => {
+    const elegido = trenes.find((t) => t.trenId === seleccion);
+    let ruta = null;
+    if (elegido) {
+      const trazado = puntosDe(elegido);
+      const corte = trazado.length > 1 ? partirRuta(trazado, elegido.lat, elegido.lon) : null;
+      const paradas = elegido.paradas.filter(dibujable);
+      const { salida, llegada } = extremos(paradas);
+      const esExtremo = (p: ParadaRuta) => p.estacionId === salida?.estacionId || p.estacionId === llegada?.estacionId;
+      const extremosDibujo =
+        salida && llegada && salida.estacionId === llegada.estacionId
+          ? [{ p: salida, n: `Parada ${salida.nombre}` }]
+          : [
+              ...(salida ? [{ p: salida, n: `Sale de ${salida.nombre}` }] : []),
+              ...(llegada ? [{ p: llegada, n: `Llega a ${llegada.nombre}` }] : []),
+            ];
+      ruta = {
+        color: colorTipo[elegido.tipo],
+        hecho: corte?.hecho ?? [],
+        pendiente: corte?.pendiente ?? [],
+        paradas: paradas.filter((p) => !esExtremo(p)).map((p) => ({ la: p.lat, lo: p.lon, n: p.nombre, pasada: !!p.pasada })),
+        extremos: extremosDibujo.map(({ p, n }) => ({ la: p.lat, lo: p.lon, n })),
+      };
     }
-    if (centrado.current === elegido.trenId) return;
-    centrado.current = elegido.trenId;
-    const tapado = Math.min(Math.max(espacioInferior, 0), altoPantalla * 0.55);
-    const gradosPorPx = Math.abs(regionActual.current.latitudeDelta) / Math.max(1, altoPantalla);
-    mapa.current?.animateCamera(
-      { center: { latitude: elegido.lat - (tapado / 2) * gradosPorPx, longitude: elegido.lon } },
-      { duration: 450 },
-    );
-  }, [elegido, espacioInferior, altoPantalla]);
+    return {
+      trenes: trenes.map((t) => ({ id: t.trenId, la: t.lat, lo: t.lon, c: colorTipo[t.tipo] })),
+      seleccion: seleccion ?? null,
+      siguiendo,
+      reducir,
+      tapado: Math.min(Math.max(espacioInferior, 0), altoPantalla * 0.55),
+      ruta,
+    };
+  }, [trenes, seleccion, siguiendo, reducir, espacioInferior, altoPantalla]);
 
-  // Al elegir un tren no se mueve la cámara: el usuario ve el recorrido donde está mirando y no
-  // se le cambia el zoom. Solo se sigue al tren si él lo pide con «Seguir en el mapa».
+  const enviar = (s: typeof estado) => web.current?.injectJavaScript(`window.actualizar(${JSON.stringify(s)});true;`);
+  useEffect(() => {
+    if (listo.current) enviar(estado);
+  }, [estado]);
+  const ultimo = useRef(estado);
+  ultimo.current = estado;
 
-  const color = elegido ? colorTipo[elegido.tipo] : colores.marca;
-  // Con el tiempo real solo llegan paradas con coordenadas: se unen para marcar el recorrido, que
-  // antes no se pintaba porque `ruta` llegaba vacía.
-  const trazado = elegido ? puntosDe(elegido) : [];
-  const corte = elegido && trazado.length > 1 ? partirRuta(trazado, elegido.lat, elegido.lon) : null;
-  const paradas = elegido ? elegido.paradas.filter(dibujable) : [];
-  const { salida, llegada } = extremos(paradas);
-  const esExtremo = (p: ParadaRuta) => p.estacionId === salida?.estacionId || p.estacionId === llegada?.estacionId;
-  // Con una sola parada, salida y llegada son la misma: se pinta una vez, como en la web.
-  const extremosDibujo =
-    salida && llegada && salida.estacionId === llegada.estacionId
-      ? [{ parada: salida, etiqueta: "Parada" }]
-      : [
-          ...(salida ? [{ parada: salida, etiqueta: "Sale de" }] : []),
-          ...(llegada ? [{ parada: llegada, etiqueta: "Llega a" }] : []),
-        ];
-  const aCoordenadas = (puntos: PuntoRuta[]) =>
-    puntos.map(([latitude, longitude]) => ({ latitude, longitude }));
-
-  // El marcador nativo no siempre recibe el toque (va dentro de un mapa con cientos de pines), así
-  // que el toque se resuelve en el propio mapa: se elige el tren más cercano al punto pulsado.
-  const alTocarMapa = (e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
-    if (!onElegir || !trenes.length) return;
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    const latPorPx = Math.abs(regionActual.current.latitudeDelta) / Math.max(1, altoPantalla);
-    const lonPorPx = Math.abs(regionActual.current.longitudeDelta) / Math.max(1, anchoPantalla);
-    let mejor: { tren: PosicionTren; distancia: number } | null = null;
-    for (const t of trenes) {
-      const distancia = Math.hypot((t.lat - latitude) / latPorPx, (t.lon - longitude) / lonPorPx);
-      if (!mejor || distancia < mejor.distancia) mejor = { tren: t, distancia };
-    }
-    // Radio de 26 px (el icono mide 62×66 y la distancia está en píxeles de pantalla): con 44 px,
-    // con el mapa alejado, cualquier toque en el mapa pillaba un tren a decenas de km y abría su
-    // detalle. Ahora hay que tocar de verdad encima del tren.
-    if (mejor && mejor.distancia <= 26) onElegir(mejor.tren);
+  const alMensaje = (e: WebViewMessageEvent) => {
+    const m = JSON.parse(e.nativeEvent.data) as { t: string; id?: string };
+    if (m.t === "listo") {
+      listo.current = true;
+      web.current?.injectJavaScript(`window.estaciones(${JSON.stringify(ESTACIONES_MAPA)});true;`);
+      enviar(ultimo.current);
+    } else if (m.t === "elegir") {
+      const tren = callbacks.current.trenes.find((t) => t.trenId === m.id);
+      if (tren) callbacks.current.onElegir?.(tren);
+    } else if (m.t === "soltar") callbacks.current.onSoltar?.();
   };
 
   return (
-    <MapView
-      ref={mapa}
-      style={StyleSheet.absoluteFill}
-      initialRegion={ESPANA}
-      showsCompass={false}
-      showsScale={false}
-      toolbarEnabled={false}
-      loadingEnabled
-      loadingBackgroundColor="#eff3f6"
-      loadingIndicatorColor={colores.marca}
-      // Solo el gesto del usuario suelta el seguimiento; las animaciones propias no lo disparan.
-      onPanDrag={siguiendo ? onSoltar : undefined}
-      onPress={alTocarMapa}
-      onRegionChangeComplete={(r) => {
-        regionActual.current = r;
-        setCerca(r.longitudeDelta < DELTA_CERCA);
+    <Web
+      ref={web}
+      style={[StyleSheet.absoluteFill, { backgroundColor: "#eff3f6" }]}
+      // baseUrl con https: OpenStreetMap pide un Referer válido para servir las teselas.
+      source={{ html: HTML, baseUrl: "https://renfe-app-beta.vercel.app/" }}
+      originWhitelist={["*"]}
+      onMessage={alMensaje}
+      // Si Android mata el proceso del WebView (poca memoria), se recarga en vez de cerrar la app.
+      onRenderProcessGone={() => {
+        listo.current = false;
+        web.current?.reload();
       }}
-    >
-      {ESTACIONES.map((e, i) => {
-        // Etiqueta de ciudad una sola vez por ciudad, y solo con el mapa cerca (como la web).
-        const etiqueta = cerca && ESTACIONES.findIndex((x) => x.ciudad === e.ciudad) === i;
-        return (
-          <Marker
-            key={`estacion-${e.id}-${etiqueta}`}
-            coordinate={{ latitude: e.lat, longitude: e.lon }}
-            anchor={{ x: 0.5, y: etiqueta ? 0.78 : 0.5 }}
-            tracksViewChanges={false}
-            title={e.nombre}
-            accessibilityLabel={`Estación ${e.nombre}`}
-            zIndex={2}
-          >
-            <View style={styles.estacion}>
-              {etiqueta ? <Text style={styles.ciudad}>{e.ciudad}</Text> : null}
-              <SimboloEstacion tamano={18} />
-            </View>
-          </Marker>
-        );
-      })}
-
-      {corte && corte.hecho.length > 1 ? (
-        <Polyline
-          coordinates={aCoordenadas(corte.hecho)}
-          strokeColor={color}
-          strokeWidth={4}
-          lineDashPattern={[6, 6]}
-          lineJoin="round"
-          lineCap="round"
-          zIndex={3}
-        />
-      ) : null}
-
-      {corte && corte.pendiente.length > 1 ? (
-        <>
-          <Polyline
-            coordinates={aCoordenadas(corte.pendiente)}
-            strokeColor="#fff"
-            strokeWidth={9}
-            lineJoin="round"
-            lineCap="round"
-            zIndex={4}
-          />
-          <Polyline
-            coordinates={aCoordenadas(corte.pendiente)}
-            strokeColor={color}
-            strokeWidth={5}
-            lineJoin="round"
-            lineCap="round"
-            zIndex={5}
-          />
-        </>
-      ) : null}
-
-      {paradas.map((p) =>
-        esExtremo(p) ? null : (
-          <Marker
-            key={`parada-${p.estacionId}`}
-            coordinate={{ latitude: p.lat, longitude: p.lon }}
-            anchor={{ x: 0.04, y: 0.5 }}
-            tracksViewChanges={false}
-            accessibilityLabel={p.pasada ? `${p.nombre}, ya pasada` : `Parada en ${p.nombre}`}
-            zIndex={6}
-          >
-            <View style={styles.extremo}>
-              <View style={[styles.parada, { borderColor: color }, p.pasada && styles.paradaPasada]} />
-              <Text style={[styles.extremoTexto, styles.paradaTexto, p.pasada && styles.paradaTextoPasada]} numberOfLines={1}>
-                {p.nombre}
-              </Text>
-            </View>
-          </Marker>
-        ),
-      )}
-
-      {extremosDibujo.map(({ parada: p, etiqueta }) => (
-        <Marker
-          key={`extremo-${etiqueta}-${p.estacionId}`}
-          coordinate={{ latitude: p.lat, longitude: p.lon }}
-          anchor={{ x: 0.1, y: 0.5 }}
-          accessibilityLabel={`${etiqueta} ${p.nombre}`}
-          zIndex={7}
-        >
-          <View style={styles.extremo}>
-            <View style={[styles.extremoPunto, { backgroundColor: color, borderColor: color }]} />
-            <Text style={styles.extremoTexto} numberOfLines={1}>
-              {etiqueta} {p.nombre}
-            </Text>
-          </View>
-        </Marker>
-      ))}
-
-      {trenes.map((t) => {
-        const activo = t.trenId === seleccion;
-        // La clave cambia al elegirlo para que el marcador nativo rehaga su tamaño.
-        return (
-          <TrenAnimado
-            key={`${t.trenId}-${activo ? "on" : "off"}`}
-            tren={t}
-            activo={activo}
-            reducir={reducir}
-            onPress={() => onElegir?.(t)}
-          />
-        );
-      })}
-    </MapView>
+      javaScriptEnabled
+      domStorageEnabled
+      setSupportMultipleWindows={false}
+      accessibilityLabel="Mapa de trenes en directo"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  estacion: { alignItems: "center", gap: 1 },
-  ciudad: {
-    fontFamily: fuentes.seminegrita,
-    fontSize: 10,
-    color: "#464646",
-    backgroundColor: "rgba(255,255,255,0.85)",
-    paddingHorizontal: 3,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  parada: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 3,
-    backgroundColor: "#fff",
-  },
-  paradaPasada: { backgroundColor: "#d9dde2", opacity: 0.5 },
-  paradaTexto: { fontFamily: fuentes.medio, fontSize: 9.5 },
-  paradaTextoPasada: { opacity: 0.55 },
-  extremo: { flexDirection: "row", alignItems: "center", gap: 4 },
-  extremoPunto: { width: 16, height: 16, borderRadius: 8, borderWidth: 3 },
-  extremoTexto: {
-    maxWidth: 150,
-    fontFamily: fuentes.seminegrita,
-    fontSize: 10.5,
-    color: colores.texto,
-    backgroundColor: "rgba(255,255,255,0.88)",
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 5,
-    overflow: "hidden",
-  },
-});
