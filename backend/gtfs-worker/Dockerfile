@@ -13,6 +13,8 @@ RUN corepack enable
 WORKDIR /repo
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# pnpm hashea los patchedDependencies del package.json raíz aunque no los instale.
+COPY patches patches
 COPY backend/api/package.json backend/api/
 COPY backend/gtfs-worker/package.json backend/gtfs-worker/
 # tsx es devDependency y aquí sí hace falta en ejecución: el `build` del worker
