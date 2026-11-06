@@ -81,9 +81,8 @@ que en algún momento sí se enlazaba.
 - **Alex**: ¿con qué build se reproduce? Si es un APK de EAS, la diferencia entre ese entorno y el
   local puede ser justo el autolinking. Y conviene saber si el facial llegó a funcionar alguna vez en
   el móvil (v1.0.0 tenía las `.so`, pero nadie ha confirmado que la cara funcionara en un dispositivo).
-- Rubén: la toolchain Android **sí existe** en mi PC (`AppData\Local\android-toolchain`: JDK 17
-  Temurin + SDK con platforms 36/37, NDK 27.1.12297006 y cmake 3.22.1), aunque no está en el `PATH`.
-  Puedo intentar un `expo run:android` si hace falta que lo pruebe yo.
+- Rubén: no tengo la app compilada en mi PC, así que la prueba en móvil real la tiene que hacer alguien
+  que pueda instalar el APK.
 
 ## Cambios en contratos
 
