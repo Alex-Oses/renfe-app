@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Modal,
   PanResponder,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -158,7 +157,8 @@ export function Hoja({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar} statusBarTranslucent>
       <KeyboardAvoidingView
         style={styles.raiz}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // Android también: el Modal con statusBarTranslucent va edge-to-edge y adjustResize no lo empuja.
+        behavior="padding"
       >
         <Pressable style={styles.velo} accessibilityLabel="Cerrar" onPress={onCerrar} />
         <Animated.View
