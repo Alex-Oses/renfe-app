@@ -11,12 +11,20 @@ import type { InferenceSession } from "onnxruntime-react-native";
 type Ort = typeof import("onnxruntime-react-native");
 let ort: Ort | undefined;
 function runtime(): Ort {
-  try {
-    ort ??= require("onnxruntime-react-native") as Ort;
-    return ort;
-  } catch {
-    throw new Error("El acceso con la cara necesita la app instalada (development build): Expo Go no lo trae.");
+  if (!ort) {
+    try {
+      ort = require("onnxruntime-react-native") as Ort;
+    } catch {
+      // Sin módulo nativo (Expo Go, o build que no lo enlazó): lo cuenta el error de abajo.
+    }
   }
+  // El `require` puede devolver `undefined` sin lanzar; entonces el fallo salía como «Cannot read
+  // property 'InferenceSession' of undefined», que no dice nada.
+  const cargado = ort;
+  if (!cargado?.InferenceSession) {
+    throw new Error("El acceso con la cara necesita la app instalada (build propio): Expo Go no trae el módulo nativo.");
+  }
+  return cargado;
 }
 import {
   agrupar,
