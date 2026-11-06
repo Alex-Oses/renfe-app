@@ -52,35 +52,41 @@ Dos pistas más:
   (`onnxruntime-react-native/app.plugin.js`), que es el que inyecta
   `implementation project(':onnxruntime-react-native')` en `android/app/build.gradle`. En el `android/`
   generado en local no hay ni una línea de `onnxruntime`.
-- El paquete trae `unimodule.json` y `expo-modules-autolinking` lo lee como config de módulo Expo
-  (`EXPO_MODULE_CONFIG_FILENAMES` en `ExpoModuleConfig.js` incluye `unimodule.json`). Candidato a
-  quedarse entre los dos pases (módulos Expo y módulos RN) y no enlazarse por ninguno.
+- **Causa confirmada** en el código de `expo-modules-autolinking`
+  (`build/reactNativeConfig/androidResolver.js`):
+  ```js
+  if (reactNativeConfig === undefined && expoModuleConfig?.supportsPlatform('android')) {
+    if (!!gradle && !expoModuleConfig?.rawConfig.android?.gradlePath) return null; // no se enlaza
+  }
+  ```
+  El paquete cumple las tres: no tiene `react-native.config.js`, el `unimodule.json` lo delata como
+  módulo Expo (`EXPO_MODULE_CONFIG_FILENAMES` en `ExpoModuleConfig.js` incluye `unimodule.json`) y
+  tiene `android/build.gradle` sin `gradlePath` en ese JSON. Lo descartan los dos pases.
+  Con el `native_modules.gradle` de versiones anteriores de Expo esto no pasaba, y por eso la v1.0.0
+  sí llevaba las `.so`.
 
-**No es una regresión obvia**: el `renfe-app-arm64.apk` v1.0.0 del repo **sí** trae
-`lib/arm64-v8a/libonnxruntime.so` y `libonnxruntimejsi.so` (comprobado con `tar -tf` y `aapt2`), así
-que en algún momento sí se enlazaba.
+## Arreglo (PR #167)
+
+- `frontend/mobile/react-native.config.js` (nuevo) declara la dependencia con sus plataformas: el
+  `dependencies` del proyecto manda sobre el config del paquete, así que deja de cumplirse la regla
+  de conflicto. Comprobado: el autolinking ya devuelve `import ai.onnxruntime.reactnative.OnnxruntimePackage;`
+  y `new OnnxruntimePackage()`.
+- `ficha.ts`: `runtime()` comprueba el resultado del `require` y lanza un mensaje legible en vez de
+  dejar que reviente el `TypeError`.
+- `app.json`: versión 1.1.3.
 
 ## Qué queda
 
-1. Confirmar el binario instalado y ver el log nativo:
-   ```
-   adb shell dumpsys package com.alexoses.renfeapp | findstr versionName
-   adb logcat *:E | findstr -i "onnx ort reactnativejs"
-   ```
-2. `npx expo prebuild --clean` y mirar si `android/app/build.gradle` acaba con la línea de
-   `onnxruntime-react-native`. Si no aparece, añadir `"onnxruntime-react-native"` a `plugins` en
-   `app.json`; si sigue sin aparecer, probar a quitar el `unimodule.json` del paquete con el parche que
-   ya existe en `patches/onnxruntime-react-native@1.24.3.patch` (el mismo sitio donde está el arreglo
-   de Gradle 9 y de `MAX_PATH` en Windows).
-3. Arreglar el guard de `runtime()` mientras tanto: `if (!m?.InferenceSession) throw new Error(...)`.
-   Un `TypeError` de propiedad de `undefined` no le dice nada a nadie.
-4. Sacar APK nueva cuando esté, y volver a las notas del release: hay que **desinstalar** la anterior.
+1. Sacar el APK con EAS (cuenta nueva) y comprobar dentro del fichero:
+   `tar -tf renfe.apk | findstr onnxruntime` → debe salir `lib/arm64-v8a/libonnxruntime.so`.
+2. Instalarlo **desinstalando antes** el 1.1.2 y entrar en Cuenta > Acceso con la cara.
+3. Si algo falla, `adb logcat *:E | findstr -i "onnx ort reactnativejs"` y
+   `adb shell dumpsys package com.alexoses.renfeapp | findstr versionName` para saber qué build corre.
 
 ## Bloqueos / preguntas para otros
 
-- **Alex**: ¿con qué build se reproduce? Si es un APK de EAS, la diferencia entre ese entorno y el
-  local puede ser justo el autolinking. Y conviene saber si el facial llegó a funcionar alguna vez en
-  el móvil (v1.0.0 tenía las `.so`, pero nadie ha confirmado que la cara funcionara en un dispositivo).
+- **Alex**: queda el build con EAS en la cuenta del equipo y probarlo en un móvil real: el CI no
+  compila la app nativa, así que el enlazado solo se confirma mirando el APK.
 - Rubén: no tengo la app compilada en mi PC, así que la prueba en móvil real la tiene que hacer alguien
   que pueda instalar el APK.
 
