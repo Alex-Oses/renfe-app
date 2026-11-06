@@ -10,3 +10,5 @@ Guías para personas (las notas vivas del proyecto están en `obsidian/`).
 | [agentes-ia.md](agentes-ia.md) | Cómo Claude Code, OpenCode y otros leen/escriben el vault solos |
 | [slack.md](slack.md) | Canales de Slack e integración con GitHub |
 | [arquitectura.md](arquitectura.md) | Visión general del sistema |
+| [funcionalidades.md](funcionalidades.md) | Qué puede hacer el usuario: pantallas, flujos y límites |
+| [tecnico.md](tecnico.md) | Cómo está montado: stack, datos, peticiones y despliegue |
